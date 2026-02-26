@@ -101,7 +101,11 @@ function generateApiKey() {
   return key;
 }
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(session({
@@ -247,6 +251,9 @@ app.post('/api/settings/regenerate-key', requireAuth, (req, res) => {
 });
 
 app.get('/api/extension/config', requireApiKey, (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
+  
   const settings = {};
   db.prepare('SELECT * FROM extension_settings').all().forEach(row => {
     settings[row.key] = row.value;

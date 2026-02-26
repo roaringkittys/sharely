@@ -21,7 +21,12 @@ async function fetchServices() {
 
   try {
     const res = await fetch(`${serverUrl}/api/extension/config`, {
-      headers: { 'X-API-Key': apiKey }
+      method: 'GET',
+      mode: 'cors',
+      headers: { 
+        'X-API-Key': apiKey,
+        'Accept': 'application/json'
+      }
     });
     if (!res.ok) throw new Error('Failed to connect');
     const data = await res.json();

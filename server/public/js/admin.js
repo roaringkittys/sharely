@@ -1,8 +1,32 @@
 const API = {
-  async get(url) { const r = await fetch(url); if (r.status === 401) { window.location.href = '/login'; return; } return r.json(); },
-  async post(url, data) { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); if (r.status === 401) { window.location.href = '/login'; return; } return r.json(); },
-  async put(url, data) { const r = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); return r.json(); },
-  async del(url) { const r = await fetch(url, { method: 'DELETE' }); return r.json(); }
+  async get(url) { 
+    const r = await fetch(url); 
+    if (r.status === 401) { window.location.href = '/login'; return; } 
+    return r.json(); 
+  },
+  async post(url, data) { 
+    const r = await fetch(url, { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(data) 
+    }); 
+    if (r.status === 401) { window.location.href = '/login'; return; } 
+    return r.json(); 
+  },
+  async put(url, data) { 
+    const r = await fetch(url, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(data) 
+    }); 
+    if (r.status === 401) { window.location.href = '/login'; return; }
+    return r.json(); 
+  },
+  async del(url) { 
+    const r = await fetch(url, { method: 'DELETE' }); 
+    if (r.status === 401) { window.location.href = '/login'; return; }
+    return r.json(); 
+  }
 };
 
 let servicesCache = [];
