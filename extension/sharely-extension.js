@@ -1,4 +1,4 @@
-/* sharely-extension.js for Sharely Extension 1.0 */
+/* sharely-extension.js for Sharely Extension 1.1 */
 
 let allServices = [];
 let currentCategory = 'all';
@@ -44,7 +44,11 @@ function disableFilters() {
   $('#appSearch').prop('disabled', true).attr('placeholder', 'Connecting...');
 }
 
+// Renders a service icon — PNG if icon_url set, else emoji
 function buildServiceIcon(service) {
+  if (service.icon_url) {
+    return `<div class="service-img-icon"><img src="${serverUrl}${service.icon_url}" alt="${service.name}" onerror="this.parentElement.innerHTML='<span style=\\'font-size:28px\\'>${service.icon || '🌐'}</span>'"></div>`;
+  }
   if (service.icon && service.icon.length <= 4) {
     return `<div class="service-emoji-icon">${service.icon}</div>`;
   }
@@ -62,23 +66,31 @@ function renderServices(services) {
   }
 
   services.forEach(service => {
-    const hasCookies = service.cookies && service.cookies.length > 0;
+    const accounts = service.accounts || [];
+    const hasAccounts = accounts.length > 0;
+    const accountCount = accounts.length;
+
     const $item = $(`
       <div class="col-3 text-center service" data-category="${service.category}" data-id="${service.id}">
         <div style="position:relative;display:inline-block">
           ${buildServiceIcon(service)}
-          ${hasCookies ? '' : '<span class="overlay">–</span>'}
+          ${!hasAccounts ? '<span class="overlay">–</span>' : ''}
+          ${accountCount > 1 ? `<span class="account-badge">${accountCount}</span>` : ''}
         </div>
         <p class="menu-text">${service.name}</p>
       </div>
     `);
 
-    $item.on('click', function() {
-      if (!hasCookies) {
-        showNotification('No cookies available', `${service.name} has no cookies configured yet.`);
+    $item.on('click', function () {
+      if (!hasAccounts) {
+        showNotification('No accounts', `${service.name} has no cookies configured yet.`);
         return;
       }
-      injectCookies(service);
+      if (accountCount === 1) {
+        doInject(service, accounts[0]);
+      } else {
+        showAccountPicker(service, accounts);
+      }
     });
 
     $menu.append($item);
@@ -106,51 +118,69 @@ function filterAndRender() {
   renderServices(filtered);
 }
 
-async function injectCookies(service) {
+// Account picker overlay
+function showAccountPicker(service, accounts) {
+  const iconHtml = service.icon_url
+    ? `<img src="${serverUrl}${service.icon_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover" onerror="this.outerHTML='<span style=\\'font-size:28px\\'>${service.icon || '🌐'}</span>'">`
+    : `<span style="font-size:28px">${service.icon || '🌐'}</span>`;
+
+  const accountButtons = accounts.map((acc, i) => `
+    <button class="account-pick-btn" data-idx="${i}">
+      <span class="account-pick-label">${acc.label}</span>
+      <span class="account-pick-count">${acc.cookies.length} cookie${acc.cookies.length !== 1 ? 's' : ''}</span>
+    </button>
+  `).join('');
+
+  $('#accountPickerTitle').html(`${iconHtml} <span>${service.name}</span>`);
+  $('#accountPickerList').html(accountButtons);
+  $('#accountPickerOverlay').css('display', 'flex').hide().fadeIn(150);
+
+  // Bind account buttons
+  $('#accountPickerList').off('click', '.account-pick-btn').on('click', '.account-pick-btn', function () {
+    const idx = parseInt($(this).data('idx'));
+    closeAccountPicker();
+    doInject(service, accounts[idx]);
+  });
+}
+
+function closeAccountPicker() {
+  $('#accountPickerOverlay').fadeOut(120);
+}
+
+// Core injection
+function doInject(service, account) {
   showNotification(
-    'Injecting cookies...',
-    `Setting up ${service.cookies.length} cookie(s) for ${service.name}. Please wait...`
+    'Injecting...',
+    `Setting up "${account.label}" for ${service.name} (${account.cookies.length} cookies)...`
   );
 
   const targetUrl = `https://${service.domain.replace(/^\./, '')}`;
 
-  // Send to background script so it survives popup closing
   chrome.runtime.sendMessage(
-    {
-      type: 'INJECT_AND_OPEN',
-      cookies: service.cookies,
-      targetUrl,
-    },
+    { type: 'INJECT_AND_OPEN', cookies: account.cookies, targetUrl },
     (response) => {
       if (chrome.runtime.lastError) {
         closeNotification();
-        showNotification('Error', 'Extension background error: ' + chrome.runtime.lastError.message);
+        showNotification('Error', 'Background error: ' + chrome.runtime.lastError.message);
         return;
       }
 
       if (response && response.success) {
         const { results } = response;
-        const total = results.success.length + results.failed.length;
         const ok = results.success.length;
         const bad = results.failed.length;
+        const total = ok + bad;
 
         if (bad === 0) {
-          showNotification(
-            '✅ Done!',
-            `${ok}/${total} cookies set. ${service.name} is opening...`
-          );
+          showNotification('✅ Done!', `${ok}/${total} cookies set. Opening ${service.name}...`);
         } else {
-          const failNames = results.failed.map(f => `${f.name}: ${f.reason}`).join('\n');
-          showNotification(
-            `⚠️ Partial (${ok}/${total} cookies set)`,
-            `Some cookies failed:\n${failNames}`
-          );
+          const failMsg = results.failed.map(f => `${f.name}: ${f.reason}`).join('\n');
+          showNotification(`⚠️ Partial (${ok}/${total})`, `Some cookies failed:\n${failMsg}`);
         }
-        setTimeout(closeNotification, 3000);
+        setTimeout(closeNotification, 3500);
       } else {
         closeNotification();
-        const errMsg = (response && response.error) ? response.error : 'Unknown error';
-        showNotification('Error', 'Failed to inject cookies: ' + errMsg);
+        showNotification('Error', 'Inject failed: ' + ((response && response.error) || 'Unknown'));
       }
     }
   );
@@ -173,7 +203,8 @@ async function clearAllCookies() {
 
 function showNotification(title, message) {
   const $modal = $('#notification-0');
-  const safeMsg = String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  const safeMsg = String(message)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
   $modal.find('.notificationModal-content').html(`
     <i class="fas fa-times close-icon" id="closeNotif"></i>
     <h2>${title}</h2>
@@ -203,15 +234,10 @@ async function fetchConfig() {
   try {
     const res = await fetch(`${serverUrl}/api/extension/config`, {
       method: 'GET',
-      headers: {
-        'X-API-Key': apiKey,
-        'Accept': 'application/json'
-      }
+      headers: { 'X-API-Key': apiKey, 'Accept': 'application/json' }
     });
 
-    if (!res.ok) {
-      throw new Error(`Server responded with status ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
 
     const data = await res.json();
     allServices = data.services || [];
@@ -220,9 +246,7 @@ async function fetchConfig() {
     $('#all-category').addClass('active');
     filterAndRender();
 
-    if (data.theme) {
-      applyTheme(data.theme);
-    }
+    if (data.theme) applyTheme(data.theme);
 
   } catch (err) {
     showError('Cannot connect to Sharely server. Check your settings.');
@@ -245,7 +269,7 @@ function applyTheme(theme) {
 }
 
 // Category filter
-$(document).on('click', '.category-filter:not([disabled])', function() {
+$(document).on('click', '.category-filter:not([disabled])', function () {
   $('.category-filter').removeClass('active');
   $(this).addClass('active');
   currentCategory = $(this).data('category');
@@ -256,7 +280,7 @@ $(document).on('click', '.category-filter:not([disabled])', function() {
 $('#appSearch').on('input', filterAndRender);
 
 // Toggle category filters
-$('#toggleFilters').on('click', function() {
+$('#toggleFilters').on('click', function () {
   $(this).toggleClass('rotated');
   $('#categoryFiltersContainer').toggleClass('hidden');
 });
@@ -271,8 +295,12 @@ $('#safeLogout').on('click', clearAllCookies);
 $('#theme-light').on('click', () => applyTheme('dark'));
 $('#theme-dark').on('click', () => applyTheme('light'));
 
+// Account picker close
+$('#accountPickerClose, #accountPickerOverlay').on('click', closeAccountPicker);
+$('#accountPicker').on('click', function (e) { e.stopPropagation(); });
+
 // Settings
-$('#settingsButton').on('click', async () => {
+$('#settingsButton, #openSettingsFromError').on('click', async () => {
   const stored = await loadStorage();
   $('#settingServerUrl').val(stored.serverUrl || '');
   $('#settingApiKey').val(stored.apiKey || '');
@@ -281,14 +309,6 @@ $('#settingsButton').on('click', async () => {
 });
 
 $('#closeSettings').on('click', () => $('#settingsOverlay').hide());
-
-$('#openSettingsFromError').on('click', async () => {
-  const stored = await loadStorage();
-  $('#settingServerUrl').val(stored.serverUrl || '');
-  $('#settingApiKey').val(stored.apiKey || '');
-  $('#settingsStatus').text('');
-  $('#settingsOverlay').show();
-});
 
 $('#saveSettingsBtn').on('click', async () => {
   const url = $('#settingServerUrl').val().trim().replace(/\/+$/, '');
@@ -334,8 +354,6 @@ $('#adminButton').on('click', async () => {
 // Initialise
 $(async () => {
   const stored = await loadStorage();
-  if (stored.theme) {
-    applyTheme(stored.theme);
-  }
+  if (stored.theme) applyTheme(stored.theme);
   fetchConfig();
 });

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sharely Extension",
-  "version": "1.0",
+  "version": "1.1",
   "description": "One-click access to shared premium services. Powered by Sharely.",
   "action": {
     "default_popup": "./popup.html",
@@ -9,9 +9,6 @@
       "16": "./icons/icon-16.png",
       "128": "./icons/icon-128.png"
     }
-  },
-  "side_panel": {
-    "default_path": "./popup.html"
   },
   "background": {
     "service_worker": "./background.js"
@@ -33,7 +30,6 @@
     "cookies",
     "storage",
     "activeTab",
-    "sidePanel",
     "contextMenus",
     "tabs"
   ],

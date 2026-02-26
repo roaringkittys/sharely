@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
-
+const multer = require('multer');
 const crypto = require('crypto');
 
 const app = express();
@@ -19,6 +19,9 @@ if (!fs.existsSync(path.join(__dirname, 'data'))) {
 }
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
+
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS admin_users (
@@ -33,6 +36,7 @@ db.exec(`
     name TEXT NOT NULL,
     domain TEXT NOT NULL,
     icon TEXT DEFAULT '🌐',
+    icon_url TEXT DEFAULT NULL,
     category TEXT DEFAULT 'other',
     enabled INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -61,6 +65,13 @@ db.exec(`
     value TEXT NOT NULL
   );
 `);
+
+// Add icon_url column to existing databases (migration)
+try {
+  db.exec(`ALTER TABLE services ADD COLUMN icon_url TEXT DEFAULT NULL`);
+} catch (e) {
+  // Column already exists — ignore
+}
 
 const adminExists = db.prepare('SELECT COUNT(*) as count FROM admin_users').get();
 if (adminExists.count === 0) {
@@ -100,6 +111,23 @@ function generateApiKey() {
   for (let i = 0; i < 32; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
   return key;
 }
+
+// Multer setup for icon uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, `service-${req.params.id}-${Date.now()}${ext}`);
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
 
 app.use(cors({
   origin: '*',
@@ -188,8 +216,26 @@ app.put('/api/services/:id', requireAuth, (req, res) => {
 });
 
 app.delete('/api/services/:id', requireAuth, (req, res) => {
-  db.prepare('DELETE FROM cookies WHERE service_id = ?').run(req.params.id);
   db.prepare('DELETE FROM services WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+// Upload icon for a service
+app.post('/api/services/:id/upload-icon', requireAuth, upload.single('icon'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded or invalid file type' });
+  const iconUrl = `/uploads/${req.file.filename}`;
+  db.prepare('UPDATE services SET icon_url=? WHERE id=?').run(iconUrl, req.params.id);
+  res.json({ success: true, icon_url: iconUrl });
+});
+
+// Remove icon from a service
+app.delete('/api/services/:id/upload-icon', requireAuth, (req, res) => {
+  const service = db.prepare('SELECT icon_url FROM services WHERE id=?').get(req.params.id);
+  if (service && service.icon_url) {
+    const filePath = path.join(__dirname, 'public', service.icon_url);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+  db.prepare('UPDATE services SET icon_url=NULL WHERE id=?').run(req.params.id);
   res.json({ success: true });
 });
 
@@ -197,9 +243,9 @@ app.get('/api/cookies', requireAuth, (req, res) => {
   const { service_id } = req.query;
   let cookies;
   if (service_id) {
-    cookies = db.prepare('SELECT c.*, s.name as service_name, s.domain as service_domain FROM cookies c JOIN services s ON c.service_id = s.id WHERE c.service_id = ? ORDER BY c.cookie_name').all(service_id);
+    cookies = db.prepare('SELECT c.*, s.name as service_name, s.domain as service_domain FROM cookies c JOIN services s ON c.service_id = s.id WHERE c.service_id = ? ORDER BY c.label, c.cookie_name').all(service_id);
   } else {
-    cookies = db.prepare('SELECT c.*, s.name as service_name, s.domain as service_domain FROM cookies c JOIN services s ON c.service_id = s.id ORDER BY s.name, c.cookie_name').all();
+    cookies = db.prepare('SELECT c.*, s.name as service_name, s.domain as service_domain FROM cookies c JOIN services s ON c.service_id = s.id ORDER BY s.name, c.label, c.cookie_name').all();
   }
   res.json(cookies);
 });
@@ -229,7 +275,7 @@ app.delete('/api/cookies/:id', requireAuth, (req, res) => {
 });
 
 app.post('/api/cookies/bulk', requireAuth, (req, res) => {
-  const { service_id, label, cookies, cookie_domain, cookie_path, secure, http_only, same_site, expiry } = req.body;
+  const { service_id, label, cookies, cookie_domain, cookie_path, expiry } = req.body;
   if (!service_id || !cookies || !cookie_domain) {
     return res.status(400).json({ error: 'service_id, cookies, and cookie_domain are required' });
   }
@@ -242,15 +288,15 @@ app.post('/api/cookies/bulk', requireAuth, (req, res) => {
     let count = 0;
     for (const [name, value] of Object.entries(cookieMap)) {
       insert.run(
-        service_id, 
-        label || 'Bulk Import', 
-        name, 
-        value, 
-        cookie_domain, 
-        cookie_path || '/', 
-        1, // secure: always on for Netflix
-        1, // http_only: always on for Netflix auth
-        'no_restriction', // same_site: required for cross-site auth
+        service_id,
+        label || 'Bulk Import',
+        name,
+        value,
+        cookie_domain,
+        cookie_path || '/',
+        1, // secure
+        1, // http_only
+        'no_restriction', // same_site
         expiry || 0
       );
       count++;
@@ -288,30 +334,53 @@ app.post('/api/settings/regenerate-key', requireAuth, (req, res) => {
   res.json({ api_key: newKey });
 });
 
+// Extension config — groups cookies by label into "accounts"
 app.get('/api/extension/config', requireApiKey, (req, res) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
-  
+
   const settings = {};
   db.prepare('SELECT * FROM extension_settings').all().forEach(row => {
     settings[row.key] = row.value;
   });
-  const services = db.prepare('SELECT * FROM services WHERE enabled = 1 ORDER BY name').all();
-  const cookies = db.prepare('SELECT c.*, s.domain as service_domain, s.name as service_name FROM cookies c JOIN services s ON c.service_id = s.id WHERE c.enabled = 1 AND s.enabled = 1').all();
 
-  const serviceData = services.map(s => ({
-    ...s,
-    cookies: cookies.filter(c => c.service_id === s.id).map(c => ({
-      name: c.cookie_name,
-      value: c.cookie_value,
-      domain: c.cookie_domain,
-      path: c.cookie_path,
-      secure: !!c.secure,
-      httpOnly: !!c.http_only,
-      sameSite: c.same_site,
-      expirationDate: c.expiry || undefined,
-    }))
-  }));
+  const services = db.prepare('SELECT * FROM services WHERE enabled = 1 ORDER BY name').all();
+  const allCookies = db.prepare(
+    'SELECT c.*, s.domain as service_domain, s.name as service_name FROM cookies c JOIN services s ON c.service_id = s.id WHERE c.enabled = 1 AND s.enabled = 1 ORDER BY c.label, c.cookie_name'
+  ).all();
+
+  const serviceData = services.map(s => {
+    const serviceCookies = allCookies.filter(c => c.service_id === s.id);
+
+    // Group cookies by label → accounts
+    const accountMap = {};
+    for (const c of serviceCookies) {
+      const lbl = c.label || 'Default';
+      if (!accountMap[lbl]) accountMap[lbl] = [];
+      accountMap[lbl].push({
+        name: c.cookie_name,
+        value: c.cookie_value,
+        domain: c.cookie_domain,
+        path: c.cookie_path,
+        secure: !!c.secure,
+        httpOnly: !!c.http_only,
+        sameSite: c.same_site,
+        expirationDate: c.expiry || undefined,
+      });
+    }
+
+    const accounts = Object.entries(accountMap).map(([label, cookies]) => ({ label, cookies }));
+
+    return {
+      id: s.id,
+      name: s.name,
+      domain: s.domain,
+      icon: s.icon,
+      icon_url: s.icon_url || null,
+      category: s.category,
+      accounts,
+    };
+  });
 
   res.json({
     extension_name: settings.extension_name || 'Sharely',
@@ -326,26 +395,22 @@ app.get('/api/stats', requireAuth, (req, res) => {
   const activeServices = db.prepare('SELECT COUNT(*) as count FROM services WHERE enabled = 1').get().count;
   const totalCookies = db.prepare('SELECT COUNT(*) as count FROM cookies').get().count;
   const activeCookies = db.prepare('SELECT COUNT(*) as count FROM cookies WHERE enabled = 1').get().count;
-  const categories = db.prepare('SELECT category, COUNT(*) as count FROM services GROUP BY category').all();
-  res.json({ totalServices, activeServices, totalCookies, activeCookies, categories });
+  res.json({ totalServices, activeServices, totalCookies, activeCookies });
+});
+
+app.get('/api/download/extension', requireAuth, (req, res) => {
+  const zipPath = path.join(__dirname, 'public', 'sharely-extension.zip');
+  if (fs.existsSync(zipPath)) {
+    res.download(zipPath, 'sharely-extension.zip');
+  } else {
+    res.status(404).json({ error: 'Extension zip not found. Please build it first.' });
+  }
 });
 
 app.get('/', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/services', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/cookies', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/settings', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Sharely Admin Dashboard running on port ${PORT}`);
+  console.log(`Sharely Admin running on port ${PORT}`);
 });

@@ -70,10 +70,24 @@
     </div>
   </footer>
 
+  <!-- Notification Modal -->
   <div class="notificationModal" id="notification-0" style="display:none">
     <div class="notificationModal-content"></div>
   </div>
 
+  <!-- Account Picker -->
+  <div class="account-picker-overlay" id="accountPickerOverlay">
+    <div class="account-picker-box" id="accountPicker">
+      <div class="account-picker-header">
+        <h3 id="accountPickerTitle"></h3>
+        <i class="fas fa-times account-picker-close" id="accountPickerClose"></i>
+      </div>
+      <p style="font-size:11px;color:#aaa;margin-bottom:12px">Select an account to log in:</p>
+      <div id="accountPickerList"></div>
+    </div>
+  </div>
+
+  <!-- Settings Overlay -->
   <div class="settingsOverlay" id="settingsOverlay" style="display:none">
     <div class="settingsBox">
       <div class="settingsBox-header">

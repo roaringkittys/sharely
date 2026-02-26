@@ -153,19 +153,36 @@
         <label>Domain</label>
         <input type="text" id="serviceDomain" placeholder="e.g. chatgpt.com">
       </div>
-      <div class="form-group">
-        <label>Icon (emoji)</label>
-        <input type="text" id="serviceIcon" placeholder="e.g. 🤖" maxlength="4">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label>Emoji Icon (fallback)</label>
+          <input type="text" id="serviceIcon" placeholder="e.g. 🤖" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="serviceCategory">
+            <option value="productivity">Productivity & AI</option>
+            <option value="streaming">Entertainment</option>
+            <option value="design">Design</option>
+            <option value="music">Music</option>
+            <option value="education">Education</option>
+            <option value="utilities">Utilities</option>
+            <option value="proexclusive">Pro Exclusive</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
       </div>
       <div class="form-group">
-        <label>Category</label>
-        <select id="serviceCategory">
-          <option value="productivity">Productivity & AI</option>
-          <option value="streaming">Entertainment</option>
-          <option value="design">Design</option>
-          <option value="education">Education</option>
-          <option value="other">Other</option>
-        </select>
+        <label>Custom Logo (PNG/JPG — shown in extension instead of emoji)</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <img id="serviceIconPreview" src="" alt="" style="width:48px;height:48px;border-radius:10px;object-fit:cover;display:none;border:1px solid rgba(255,255,255,0.1)">
+          <div style="flex:1">
+            <input type="file" id="serviceIconFile" accept="image/*" style="display:none">
+            <button class="btn btn-outline btn-sm" id="uploadIconBtn" type="button">Upload Logo</button>
+            <button class="btn btn-danger btn-sm" id="removeIconBtn" type="button" style="display:none">Remove</button>
+            <div id="iconUploadStatus" style="font-size:11px;color:#aaa;margin-top:4px"></div>
+          </div>
+        </div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="closeModal('serviceModal')">Cancel</button>

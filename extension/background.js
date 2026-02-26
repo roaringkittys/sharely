@@ -1,4 +1,4 @@
-/* background.js for Sharely Extension 1.0 */
+/* background.js for Sharely Extension 1.1 */
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Sharely Extension installed');
@@ -9,21 +9,16 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
-
-// Fix SameSite values: Chrome cookies API uses specific strings
 function fixSameSite(value) {
   const v = (value || 'lax').toLowerCase();
   if (v === 'none' || v === 'no_restriction') return 'no_restriction';
   if (v === 'strict') return 'strict';
-  return 'lax'; // default safe value
+  return 'lax';
 }
 
-// Build the correct URL for chrome.cookies.set()
 function buildCookieUrl(domain, path) {
   const cleanDomain = domain.replace(/^\./, '');
-  const cleanPath = path || '/';
-  return `https://${cleanDomain}${cleanPath}`;
+  return `https://${cleanDomain}${path || '/'}`;
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -32,23 +27,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { cookies, targetUrl } = message;
     const results = { success: [], failed: [] };
 
-    const setCookiesSequentially = async () => {
-      // 1. Clear existing cookies for this domain first to avoid conflicts
+    const run = async () => {
       const urlObj = new URL(targetUrl);
-      const existingCookies = await chrome.cookies.getAll({ domain: urlObj.hostname });
-      for (const c of existingCookies) {
+
+      // Clear existing cookies for this domain
+      const existing = await chrome.cookies.getAll({ domain: urlObj.hostname });
+      for (const c of existing) {
         const cUrl = `https://${c.domain.replace(/^\./, '')}${c.path}`;
-        await chrome.cookies.remove({ url: cUrl, name: c.name });
+        await chrome.cookies.remove({ url: cUrl, name: c.name }).catch(() => {});
       }
 
-      // 2. Set new cookies
+      // Set new cookies
       for (const cookie of cookies) {
         const sameSite = fixSameSite(cookie.sameSite);
         const isSecure = (sameSite === 'no_restriction') ? true : (cookie.secure !== false);
         const domain = cookie.domain.startsWith('.') ? cookie.domain : '.' + cookie.domain;
         const url = buildCookieUrl(domain, cookie.path);
 
-        const cookieParams = {
+        const params = {
           url,
           name: cookie.name,
           value: cookie.value,
@@ -60,16 +56,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         };
 
         if (cookie.expirationDate && cookie.expirationDate > Date.now() / 1000) {
-          cookieParams.expirationDate = cookie.expirationDate;
+          params.expirationDate = cookie.expirationDate;
         }
 
         try {
-          console.log('Setting cookie:', cookie.name, 'on', url);
-          const result = await chrome.cookies.set(cookieParams);
+          console.log('Setting cookie:', cookie.name, 'on', url, '| sameSite:', sameSite, '| httpOnly:', params.httpOnly);
+          const result = await chrome.cookies.set(params);
           if (result) {
             results.success.push(cookie.name);
           } else {
-            const err = chrome.runtime.lastError ? chrome.runtime.lastError.message : 'Unknown rejection';
+            const err = chrome.runtime.lastError ? chrome.runtime.lastError.message : 'null result';
             results.failed.push({ name: cookie.name, reason: err });
           }
         } catch (e) {
@@ -77,11 +73,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       }
 
-      // 3. Verification step: Check if critical cookies were actually set
-      const verifiedCookies = await chrome.cookies.getAll({ domain: urlObj.hostname });
-      console.log('Verification: Cookies currently set for', urlObj.hostname, verifiedCookies.map(c => c.name));
+      // Verify
+      const verified = await chrome.cookies.getAll({ domain: urlObj.hostname });
+      console.log('Verified cookies for', urlObj.hostname, ':', verified.map(c => c.name));
 
-      // 4. Open tab
+      // Open tab
       if (results.success.length > 0) {
         await chrome.tabs.create({ url: targetUrl });
       }
@@ -89,7 +85,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return results;
     };
 
-    setCookiesSequentially()
+    run()
       .then(results => sendResponse({ success: true, results }))
       .catch(err => sendResponse({ success: false, error: err.message }));
 
@@ -98,21 +94,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'CLEAR_ALL') {
     const { domains } = message;
-    const clearAll = async () => {
+    const clear = async () => {
       let cleared = 0;
       for (const domain of domains) {
         const cookies = await chrome.cookies.getAll({ domain });
-        for (const cookie of cookies) {
-          const url = `https://${cookie.domain.replace(/^\./, '')}${cookie.path}`;
-          try {
-            await chrome.cookies.remove({ url, name: cookie.name });
-            cleared++;
-          } catch (e) { }
+        for (const c of cookies) {
+          const url = `https://${c.domain.replace(/^\./, '')}${c.path}`;
+          await chrome.cookies.remove({ url, name: c.name }).catch(() => {});
+          cleared++;
         }
       }
       return cleared;
     };
-    clearAll().then(cleared => sendResponse({ success: true, cleared }));
+    clear().then(cleared => sendResponse({ success: true, cleared }));
     return true;
   }
 });

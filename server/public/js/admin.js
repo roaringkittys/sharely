@@ -113,17 +113,22 @@ async function loadServices() {
     document.getElementById('servicesTable').innerHTML = '<div class="empty-state"><p>No services yet. Click "Add Service" to get started.</p></div>';
     return;
   }
-  document.getElementById('servicesTable').innerHTML = `<table><thead><tr><th>Icon</th><th>Name</th><th>Domain</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead><tbody>${services.map(s => `<tr>
-    <td style="font-size:24px">${s.icon}</td>
-    <td><strong>${s.name}</strong></td>
-    <td><code>${s.domain}</code></td>
-    <td><span class="badge badge-info">${s.category}</span></td>
-    <td><span class="badge ${s.enabled ? 'badge-success' : 'badge-danger'}">${s.enabled ? 'Active' : 'Disabled'}</span></td>
-    <td class="actions-cell">
-      <button class="btn btn-outline btn-sm" onclick="editService(${s.id})">Edit</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteService(${s.id}, '${s.name}')">Delete</button>
-    </td>
-  </tr>`).join('')}</tbody></table>`;
+  document.getElementById('servicesTable').innerHTML = `<table><thead><tr><th>Logo</th><th>Name</th><th>Domain</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead><tbody>${services.map(s => {
+    const iconCell = s.icon_url
+      ? `<img src="${s.icon_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover">`
+      : `<span style="font-size:24px">${s.icon || '🌐'}</span>`;
+    return `<tr>
+      <td>${iconCell}</td>
+      <td><strong>${s.name}</strong></td>
+      <td><code>${s.domain}</code></td>
+      <td><span class="badge badge-info">${s.category}</span></td>
+      <td><span class="badge ${s.enabled ? 'badge-success' : 'badge-danger'}">${s.enabled ? 'Active' : 'Disabled'}</span></td>
+      <td class="actions-cell">
+        <button class="btn btn-outline btn-sm" onclick="editService(${s.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteService(${s.id}, '${s.name}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
 }
 
 async function loadCookies() {
@@ -238,6 +243,48 @@ document.getElementById('processBulkBtn').addEventListener('click', async () => 
   }
 });
 
+function resetServiceIconUI(iconUrl) {
+  const preview = document.getElementById('serviceIconPreview');
+  const removeBtn = document.getElementById('removeIconBtn');
+  document.getElementById('serviceIconFile').value = '';
+  document.getElementById('iconUploadStatus').textContent = '';
+  if (iconUrl) {
+    preview.src = iconUrl;
+    preview.style.display = 'block';
+    removeBtn.style.display = 'inline-block';
+  } else {
+    preview.src = '';
+    preview.style.display = 'none';
+    removeBtn.style.display = 'none';
+  }
+}
+
+document.getElementById('uploadIconBtn').addEventListener('click', () => {
+  document.getElementById('serviceIconFile').click();
+});
+
+document.getElementById('serviceIconFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const preview = document.getElementById('serviceIconPreview');
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    preview.src = ev.target.result;
+    preview.style.display = 'block';
+    document.getElementById('iconUploadStatus').textContent = `Ready to upload: ${file.name}`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('removeIconBtn').addEventListener('click', async () => {
+  const id = document.getElementById('serviceId').value;
+  if (!id) { resetServiceIconUI(null); return; }
+  await fetch(`/api/services/${id}/upload-icon`, { method: 'DELETE' });
+  resetServiceIconUI(null);
+  showToast('Logo removed');
+  loadServices();
+});
+
 document.getElementById('addServiceBtn').addEventListener('click', () => {
   document.getElementById('serviceModalTitle').textContent = 'Add Service';
   document.getElementById('serviceId').value = '';
@@ -245,6 +292,7 @@ document.getElementById('addServiceBtn').addEventListener('click', () => {
   document.getElementById('serviceDomain').value = '';
   document.getElementById('serviceIcon').value = '';
   document.getElementById('serviceCategory').value = 'productivity';
+  resetServiceIconUI(null);
   openModal('serviceModal');
 });
 
@@ -257,6 +305,7 @@ window.editService = async function(id) {
   document.getElementById('serviceDomain').value = s.domain;
   document.getElementById('serviceIcon').value = s.icon;
   document.getElementById('serviceCategory').value = s.category;
+  resetServiceIconUI(s.icon_url || null);
   openModal('serviceModal');
 };
 
@@ -270,13 +319,29 @@ document.getElementById('saveServiceBtn').addEventListener('click', async () => 
     enabled: true,
   };
   if (!data.name || !data.domain) { showToast('Name and domain are required', 'error'); return; }
+
+  let serviceId = id;
   if (id) {
     await API.put(`/api/services/${id}`, data);
-    showToast('Service updated');
   } else {
-    await API.post('/api/services', data);
-    showToast('Service added');
+    const res = await API.post('/api/services', data);
+    serviceId = res.id;
   }
+
+  // Upload icon if a file was selected
+  const fileInput = document.getElementById('serviceIconFile');
+  if (fileInput.files.length > 0 && serviceId) {
+    const formData = new FormData();
+    formData.append('icon', fileInput.files[0]);
+    const uploadRes = await fetch(`/api/services/${serviceId}/upload-icon`, {
+      method: 'POST',
+      body: formData
+    });
+    const uploadJson = await uploadRes.json();
+    if (!uploadJson.success) showToast('Icon upload failed: ' + uploadJson.error, 'error');
+  }
+
+  showToast(id ? 'Service updated' : 'Service added');
   closeModal('serviceModal');
   loadServices();
 });
