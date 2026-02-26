@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sharely Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">S</div>
+        <span>Sharely</span>
+      </div>
+      <div class="sidebar-nav">
+        <a href="#dashboard" class="active" data-page="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#services" data-page="services">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Services</span>
+        </a>
+        <a href="#cookies" data-page="cookies">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="6" cy="14" r="1"/><circle cx="14" cy="16" r="1"/></svg>
+          <span>Cookies</span>
+        </a>
+        <a href="#settings" data-page="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Settings</span>
+        </a>
+      </div>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline btn-sm btn-full" id="logoutBtn">Sign Out</button>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div id="page-dashboard" class="page">
+        <div class="page-header"><h1>Dashboard</h1></div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="card">
+          <div class="card-header"><h2>Recent Cookies</h2></div>
+          <div id="recentCookiesTable"></div>
+        </div>
+      </div>
+
+      <div id="page-services" class="page" style="display:none">
+        <div class="page-header">
+          <h1>Services</h1>
+          <button class="btn btn-primary" id="addServiceBtn">+ Add Service</button>
+        </div>
+        <div class="card">
+          <div id="servicesTable"></div>
+        </div>
+      </div>
+
+      <div id="page-cookies" class="page" style="display:none">
+        <div class="page-header">
+          <h1>Cookies</h1>
+          <div style="display:flex;gap:10px;align-items:center">
+            <select id="cookieServiceFilter" style="width:200px">
+              <option value="">All Services</option>
+            </select>
+            <button class="btn btn-primary" id="addCookieBtn">+ Add Cookie</button>
+          </div>
+        </div>
+        <div class="card">
+          <div id="cookiesTable"></div>
+        </div>
+      </div>
+
+      <div id="page-settings" class="page" style="display:none">
+        <div class="page-header"><h1>Settings</h1></div>
+        <div class="card">
+          <div class="card-header"><h2>Extension Settings</h2></div>
+          <form id="settingsForm">
+            <div class="form-group">
+              <label>Extension Name</label>
+              <input type="text" id="setting-extension_name">
+            </div>
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="setting-extension_version">
+            </div>
+            <div class="form-group">
+              <label>Theme</label>
+              <select id="setting-theme">
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>API Key</h2>
+            <button class="btn btn-outline btn-sm" id="regenerateKeyBtn">Regenerate</button>
+          </div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">
+            Use this key in your extension to connect to this admin dashboard.
+          </p>
+          <div class="api-key-display" id="apiKeyDisplay">Loading...</div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Change Password</h2></div>
+          <form id="passwordForm">
+            <div class="form-group">
+              <label>Current Password</label>
+              <input type="password" id="currentPassword">
+            </div>
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" id="newPassword">
+            </div>
+            <button type="submit" class="btn btn-primary">Update Password</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="serviceModal">
+    <div class="modal">
+      <h2 id="serviceModalTitle">Add Service</h2>
+      <input type="hidden" id="serviceId">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="serviceName" placeholder="e.g. ChatGPT">
+      </div>
+      <div class="form-group">
+        <label>Domain</label>
+        <input type="text" id="serviceDomain" placeholder="e.g. chatgpt.com">
+      </div>
+      <div class="form-group">
+        <label>Icon (emoji)</label>
+        <input type="text" id="serviceIcon" placeholder="e.g. 🤖" maxlength="4">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="serviceCategory">
+          <option value="productivity">Productivity & AI</option>
+          <option value="streaming">Entertainment</option>
+          <option value="design">Design</option>
+          <option value="education">Education</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('serviceModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveServiceBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="cookieModal">
+    <div class="modal">
+      <h2 id="cookieModalTitle">Add Cookie</h2>
+      <input type="hidden" id="cookieId">
+      <div class="form-group">
+        <label>Service</label>
+        <select id="cookieService"></select>
+      </div>
+      <div class="form-group">
+        <label>Label</label>
+        <input type="text" id="cookieLabel" placeholder="e.g. Account 1">
+      </div>
+      <div class="form-group">
+        <label>Cookie Name</label>
+        <input type="text" id="cookieName" placeholder="e.g. __Secure-next-auth.session-token">
+      </div>
+      <div class="form-group">
+        <label>Cookie Value</label>
+        <textarea id="cookieValue" rows="3" placeholder="Paste the cookie value here"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Cookie Domain</label>
+        <input type="text" id="cookieDomain" placeholder="e.g. .chatgpt.com">
+      </div>
+      <div class="form-group">
+        <label>Path</label>
+        <input type="text" id="cookiePath" value="/">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label>Same Site</label>
+          <select id="cookieSameSite">
+            <option value="lax">Lax</option>
+            <option value="strict">Strict</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Expiry (unix timestamp)</label>
+          <input type="number" id="cookieExpiry" value="0" placeholder="0 = session">
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;margin-bottom:10px">
+        <label class="toggle">
+          <input type="checkbox" id="cookieSecure" checked>
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:13px">Secure</span>
+        <label class="toggle">
+          <input type="checkbox" id="cookieHttpOnly">
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:13px">HttpOnly</span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('cookieModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveCookieBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
