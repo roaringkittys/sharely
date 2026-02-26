@@ -153,7 +153,18 @@ async function loadSettings() {
   document.getElementById('setting-extension_version').value = settings.extension_version || '';
   document.getElementById('setting-theme').value = settings.theme || 'dark';
   document.getElementById('apiKeyDisplay').textContent = settings.api_key || 'No key set';
+  document.getElementById('serverUrlDisplay').textContent = window.location.origin;
 }
+
+document.getElementById('cookieDomain').addEventListener('blur', (e) => {
+  let val = e.target.value.trim();
+  if (val.startsWith('http')) {
+    try {
+      const url = new URL(val);
+      e.target.value = '.' + url.hostname.replace(/^www\./, '');
+    } catch(e) {}
+  }
+});
 
 document.getElementById('addServiceBtn').addEventListener('click', () => {
   document.getElementById('serviceModalTitle').textContent = 'Add Service';

@@ -75,6 +75,18 @@
       <div id="page-settings" class="page" style="display:none">
         <div class="page-header"><h1>Settings</h1></div>
         <div class="card">
+          <div class="card-header"><h1>Extension Connection</h1></div>
+          <div class="setting-group">
+            <label>Admin Server URL (Copy this to extension)</label>
+            <div class="api-key-display" id="serverUrlDisplay">Loading...</div>
+          </div>
+          <div class="setting-group">
+            <label>API Key (Copy this to extension)</label>
+            <div class="api-key-display" id="apiKeyDisplay">Loading...</div>
+            <button class="btn btn-outline btn-sm" id="regenerateKeyBtn">Regenerate Key</button>
+          </div>
+        </div>
+        <div class="card">
           <div class="card-header"><h2>Extension Settings</h2></div>
           <form id="settingsForm">
             <div class="form-group">
