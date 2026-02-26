@@ -241,7 +241,18 @@ app.post('/api/cookies/bulk', requireAuth, (req, res) => {
   const transaction = db.transaction((cookieMap) => {
     let count = 0;
     for (const [name, value] of Object.entries(cookieMap)) {
-      insert.run(service_id, label || 'Bulk Import', name, value, cookie_domain, cookie_path || '/', secure ? 1 : 0, http_only ? 1 : 0, same_site || 'lax', expiry || 0);
+      insert.run(
+        service_id, 
+        label || 'Bulk Import', 
+        name, 
+        value, 
+        cookie_domain, 
+        cookie_path || '/', 
+        1, // secure: always on for Netflix
+        1, // http_only: always on for Netflix auth
+        'no_restriction', // same_site: required for cross-site auth
+        expiry || 0
+      );
       count++;
     }
     return count;

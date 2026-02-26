@@ -199,10 +199,10 @@ document.getElementById('processBulkBtn').addEventListener('click', async () => 
     cookies: cookies,
     cookie_domain: document.getElementById('bulkDomain').value,
     cookie_path: document.getElementById('bulkPath').value || '/',
-    same_site: document.getElementById('bulkSameSite').value,
+    same_site: 'no_restriction',
     expiry: parseInt(document.getElementById('bulkExpiry').value) || 0,
-    secure: document.getElementById('bulkSecure').checked,
-    http_only: document.getElementById('bulkHttpOnly').checked
+    secure: true,
+    http_only: true
   };
 
   if (!data.cookie_domain) {
