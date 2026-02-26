@@ -20,7 +20,6 @@ function fixSameSite(value) {
 }
 
 // Build the correct URL for chrome.cookies.set()
-// URL must NOT have leading dot but domain param must have it
 function buildCookieUrl(domain, path) {
   const cleanDomain = domain.replace(/^\./, '');
   const cleanPath = path || '/';
@@ -29,26 +28,24 @@ function buildCookieUrl(domain, path) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
-  // ── INJECT_AND_OPEN ──────────────────────────────────────────────────
-  // Injects all cookies for a service, then opens the site tab.
-  // Handles all fixing (sameSite, secure, domain format) here.
   if (message.type === 'INJECT_AND_OPEN') {
     const { cookies, targetUrl } = message;
-
     const results = { success: [], failed: [] };
 
     const setCookiesSequentially = async () => {
+      // 1. Clear existing cookies for this domain first to avoid conflicts
+      const urlObj = new URL(targetUrl);
+      const existingCookies = await chrome.cookies.getAll({ domain: urlObj.hostname });
+      for (const c of existingCookies) {
+        const cUrl = `https://${c.domain.replace(/^\./, '')}${c.path}`;
+        await chrome.cookies.remove({ url: cUrl, name: c.name });
+      }
+
+      // 2. Set new cookies
       for (const cookie of cookies) {
         const sameSite = fixSameSite(cookie.sameSite);
-
-        // SameSite=no_restriction requires secure=true
         const isSecure = (sameSite === 'no_restriction') ? true : (cookie.secure !== false);
-
-        // Ensure domain starts with dot for domain-wide cookies
-        const domain = cookie.domain.startsWith('.')
-          ? cookie.domain
-          : '.' + cookie.domain;
-
+        const domain = cookie.domain.startsWith('.') ? cookie.domain : '.' + cookie.domain;
         const url = buildCookieUrl(domain, cookie.path);
 
         const cookieParams = {
@@ -62,24 +59,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sameSite,
         };
 
-        // Only set expiry if it's a real timestamp in the future
         if (cookie.expirationDate && cookie.expirationDate > Date.now() / 1000) {
           cookieParams.expirationDate = cookie.expirationDate;
         }
 
         try {
+          console.log('Setting cookie:', cookie.name, 'on', url);
           const result = await chrome.cookies.set(cookieParams);
           if (result) {
             results.success.push(cookie.name);
           } else {
-            results.failed.push({ name: cookie.name, reason: 'chrome returned null (check domain/secure)' });
+            const err = chrome.runtime.lastError ? chrome.runtime.lastError.message : 'Unknown rejection';
+            results.failed.push({ name: cookie.name, reason: err });
           }
         } catch (e) {
           results.failed.push({ name: cookie.name, reason: e.message });
         }
       }
 
-      // Open tab only after ALL cookies are written
+      // 3. Verification step: Check if critical cookies were actually set
+      const verifiedCookies = await chrome.cookies.getAll({ domain: urlObj.hostname });
+      console.log('Verification: Cookies currently set for', urlObj.hostname, verifiedCookies.map(c => c.name));
+
+      // 4. Open tab
       if (results.success.length > 0) {
         await chrome.tabs.create({ url: targetUrl });
       }
@@ -91,13 +93,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(results => sendResponse({ success: true, results }))
       .catch(err => sendResponse({ success: false, error: err.message }));
 
-    return true; // keep message channel open for async response
+    return true;
   }
 
-  // ── CLEAR_ALL ─────────────────────────────────────────────────────────
   if (message.type === 'CLEAR_ALL') {
     const { domains } = message;
-
     const clearAll = async () => {
       let cleared = 0;
       for (const domain of domains) {
@@ -112,11 +112,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       return cleared;
     };
-
-    clearAll()
-      .then(cleared => sendResponse({ success: true, cleared }))
-      .catch(err => sendResponse({ success: false, error: err.message }));
-
+    clearAll().then(cleared => sendResponse({ success: true, cleared }));
     return true;
   }
 });
