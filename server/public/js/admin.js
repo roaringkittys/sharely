@@ -77,14 +77,32 @@ async function loadDashboard() {
     <div class="stat-card"><div class="stat-label">Total Cookies</div><div class="stat-value">${stats.totalCookies}</div></div>
     <div class="stat-card"><div class="stat-label">Active Cookies</div><div class="stat-value">${stats.activeCookies}</div></div>
   `;
+  
+  // Add Extractor Snippet Section
+  const snippet = `copy(Object.fromEntries(document.cookie.split('; ').map(c => c.split('=')))); console.log('Cookies copied to clipboard!');`;
+  
   const cookies = await API.get('/api/cookies');
   if (!cookies) return;
+  
+  let html = `
+    <div class="dashboard-section" style="margin-top:20px; padding:20px; background: rgba(255,255,255,0.05); border-radius:12px; border:1px solid rgba(255,255,255,0.1)">
+      <h3>🍪 Easy Cookie Extractor</h3>
+      <p style="font-size: 13px; opacity: 0.8; margin-bottom: 10px;">To copy cookies from any site (Netflix, etc.) as JSON, open DevTools Console (F12) and paste this:</p>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <code style="background:#000; padding:10px; border-radius:6px; flex:1; font-size:12px; color:#0f0; border:1px solid #333;">${snippet}</code>
+        <button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(\`${snippet}\`).then(() => showToast('Snippet copied!'))">Copy Snippet</button>
+      </div>
+    </div>
+    <h3 style="margin-top:30px">Recent Cookies</h3>
+  `;
+  
   if (cookies.length === 0) {
-    document.getElementById('recentCookiesTable').innerHTML = '<div class="empty-state"><p>No cookies added yet. Go to Cookies page to add some.</p></div>';
-    return;
+    html += '<div class="empty-state"><p>No cookies added yet. Go to Cookies page to add some.</p></div>';
+  } else {
+    const recent = cookies.slice(0, 5);
+    html += `<table><thead><tr><th>Service</th><th>Label</th><th>Cookie Name</th><th>Domain</th><th>Status</th></tr></thead><tbody>${recent.map(c => `<tr><td>${c.service_name}</td><td>${c.label}</td><td><code>${c.cookie_name}</code></td><td>${c.cookie_domain}</td><td><span class="badge ${c.enabled ? 'badge-success' : 'badge-danger'}">${c.enabled ? 'Active' : 'Disabled'}</span></td></tr>`).join('')}</tbody></table>`;
   }
-  const recent = cookies.slice(0, 5);
-  document.getElementById('recentCookiesTable').innerHTML = `<table><thead><tr><th>Service</th><th>Label</th><th>Cookie Name</th><th>Domain</th><th>Status</th></tr></thead><tbody>${recent.map(c => `<tr><td>${c.service_name}</td><td>${c.label}</td><td><code>${c.cookie_name}</code></td><td>${c.cookie_domain}</td><td><span class="badge ${c.enabled ? 'badge-success' : 'badge-danger'}">${c.enabled ? 'Active' : 'Disabled'}</span></td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('recentCookiesTable').innerHTML = html;
 }
 
 async function loadServices() {
