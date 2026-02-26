@@ -1,27 +1,33 @@
+/* background.js for Sharely Extension 1.0 */
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Sharely Extension installed');
+  chrome.contextMenus.create({
+    id: 'sharely-open',
+    title: 'Open Sharely',
+    contexts: ['action']
+  });
 });
 
-chrome.action.onClicked.addListener((tab) => {
-  chrome.sidePanel.open({ windowId: tab.windowId });
-});
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SET_COOKIES') {
     const { cookies } = message;
     Promise.all(
       cookies.map(cookie => {
-        const url = `http${cookie.secure ? 's' : ''}://${cookie.domain.replace(/^\./, '')}${cookie.path || '/'}`;
+        const domain = cookie.domain.startsWith('.') ? cookie.domain : '.' + cookie.domain;
+        const url = `https://${domain.replace(/^\./, '')}${cookie.path || '/'}`;
         return chrome.cookies.set({
           url,
           name: cookie.name,
           value: cookie.value,
           domain: cookie.domain,
           path: cookie.path || '/',
-          secure: cookie.secure || false,
+          secure: cookie.secure !== false,
           httpOnly: cookie.httpOnly || false,
-          sameSite: cookie.sameSite || 'lax',
-          expirationDate: cookie.expirationDate || undefined,
+          sameSite: (cookie.sameSite || 'lax').toLowerCase(),
+          expirationDate: cookie.expirationDate && cookie.expirationDate > 0 ? cookie.expirationDate : undefined,
         });
       })
     )
@@ -35,7 +41,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.cookies.getAll({ domain }, (cookies) => {
       Promise.all(
         cookies.map(cookie => {
-          const url = `http${cookie.secure ? 's' : ''}://${cookie.domain.replace(/^\./, '')}${cookie.path}`;
+          const url = `https://${cookie.domain.replace(/^\./, '')}${cookie.path}`;
           return chrome.cookies.remove({ url, name: cookie.name });
         })
       )

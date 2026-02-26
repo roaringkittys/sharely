@@ -76,15 +76,20 @@
       <div id="page-settings" class="page" style="display:none">
         <div class="page-header"><h1>Settings</h1></div>
         <div class="card">
-          <div class="card-header"><h1>Extension Connection</h1></div>
+          <div class="card-header"><h2>Extension Connection</h2></div>
           <div class="setting-group">
-            <label>Admin Server URL (Copy this to extension)</label>
-            <div class="api-key-display" id="serverUrlDisplay">Loading...</div>
+            <label>Step 1 — Download the Extension</label>
+            <a href="/sharely-extension.zip" download class="btn btn-primary" style="display:inline-block;text-decoration:none">Download Sharely Extension (.zip)</a>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px">Then in Chrome: go to <code>chrome://extensions</code>, enable Developer Mode, click "Load unpacked", select the <code>extension/</code> folder.</p>
+          </div>
+          <div class="setting-group" style="margin-top:16px">
+            <label>Step 2 — Copy this Server URL into extension Settings</label>
+            <div class="api-key-display" id="serverUrlDisplay" style="cursor:pointer" title="Click to copy">Loading...</div>
           </div>
           <div class="setting-group">
-            <label>API Key (Copy this to extension)</label>
-            <div class="api-key-display" id="apiKeyDisplay">Loading...</div>
-            <button class="btn btn-outline btn-sm" id="regenerateKeyBtn">Regenerate Key</button>
+            <label>Step 3 — Copy this API Key into extension Settings</label>
+            <div class="api-key-display" id="apiKeyDisplay" style="cursor:pointer" title="Click to copy">Loading...</div>
+            <button class="btn btn-outline btn-sm" id="regenerateKeyBtn" style="margin-top:8px">Regenerate Key</button>
           </div>
         </div>
         <div class="card">

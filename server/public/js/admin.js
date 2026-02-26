@@ -152,8 +152,16 @@ async function loadSettings() {
   document.getElementById('setting-extension_name').value = settings.extension_name || '';
   document.getElementById('setting-extension_version').value = settings.extension_version || '';
   document.getElementById('setting-theme').value = settings.theme || 'dark';
-  document.getElementById('apiKeyDisplay').textContent = settings.api_key || 'No key set';
-  document.getElementById('serverUrlDisplay').textContent = window.location.origin;
+  const apiKeyEl = document.getElementById('apiKeyDisplay');
+  const serverUrlEl = document.getElementById('serverUrlDisplay');
+  apiKeyEl.textContent = settings.api_key || 'No key set';
+  serverUrlEl.textContent = window.location.origin;
+
+  function copyText(el) {
+    navigator.clipboard.writeText(el.textContent).then(() => showToast('Copied to clipboard!'));
+  }
+  apiKeyEl.onclick = () => copyText(apiKeyEl);
+  serverUrlEl.onclick = () => copyText(serverUrlEl);
 }
 
 document.getElementById('cookieDomain').addEventListener('blur', (e) => {
