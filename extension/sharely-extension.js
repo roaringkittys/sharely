@@ -107,73 +107,77 @@ function filterAndRender() {
 }
 
 async function injectCookies(service) {
-  showNotification('Injecting...', `Setting up access to ${service.name}...`);
+  showNotification(
+    'Injecting cookies...',
+    `Setting up ${service.cookies.length} cookie(s) for ${service.name}. Please wait...`
+  );
 
-  try {
-    let successCount = 0;
-    for (const cookie of service.cookies) {
-      try {
-        const cookieDomain = cookie.domain.startsWith('.') ? cookie.domain : '.' + cookie.domain;
-        const url = `https://${cookieDomain.replace(/^\./, '')}${cookie.path || '/'}`;
-        await chrome.cookies.set({
-          url: url,
-          name: cookie.name,
-          value: cookie.value,
-          domain: cookie.domain,
-          path: cookie.path || '/',
-          secure: cookie.secure !== false,
-          httpOnly: cookie.httpOnly || false,
-          sameSite: (cookie.sameSite || 'lax').toLowerCase(),
-          expirationDate: cookie.expirationDate && cookie.expirationDate > 0 ? cookie.expirationDate : undefined,
-        });
-        successCount++;
-      } catch (e) {
-        console.warn('Failed to set cookie:', cookie.name, e.message);
+  const targetUrl = `https://${service.domain.replace(/^\./, '')}`;
+
+  // Send to background script so it survives popup closing
+  chrome.runtime.sendMessage(
+    {
+      type: 'INJECT_AND_OPEN',
+      cookies: service.cookies,
+      targetUrl,
+    },
+    (response) => {
+      if (chrome.runtime.lastError) {
+        closeNotification();
+        showNotification('Error', 'Extension background error: ' + chrome.runtime.lastError.message);
+        return;
+      }
+
+      if (response && response.success) {
+        const { results } = response;
+        const total = results.success.length + results.failed.length;
+        const ok = results.success.length;
+        const bad = results.failed.length;
+
+        if (bad === 0) {
+          showNotification(
+            '✅ Done!',
+            `${ok}/${total} cookies set. ${service.name} is opening...`
+          );
+        } else {
+          const failNames = results.failed.map(f => `${f.name}: ${f.reason}`).join('\n');
+          showNotification(
+            `⚠️ Partial (${ok}/${total} cookies set)`,
+            `Some cookies failed:\n${failNames}`
+          );
+        }
+        setTimeout(closeNotification, 3000);
+      } else {
+        closeNotification();
+        const errMsg = (response && response.error) ? response.error : 'Unknown error';
+        showNotification('Error', 'Failed to inject cookies: ' + errMsg);
       }
     }
-
-    closeNotification();
-    setTimeout(() => {
-      showNotification('Access Granted!', `${service.name} is ready. Opening now...`);
-      setTimeout(() => {
-        chrome.tabs.create({ url: `https://${service.domain}` });
-        closeNotification();
-      }, 1200);
-    }, 100);
-
-  } catch (err) {
-    closeNotification();
-    showNotification('Error', 'Failed to inject cookies: ' + err.message);
-  }
+  );
 }
 
 async function clearAllCookies() {
   if (!confirm('Clear all session cookies from Sharely services?')) return;
 
-  let cleared = 0;
-  for (const service of allServices) {
-    try {
-      const cookies = await new Promise(resolve =>
-        chrome.cookies.getAll({ domain: service.domain }, resolve)
-      );
-      for (const cookie of cookies) {
-        const url = `https://${cookie.domain.replace(/^\./, '')}${cookie.path}`;
-        await chrome.cookies.remove({ url, name: cookie.name });
-        cleared++;
-      }
-    } catch (e) { }
-  }
+  const domains = allServices.map(s => s.domain.replace(/^\./, ''));
 
-  showNotification('Logged Out', `Cleared ${cleared} cookies from all services.`);
-  setTimeout(closeNotification, 2000);
+  chrome.runtime.sendMessage({ type: 'CLEAR_ALL', domains }, (response) => {
+    if (response && response.success) {
+      showNotification('Logged Out', `Cleared ${response.cleared} cookies from all services.`);
+    } else {
+      showNotification('Logged Out', 'Cookies cleared.');
+    }
+    setTimeout(closeNotification, 2000);
+  });
 }
 
 function showNotification(title, message) {
   const $modal = $('#notification-0');
+  const safeMsg = String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
   $modal.find('.notificationModal-content').html(`
     <i class="fas fa-times close-icon" id="closeNotif"></i>
     <h2>${title}</h2>
-    <p>${message}</p>
+    <p style="text-align:left;font-size:11px;line-height:1.6">${safeMsg}</p>
   `);
   $modal.css({ display: 'flex', opacity: 1, visibility: 'visible' });
   $('#closeNotif').on('click', closeNotification);
