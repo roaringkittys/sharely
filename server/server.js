@@ -228,6 +228,33 @@ app.delete('/api/cookies/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/cookies/bulk', requireAuth, (req, res) => {
+  const { service_id, label, cookies, cookie_domain, cookie_path, secure, http_only, same_site, expiry } = req.body;
+  if (!service_id || !cookies || !cookie_domain) {
+    return res.status(400).json({ error: 'service_id, cookies, and cookie_domain are required' });
+  }
+
+  const insert = db.prepare(
+    'INSERT INTO cookies (service_id, label, cookie_name, cookie_value, cookie_domain, cookie_path, secure, http_only, same_site, expiry) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  );
+
+  const transaction = db.transaction((cookieMap) => {
+    let count = 0;
+    for (const [name, value] of Object.entries(cookieMap)) {
+      insert.run(service_id, label || 'Bulk Import', name, value, cookie_domain, cookie_path || '/', secure ? 1 : 0, http_only ? 1 : 0, same_site || 'lax', expiry || 0);
+      count++;
+    }
+    return count;
+  });
+
+  try {
+    const count = transaction(cookies);
+    res.json({ success: true, count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/settings', requireAuth, (req, res) => {
   const settings = {};
   db.prepare('SELECT * FROM extension_settings').all().forEach(row => {

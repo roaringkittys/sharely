@@ -166,6 +166,52 @@ document.getElementById('cookieDomain').addEventListener('blur', (e) => {
   }
 });
 
+document.getElementById('bulkImportBtn').addEventListener('click', () => {
+  const serviceSelect = document.getElementById('bulkService');
+  serviceSelect.innerHTML = servicesCache.map(s => `<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
+  document.getElementById('bulkLabel').value = '';
+  document.getElementById('bulkJson').value = '';
+  document.getElementById('bulkDomain').value = '';
+  openModal('bulkModal');
+});
+
+document.getElementById('processBulkBtn').addEventListener('click', async () => {
+  const jsonStr = document.getElementById('bulkJson').value;
+  let cookies;
+  try {
+    cookies = JSON.parse(jsonStr);
+  } catch (e) {
+    showToast('Invalid JSON format', 'error');
+    return;
+  }
+
+  const data = {
+    service_id: parseInt(document.getElementById('bulkService').value),
+    label: document.getElementById('bulkLabel').value || 'Bulk Import',
+    cookies: cookies,
+    cookie_domain: document.getElementById('bulkDomain').value,
+    cookie_path: document.getElementById('bulkPath').value || '/',
+    same_site: document.getElementById('bulkSameSite').value,
+    expiry: parseInt(document.getElementById('bulkExpiry').value) || 0,
+    secure: document.getElementById('bulkSecure').checked,
+    http_only: document.getElementById('bulkHttpOnly').checked
+  };
+
+  if (!data.cookie_domain) {
+    showToast('Cookie domain is required', 'error');
+    return;
+  }
+
+  const res = await API.post('/api/cookies/bulk', data);
+  if (res.success) {
+    showToast(`Successfully imported ${res.count} cookies`);
+    closeModal('bulkModal');
+    loadCookies();
+  } else {
+    showToast(res.error || 'Import failed', 'error');
+  }
+});
+
 document.getElementById('addServiceBtn').addEventListener('click', () => {
   document.getElementById('serviceModalTitle').textContent = 'Add Service';
   document.getElementById('serviceId').value = '';
