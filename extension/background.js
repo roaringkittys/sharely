@@ -50,9 +50,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           value: cookie.value,
           domain,
           path: cookie.path || '/',
-          secure: isSecure,
+          secure: true, // Always force secure for cross-site premium services
           httpOnly: cookie.httpOnly || false,
-          sameSite,
+          sameSite: sameSite,
         };
 
         if (cookie.expirationDate && cookie.expirationDate > Date.now() / 1000) {

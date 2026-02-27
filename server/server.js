@@ -296,7 +296,7 @@ app.post('/api/cookies/bulk', requireAuth, (req, res) => {
         cookie_path || '/',
         1, // secure
         1, // http_only
-        'no_restriction', // same_site
+        'no_restriction', // same_site: Force None for all imports to ensure cross-site works
         expiry || 0
       );
       count++;
