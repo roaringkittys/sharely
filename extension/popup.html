@@ -60,6 +60,7 @@
     <div class="icon-container">
       <i id="safeLogout" class="fas fa-right-from-bracket icon" title="Safely log out"></i>
       <i id="refreshButton" class="fas fa-sync-alt icon" title="Refresh"></i>
+      <i id="captureButton" class="fas fa-camera icon icon-capture" title="Capture current site cookies"></i>
       <i id="settingsButton" class="fas fa-cog icon" title="Settings"></i>
       <i id="adminButton" class="fas fa-shield-alt icon" title="Open Admin Dashboard"></i>
     </div>
@@ -73,6 +74,35 @@
   <!-- Notification Modal -->
   <div class="notificationModal" id="notification-0" style="display:none">
     <div class="notificationModal-content"></div>
+  </div>
+
+  <!-- Capture Overlay -->
+  <div class="capture-overlay" id="captureOverlay">
+    <div class="capture-box" id="captureBox">
+      <div class="capture-header">
+        <h3><i class="fas fa-camera" style="color:#6c5ce7;margin-right:8px"></i>Capture Session</h3>
+        <i class="fas fa-times capture-close" id="captureClose"></i>
+      </div>
+      <div id="captureScanning" style="text-align:center;padding:20px 0">
+        <div class="bouncing-loader" style="justify-content:center"><div></div><div></div><div></div></div>
+        <p style="font-size:12px;color:#aaa;margin-top:12px">Reading cookies from current tab...</p>
+      </div>
+      <div id="captureReady" style="display:none">
+        <div class="capture-site-info" id="captureSiteInfo"></div>
+        <div class="form-field-cap">
+          <label>Account Label</label>
+          <input type="text" id="captureLabelInput" placeholder="e.g. My Account, Account 2">
+        </div>
+        <p style="font-size:11px;color:#aaa;margin:8px 0 16px">All <strong id="captureCookieCount">0</strong> cookies will be sent to your Admin Dashboard.</p>
+        <button class="capture-confirm-btn" id="captureConfirmBtn">
+          <i class="fas fa-upload" style="margin-right:6px"></i>Send to Dashboard
+        </button>
+      </div>
+      <div id="captureError" style="display:none;text-align:center;padding:10px 0">
+        <i class="fas fa-exclamation-triangle" style="font-size:28px;color:#e17055;margin-bottom:8px;display:block"></i>
+        <p id="captureErrorMsg" style="font-size:12px;color:#e17055"></p>
+      </div>
+    </div>
   </div>
 
   <!-- Account Picker -->

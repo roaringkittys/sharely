@@ -340,6 +340,125 @@ $('#saveSettingsBtn').on('click', async () => {
   }
 });
 
+// ── One-Click Capture ─────────────────────────────────────────────────
+let capturedCookiesCache = [];
+let capturedDomainCache = '';
+
+function closeCaptureOverlay() {
+  $('#captureOverlay').fadeOut(150);
+}
+
+$('#captureButton').on('click', () => {
+  if (!serverUrl || !apiKey) {
+    showNotification('Not connected', 'Set your server URL and API key in settings first.');
+    setTimeout(closeNotification, 2500);
+    return;
+  }
+
+  // Reset state
+  capturedCookiesCache = [];
+  capturedDomainCache = '';
+  $('#captureScanning').show();
+  $('#captureReady').hide();
+  $('#captureError').hide();
+  $('#captureLabelInput').val('');
+  $('#captureOverlay').css('display', 'flex').hide().fadeIn(150);
+
+  // Ask background to get cookies from the active tab
+  chrome.runtime.sendMessage({ type: 'GET_SITE_COOKIES' }, (response) => {
+    if (chrome.runtime.lastError || !response || !response.success) {
+      const err = (response && response.error) || 'Could not read tab cookies.';
+      $('#captureScanning').hide();
+      $('#captureError').show();
+      $('#captureErrorMsg').text(err);
+      return;
+    }
+
+    const { hostname, rootDomain, tabTitle, cookies } = response;
+    capturedCookiesCache = cookies;
+    capturedDomainCache = rootDomain;
+
+    if (cookies.length === 0) {
+      $('#captureScanning').hide();
+      $('#captureError').show();
+      $('#captureErrorMsg').text(`No cookies found on ${hostname}. Make sure you are logged in.`);
+      return;
+    }
+
+    // Show the confirm UI
+    $('#captureSiteInfo').html(`
+      <div>
+        <div class="capture-site-domain">${hostname}</div>
+        <div class="capture-site-tab">${tabTitle}</div>
+      </div>
+    `);
+    $('#captureCookieCount').text(cookies.length);
+    $('#captureScanning').hide();
+    $('#captureReady').show();
+  });
+});
+
+$('#captureClose').on('click', closeCaptureOverlay);
+$('#captureOverlay').on('click', function (e) {
+  if (e.target === this) closeCaptureOverlay();
+});
+
+$('#captureConfirmBtn').on('click', async () => {
+  if (!capturedCookiesCache.length) return;
+
+  const label = $('#captureLabelInput').val().trim() || undefined;
+
+  $('#captureConfirmBtn').prop('disabled', true).text('Sending...');
+
+  try {
+    const payload = {
+      domain: capturedDomainCache,
+      cookies: capturedCookiesCache.map(c => ({
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path,
+        secure: c.secure,
+        httpOnly: c.httpOnly,
+        expirationDate: c.expirationDate,
+      })),
+      label,
+    };
+
+    const res = await fetch(`${serverUrl}/api/capture`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      closeCaptureOverlay();
+      showNotification(
+        '✅ Captured!',
+        `${data.count} cookies saved to "${data.service_name}" as "${data.label}". Refreshing...`
+      );
+      setTimeout(() => {
+        closeNotification();
+        fetchConfig();
+      }, 2000);
+    } else {
+      throw new Error(data.error || 'Unknown server error');
+    }
+
+  } catch (err) {
+    $('#captureConfirmBtn').prop('disabled', false).html('<i class="fas fa-upload" style="margin-right:6px"></i>Send to Dashboard');
+    $('#captureReady').hide();
+    $('#captureError').show();
+    $('#captureErrorMsg').text('Failed: ' + err.message);
+  }
+});
+// ─────────────────────────────────────────────────────────────────────
+
 // Admin dashboard
 $('#adminButton').on('click', async () => {
   const stored = await loadStorage();

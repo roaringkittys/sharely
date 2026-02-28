@@ -390,6 +390,65 @@ app.get('/api/extension/config', requireApiKey, (req, res) => {
   });
 });
 
+// One-Click Capture endpoint — called by extension with X-API-Key
+app.post('/api/capture', requireApiKey, (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
+
+  const { domain, cookies, label } = req.body;
+  if (!domain || !Array.isArray(cookies) || cookies.length === 0) {
+    return res.status(400).json({ error: 'domain and cookies array are required' });
+  }
+
+  // Find service by domain (partial match)
+  const cleanDomain = domain.replace(/^www\./, '');
+  let service = db.prepare("SELECT * FROM services WHERE domain LIKE ?").get(`%${cleanDomain}%`);
+
+  // Auto-create service if not found
+  if (!service) {
+    const result = db.prepare(
+      "INSERT INTO services (name, domain, icon, category) VALUES (?, ?, '🌐', 'other')"
+    ).run(cleanDomain, cleanDomain);
+    service = db.prepare('SELECT * FROM services WHERE id = ?').get(result.lastInsertRowid);
+  }
+
+  const captureLabel = label || `Captured ${new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}`;
+  const cookieDomain = `.${cleanDomain}`;
+
+  const insert = db.prepare(
+    'INSERT INTO cookies (service_id, label, cookie_name, cookie_value, cookie_domain, cookie_path, secure, http_only, same_site, expiry) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  );
+
+  const transaction = db.transaction(() => {
+    let count = 0;
+    for (const c of cookies) {
+      try {
+        insert.run(
+          service.id,
+          captureLabel,
+          c.name,
+          c.value,
+          c.domain || cookieDomain,
+          c.path || '/',
+          1,
+          c.httpOnly ? 1 : 0,
+          'no_restriction',
+          c.expirationDate ? Math.floor(c.expirationDate) : 0
+        );
+        count++;
+      } catch (e) { /* skip duplicates */ }
+    }
+    return count;
+  });
+
+  try {
+    const count = transaction();
+    res.json({ success: true, count, service_name: service.name, label: captureLabel });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/stats', requireAuth, (req, res) => {
   const totalServices = db.prepare('SELECT COUNT(*) as count FROM services').get().count;
   const activeServices = db.prepare('SELECT COUNT(*) as count FROM services WHERE enabled = 1').get().count;
