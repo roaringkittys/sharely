@@ -78,9 +78,13 @@
         <div class="card">
           <div class="card-header"><h2>Extension Connection</h2></div>
           <div class="setting-group">
-            <label>Step 1 — Download the Extension</label>
-            <a href="/sharely-extension.zip" download class="btn btn-primary" style="display:inline-block;text-decoration:none">Download Sharely Extension (.zip)</a>
-            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px">Then in Chrome: go to <code>chrome://extensions</code>, enable Developer Mode, click "Load unpacked", select the <code>extension/</code> folder.</p>
+            <label>Step 1 — Download the Extensions</label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+              <a href="/sharely-extension.zip" download class="btn btn-primary" style="display:inline-block;text-decoration:none">⬇ Sharely Extension (main)</a>
+              <a href="/sharely-capture.zip" download class="btn btn-outline" style="display:inline-block;text-decoration:none">📷 Sharely Capture (companion)</a>
+            </div>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px">In Chrome: go to <code>chrome://extensions</code>, enable Developer Mode, click "Load unpacked" and load each extension folder separately.</p>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:4px"><strong>Capture companion:</strong> Navigate to any site you're logged into, click the 📷 icon — it reads all cookies and sends them directly to this dashboard.</p>
           </div>
           <div class="setting-group" style="margin-top:16px">
             <label>Step 2 — Copy this Server URL into extension Settings</label>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sharely Capture</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="./popup.css">
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-icon">📷</div>
+    <div>
+      <h1>Sharely Capture</h1>
+      <p>One-click session cookie capture</p>
+    </div>
+  </div>
+
+  <!-- No settings configured -->
+  <div class="body" id="viewNoSettings" style="display:none">
+    <div class="no-settings">
+      <span class="no-settings-icon">⚙️</span>
+      <p>Enter your Sharely Admin URL and API Key below to get started.</p>
+    </div>
+  </div>
+
+  <!-- Scanning -->
+  <div class="body" id="viewScanning" style="display:none">
+    <div class="scanning">
+      <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      <p>Reading cookies from current tab...</p>
+    </div>
+  </div>
+
+  <!-- Ready to capture -->
+  <div class="body" id="viewReady" style="display:none">
+    <div class="site-card">
+      <img class="site-favicon" id="siteFavicon" src="" alt="">
+      <div>
+        <div class="site-domain" id="siteDomain"></div>
+        <div class="site-tab" id="siteTab"></div>
+      </div>
+    </div>
+    <p class="cookie-count">Found <strong id="cookieCount">0</strong> cookies ready to capture</p>
+    <div class="label-group">
+      <label>Account Label (optional)</label>
+      <input type="text" id="labelInput" placeholder="e.g. My Account, Account 2">
+    </div>
+    <button class="capture-btn" id="captureBtn">
+      <i class="fas fa-upload"></i> Send to Dashboard
+    </button>
+  </div>
+
+  <!-- Error -->
+  <div class="body" id="viewError" style="display:none">
+    <div class="error-box">
+      <i class="fas fa-exclamation-triangle error-icon"></i>
+      <p class="error-msg" id="errorMsg"></p>
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div class="body" id="viewSuccess" style="display:none">
+    <div class="success-box">
+      <span class="success-icon">✅</span>
+      <p class="success-title" id="successTitle"></p>
+      <p class="success-sub" id="successSub"></p>
+    </div>
+  </div>
+
+  <!-- Settings (always at bottom) -->
+  <div class="settings-section" id="settingsSection">
+    <div>
+      <label>Admin Server URL</label>
+      <input type="text" id="serverUrlInput" placeholder="https://your-app.replit.app">
+    </div>
+    <div>
+      <label>API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk_sharely_...">
+    </div>
+    <button class="save-settings-btn" id="saveSettingsBtn">Save Settings</button>
+    <div class="settings-status" id="settingsStatus"></div>
+  </div>
+
+  <script src="./popup.js"></script>
+</body>
+</html>
