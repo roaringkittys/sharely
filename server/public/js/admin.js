@@ -79,7 +79,7 @@ async function loadDashboard() {
   `;
   
   // Add Extractor Snippet Section
-  const snippet = `(async()=>{const c=await cookieStore.getAll();const o=Object.fromEntries(c.map(i=>[i.name,i.value]));copy(o);console.log('✅ '+c.length+' cookies copied to clipboard!');})();`;
+  const snippet = `(async()=>{const c=await cookieStore.getAll();const o=Object.fromEntries(c.map(i=>[i.name,i.value]));const s=JSON.stringify(o);const t=document.createElement('textarea');t.value=s;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);console.log('✅ '+c.length+' cookies copied to clipboard!');})();`;
   
   const cookies = await API.get('/api/cookies');
   if (!cookies) return;
