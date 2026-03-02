@@ -165,6 +165,10 @@ app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.html'));
 });
 
+app.get('/safari', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'safari.html'));
+});
+
 app.get('/login', (req, res) => {
   if (req.session && req.session.userId) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
