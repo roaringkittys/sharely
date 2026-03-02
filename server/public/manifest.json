@@ -1,0 +1,21 @@
+{
+  "name": "Sharely Admin",
+  "short_name": "Sharely",
+  "description": "Manage shared premium access and sessions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#6c5ce7",
+  "icons": [
+    {
+      "src": "/sharely-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/sharely-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
