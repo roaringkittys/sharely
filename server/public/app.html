@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+    <title>Sharely</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/sharely-extension.css">
+    <link rel="manifest" href="/app-manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/sharely-logo.png">
+    <style>
+        body { 
+            background: #000; 
+            min-width: unset; 
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .gpy { 
+            max-width: 100%; 
+            padding-top: 80px;
+            padding-bottom: 70px;
+            min-height: 100vh;
+        }
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 2000;
+        }
+        footer.card-footer {
+            padding-bottom: env(safe-area-inset-bottom, 15px);
+            height: auto;
+        }
+        .container { max-width: 600px; }
+        #loaded.row { margin: 0; padding: 10px; }
+        .service { margin-bottom: 20px; }
+        /* Hide extension-specific icons on web version */
+        #safeLogout, #captureButton { display: none !important; }
+    </style>
+</head>
+<body>
+    <header class="sticky-top">
+        <div class="header-top-content container">
+            <div class="sharely-logo">
+                <span class="logo-icon">S</span>
+                <span class="logo-text">Sharely</span>
+            </div>
+            <div class="search-container">
+                <i class="fa fa-search search-icon"></i>
+                <input type="text" id="appSearch" class="form-control" placeholder="Search services...">
+            </div>
+        </div>
+        <div class="filters-toggle-wrapper container">
+            <span class="filters-label">Categories</span>
+            <i class="fas fa-chevron-down" id="toggleFilters"></i>
+        </div>
+        <div class="category-filters-container container" id="categoryFiltersContainer">
+            <div class="category-filters">
+                <button class="btn btn-outline-light category-filter active" data-category="all">♾️ All</button>
+                <button class="btn btn-outline-light category-filter" data-category="productivity">⚡ Productivity</button>
+                <button class="btn btn-outline-light category-filter" data-category="streaming">🍿 Entertainment</button>
+                <button class="btn btn-outline-light category-filter" data-category="design">🖼️ Visual</button>
+                <button class="btn btn-outline-light category-filter" data-category="music">🎧 Music</button>
+                <button class="btn btn-outline-light category-filter" data-category="education">📚 Learning</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="card text-center card-body gpy">
+        <div id="loading" class="full-page-container">
+            <div class="bouncing-loader"><div></div><div></div><div></div></div>
+        </div>
+        <div id="loaded" class="row menu d-none"></div>
+    </main>
+
+    <footer class="py-2 card-footer justify-content-between">
+        <div class="icon-container">
+            <i id="refreshButton" class="fas fa-sync-alt icon"></i>
+            <i id="settingsButton" class="fas fa-cog icon"></i>
+        </div>
+        <div class="theme-switcher">
+            <span class="footer-text">Sharely &copy; 2026</span>
+            <i id="theme-light" class="fas fa-sun icon"></i>
+            <i id="theme-dark" class="fas fa-moon icon d-none"></i>
+        </div>
+    </footer>
+
+    <!-- Account Picker Overlay -->
+    <div class="account-picker-overlay" id="accountPickerOverlay">
+        <div class="account-picker-box">
+            <div class="account-picker-header">
+                <h3 id="accountPickerTitle">Select Account</h3>
+                <i class="fas fa-times account-picker-close" id="accountPickerClose"></i>
+            </div>
+            <div id="accountPickerList"></div>
+        </div>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div class="settingsOverlay" id="settingsOverlay" style="display:none">
+        <div class="settingsBox">
+            <div class="settingsBox-header">
+                <h2>Settings</h2>
+                <i class="fas fa-times close-icon" id="closeSettings"></i>
+            </div>
+            <div class="settings-field">
+                <label>API Key</label>
+                <input type="password" id="settingApiKey" placeholder="sk_sharely_...">
+            </div>
+            <button class="btn btn-primary w-100" id="saveSettingsBtn">Save & Connect</button>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        // Simplified Mobile Web Version of sharely-extension.js
+        let servicesCache = [];
+        const API_BASE = window.location.origin;
+
+        async function init() {
+            const apiKey = localStorage.getItem('sharely_api_key');
+            if (!apiKey) {
+                $('#settingsOverlay').show();
+                $('#loading').hide();
+                return;
+            }
+            loadServices();
+        }
+
+        async function loadServices() {
+            try {
+                const res = await fetch(`${API_BASE}/api/config`, {
+                    headers: { 'X-API-Key': localStorage.getItem('sharely_api_key') }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    servicesCache = data.services;
+                    renderServices(servicesCache);
+                    $('#loading').hide();
+                    $('#loaded').removeClass('d-none');
+                }
+            } catch (e) {
+                alert('Connection failed');
+            }
+        }
+
+        function renderServices(services) {
+            const $menu = $('#loaded');
+            $menu.empty();
+            services.forEach(s => {
+                const icon = s.icon_url ? `<div class="service-img-icon"><img src="${s.icon_url}"></div>` : `<div class="service-emoji-icon">${s.icon || '🌐'}</div>`;
+                const badge = s.accounts.length > 1 ? `<span class="account-badge">${s.accounts.length}</span>` : '';
+                const $item = $(`
+                    <div class="col-4 text-center service" data-id="${s.id}">
+                        <div style="position:relative;display:inline-block">
+                            ${icon}${badge}
+                        </div>
+                        <p class="menu-text">${s.name}</p>
+                    </div>
+                `);
+                $item.on('click', () => showAccounts(s));
+                $menu.append($item);
+            });
+        }
+
+        function showAccounts(service) {
+            const $list = $('#accountPickerList').empty();
+            $('#accountPickerTitle').text(service.name);
+            service.accounts.forEach(acc => {
+                const $btn = $(`<button class="account-pick-btn w-100 mb-2">
+                    <span>${acc.label}</span>
+                    <i class="fas fa-copy"></i>
+                </button>`);
+                $btn.on('click', () => {
+                    // In web app, we just copy cookies to clipboard since we can't inject
+                    const cookieStr = JSON.stringify(acc.cookies);
+                    navigator.clipboard.writeText(cookieStr);
+                    alert('Cookies copied to clipboard! (Injection requires Chrome Extension)');
+                });
+                $list.append($btn);
+            });
+            $('#accountPickerOverlay').css('display', 'flex');
+        }
+
+        $('#saveSettingsBtn').on('click', () => {
+            localStorage.setItem('sharely_api_key', $('#settingApiKey').val());
+            $('#settingsOverlay').hide();
+            $('#loading').show();
+            loadServices();
+        });
+
+        $('#accountPickerClose').on('click', () => $('#accountPickerOverlay').hide());
+        $('#closeSettings').on('click', () => $('#settingsOverlay').hide());
+        $('#settingsButton').on('click', () => $('#settingsOverlay').show());
+        $('#refreshButton').on('click', () => loadServices());
+
+        init();
+    </script>
+</body>
+</html>

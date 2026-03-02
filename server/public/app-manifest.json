@@ -1,0 +1,21 @@
+{
+  "name": "Sharely",
+  "short_name": "Sharely",
+  "description": "Premium access on your mobile device.",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#6c5ce7",
+  "icons": [
+    {
+      "src": "/sharely-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/sharely-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
