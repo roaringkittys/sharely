@@ -197,6 +197,18 @@ document.getElementById('cookieDomain').addEventListener('blur', (e) => {
   }
 });
 
+document.getElementById('bulkDomain').addEventListener('blur', (e) => {
+  let val = e.target.value.trim();
+  if (val.startsWith('http')) {
+    try {
+      const url = new URL(val);
+      e.target.value = '.' + url.hostname.replace(/^www\./, '');
+    } catch(e) {}
+  } else if (val && !val.startsWith('.')) {
+    e.target.value = '.' + val;
+  }
+});
+
 document.getElementById('bulkImportBtn').addEventListener('click', () => {
   const serviceSelect = document.getElementById('bulkService');
   serviceSelect.innerHTML = servicesCache.map(s => `<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');

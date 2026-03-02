@@ -71,7 +71,7 @@ function renderServices(services) {
     const accountCount = accounts.length;
 
     const $item = $(`
-      <div class="col-3 text-center service" data-category="${service.category}" data-id="${service.id}">
+      <div class="col-2 text-center service" data-category="${service.category}" data-id="${service.id}">
         <div style="position:relative;display:inline-block">
           ${buildServiceIcon(service)}
           ${!hasAccounts ? '<span class="overlay">–</span>' : ''}
