@@ -18,6 +18,19 @@
       --text: #ffffff;
       --muted: #888;
     }
+
+    /* ── Dev API Modal ── */
+    .dev-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .dev-modal.active { display: flex; }
+    .dev-modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; max-width: 420px; width: 90%; }
+    .dev-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .dev-modal-header h2 { font-size: 18px; font-weight: 800; margin: 0; }
+    .dev-close-btn { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+    .dev-field { margin-bottom: 16px; }
+    .dev-field label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .dev-field input { width: 100%; padding: 10px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 12px; font-family: monospace; }
+    .dev-copy-btn { padding: 8px 12px; background: rgba(108,92,231,0.2); border: 1px solid rgba(108,92,231,0.4); border-radius: 8px; color: var(--purple-light); font-size: 11px; font-weight: 700; cursor: pointer; font-family: Inter, sans-serif; }
+    .dev-copy-btn:hover { background: rgba(108,92,231,0.3); }
     html { scroll-behavior: smooth; }
     body {
       font-family: Inter, sans-serif;
@@ -92,16 +105,22 @@
     .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .btn-primary {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 14px 28px;
+      padding: 14px 32px;
       background: linear-gradient(135deg, var(--purple), var(--purple-light));
       color: #fff;
       border: none; border-radius: 14px;
-      font-size: 14px; font-weight: 700;
+      font-size: 15px; font-weight: 700;
       font-family: Inter, sans-serif;
       cursor: pointer; text-decoration: none;
       transition: opacity .2s, transform .15s;
     }
     .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+    
+    /* Dev button in header */
+    .dev-btn {
+      font-size: 11px; color: var(--muted); background: none; border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: all .2s; font-family: Inter, sans-serif;
+    }
+    .dev-btn:hover { color: var(--text); border-color: var(--purple-light); }
     .btn-outline {
       display: inline-flex; align-items: center; gap: 8px;
       padding: 14px 28px;
@@ -233,13 +252,38 @@
     <div class="logo-icon">S</div>
     <span class="logo-text">Sharely</span>
   </a>
-  <span class="header-badge">Setup Guide</span>
+  <button class="dev-btn" id="devBtn">👨‍💻 Developer</button>
 </header>
 
+<!-- Developer API Modal -->
+<div class="dev-modal" id="devModal">
+  <div class="dev-modal-box">
+    <div class="dev-modal-header">
+      <h2>Developer Access</h2>
+      <button class="dev-close-btn" id="devClose">&times;</button>
+    </div>
+    <div class="dev-field">
+      <label>Server URL</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="devServerUrl" readonly>
+        <button class="dev-copy-btn" onclick="copyToClipboard('devServerUrl')">Copy</button>
+      </div>
+    </div>
+    <div class="dev-field">
+      <label>API Key (for admin dashboard)</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="devApiKey" readonly placeholder="Loading...">
+        <button class="dev-copy-btn" onclick="copyToClipboard('devApiKey')">Copy</button>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-top:16px">Use the API key to authenticate admin dashboard requests. Users don't need this — they use email + token only.</p>
+  </div>
+</div>
+
 <section class="hero">
-  <div class="hero-pill">🚀 Get started in 3 steps</div>
+  <div class="hero-pill">🚀 Get started in 2 steps</div>
   <h1>Start using <span>Sharely</span> today</h1>
-  <p>You've already purchased access. Follow the steps below to install the extension and start using your shared services in seconds.</p>
+  <p>You have your email and access token. Install the extension and you're ready to go — no setup required.</p>
   <div class="hero-actions">
     <a href="/sharely-extension.zip" download class="btn-primary">
       ⬇ Download Extension
@@ -251,20 +295,17 @@
 
 <section class="steps-section" id="steps">
   <p class="section-label">How it works</p>
-  <h2 class="section-title">Up and running in minutes</h2>
+  <h2 class="section-title">Two simple steps</h2>
   <div class="steps">
 
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-content">
-        <h3>Install the Sharely extension</h3>
-        <p>Download the extension file and load it into Chrome or Edge. It only takes 30 seconds — no account required at this step.</p>
+        <h3>Install the extension</h3>
+        <p>Download the Sharely extension ZIP file and load it into Chrome or Edge. Takes about 30 seconds.</p>
         <div class="step-action">
-          <a href="/sharely-extension.zip" download>⬇ Download .zip file</a>
-          <a href="https://support.google.com/chrome/a/answer/2714278" target="_blank" rel="noopener">How to load a .zip →</a>
-        </div>
-        <div class="download-note" style="margin-top:10px">
-          1. Unzip the file &nbsp;·&nbsp; 2. Go to <code style="color:#a29bfe">chrome://extensions</code> &nbsp;·&nbsp; 3. Enable Developer mode &nbsp;·&nbsp; 4. Click "Load unpacked" &nbsp;·&nbsp; 5. Select the unzipped folder
+          <a href="/sharely-extension.zip" download>⬇ Download extension</a>
+          <a href="https://support.google.com/chrome/a/answer/2714278" target="_blank" rel="noopener">Installation help →</a>
         </div>
       </div>
     </div>
@@ -272,24 +313,12 @@
     <div class="step">
       <div class="step-number">2</div>
       <div class="step-content">
-        <h3>Configure the server</h3>
-        <p>Open the extension by clicking the Sharely icon in Chrome. Click the ⚙ Settings icon at the bottom and enter the server URL you received.</p>
+        <h3>Enter email + access token</h3>
+        <p>Click the Sharely icon in Chrome. Enter your email and the access token from your purchase. That's it — everything auto-configures.</p>
         <div class="step-action">
-          <a href="javascript:void(0)" onclick="copyServerUrl()">📋 Copy server URL</a>
+          <a href="/register">Prefer web registration? →</a>
         </div>
-        <div class="download-note" style="margin-top:10px" id="serverUrlDisplay">Server URL: <code style="color:#a29bfe" id="serverUrlCode">Loading...</code></div>
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-number">3</div>
-      <div class="step-content">
-        <h3>Enter your email and access token</h3>
-        <p>After setting the server, a login screen will appear. Enter the email address you used to purchase access and paste in your <strong>access token</strong>. Then click <strong>Get Access</strong>.</p>
-        <div class="step-action">
-          <a href="/register">Register on web instead →</a>
-        </div>
-        <div class="download-note" style="margin-top:10px">Your access token was sent to you after purchase. It looks like: <code style="color:#a29bfe">6d899532571fae9e</code></div>
+        <div class="download-note" style="margin-top:10px">No setup, no server URL copy-paste. It all works automatically.</div>
       </div>
     </div>
 
@@ -324,14 +353,48 @@
 </footer>
 
 <script>
-  // Show the current server URL
-  const url = window.location.origin;
-  document.getElementById('serverUrlCode').textContent = url;
+  const serverUrl = window.location.origin;
 
-  function copyServerUrl() {
-    navigator.clipboard.writeText(url).then(() => {
-      const el = document.querySelector('.step-action a[onclick]');
-      if (el) { const orig = el.textContent; el.textContent = '✓ Copied!'; setTimeout(() => el.textContent = orig, 1500); }
+  // Populate dev modal
+  document.getElementById('devServerUrl').value = serverUrl;
+
+  // Load API key
+  (async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.api_key) {
+          document.getElementById('devApiKey').value = data.api_key;
+        }
+      }
+    } catch (_) {}
+  })();
+
+  // Dev modal handlers
+  document.getElementById('devBtn').addEventListener('click', () => {
+    document.getElementById('devModal').classList.add('active');
+  });
+
+  document.getElementById('devClose').addEventListener('click', () => {
+    document.getElementById('devModal').classList.remove('active');
+  });
+
+  document.getElementById('devModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('devModal')) {
+      document.getElementById('devModal').classList.remove('active');
+    }
+  });
+
+  function copyToClipboard(elementId) {
+    const el = document.getElementById(elementId);
+    const text = el.value;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => btn.textContent = orig, 1200);
     });
   }
 </script>
