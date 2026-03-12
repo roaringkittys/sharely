@@ -9,6 +9,7 @@ const fs = require('fs');
 const multer = require('multer');
 const crypto = require('crypto');
 const userSystem = require('./user-system');
+const { verifyUserSession } = userSystem;
 
 const app = express();
 const PORT = 5000;
@@ -133,7 +134,7 @@ const upload = multer({
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-User-Session']
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -160,10 +161,19 @@ function requireAuth(req, res, next) {
 }
 
 function requireApiKey(req, res, next) {
+  // Accept admin API key
   const apiKey = req.headers['x-api-key'];
   const stored = db.prepare("SELECT value FROM extension_settings WHERE key = 'api_key'").get();
   if (apiKey && stored && apiKey === stored.value) return next();
-  res.status(401).json({ error: 'Invalid API key' });
+
+  // Also accept a valid user session token
+  const userSession = req.headers['x-user-session'];
+  if (userSession && verifyUserSession(userSession)) {
+    req.isUserSession = true;
+    return next();
+  }
+
+  res.status(401).json({ error: 'Authentication required. Please log in via the extension.' });
 }
 
 app.get('/app', (req, res) => {
@@ -172,6 +182,10 @@ app.get('/app', (req, res) => {
 
 app.get('/safari', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'safari.html'));
+});
+
+app.get('/start', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'start.html'));
 });
 
 app.get('/register', (req, res) => {

@@ -16,5 +16,40 @@ footer.card-footer{border-top:1px solid var(--glass-border-dark);display:flex;al
 .capture-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:18000;display:none;align-items:center;justify-content:center}.capture-box{background:rgba(18,18,28,0.98);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:22px;width:88%;max-width:360px;backdrop-filter:blur(20px);animation:fadeIn .2s ease}.capture-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.capture-header h3{font-size:15px;font-weight:700;color:#fff;margin:0}.capture-close{color:#aaa;cursor:pointer;font-size:18px}.capture-site-info{background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px}.capture-site-domain{font-size:13px;font-weight:700;color:#a29bfe}.capture-site-tab{font-size:11px;color:#aaa;margin-top:2px}.form-field-cap{margin-bottom:10px;text-align:left}.form-field-cap label{display:block;font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}.form-field-cap input{width:100%;padding:9px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none}.form-field-cap input:focus{border-color:#6c5ce7}.capture-confirm-btn{width:100%;padding:11px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;transition:opacity .2s}.capture-confirm-btn:hover{opacity:.85}.capture-confirm-btn:disabled{opacity:.5;cursor:not-allowed}.icon-capture{color:#a29bfe !important}body.light-theme .capture-box{background:rgba(255,255,255,0.98);border-color:rgba(0,0,0,0.1)}body.light-theme .capture-header h3,body.light-theme .form-field-cap input{color:#000}body.light-theme .form-field-cap input{background:rgba(0,0,0,0.05);border-color:rgba(0,0,0,0.15)}
 /* ────────────────────────────────────────────────────────────────────── */
 
+/* ── Auth Overlay ────────────────────────────────────────────────────────── */
+.auth-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(8,8,16,0.96);z-index:25000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.auth-box{width:92%;max-width:380px;padding:28px 24px 20px;text-align:center;animation:fadeIn .25s ease}
+.auth-logo{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px}
+.auth-title{font-size:18px;font-weight:800;color:#fff;margin:0 0 6px}
+.auth-subtitle{font-size:12px;color:#888;margin:0 0 18px;line-height:1.5}
+.auth-error{background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.35);border-radius:10px;padding:9px 14px;font-size:12px;color:#e74c3c;margin-bottom:14px;text-align:left;line-height:1.5}
+.auth-fields{margin-bottom:14px;text-align:left}
+.auth-field{margin-bottom:12px}
+.auth-field label{display:block;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px}
+.auth-field input{width:100%;padding:11px 14px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;color:#fff;font-size:13px;font-family:Inter,sans-serif;outline:none;transition:border-color .15s}
+.auth-field input:focus{border-color:#6c5ce7;background:rgba(108,92,231,0.1)}
+.auth-field input::placeholder{color:#555}
+.auth-field-hint{font-size:10px;color:#555;margin-top:4px}
+.auth-btn{width:100%;padding:12px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;transition:opacity .2s;margin-bottom:14px}
+.auth-btn:hover{opacity:.88}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-toggle{font-size:12px;color:#666;margin-bottom:16px}
+.auth-toggle a{color:#a29bfe;text-decoration:none;margin-left:5px;font-weight:600}
+.auth-toggle a:hover{color:#fff}
+.auth-success{padding:12px 0 8px;text-align:center}
+.auth-success-icon{width:52px;height:52px;background:linear-gradient(135deg,#00b894,#55efc4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;font-weight:700;margin:0 auto 12px}
+.auth-success h3{font-size:16px;font-weight:700;color:#fff;margin:0 0 6px}
+.auth-success p{font-size:12px;color:#aaa;margin:0}
+.auth-help{font-size:11px;padding-top:6px}
+.auth-help a{color:#555;text-decoration:none}
+.auth-help a:hover{color:#888}
+/* Expiry badge in footer */
+.expiry-badge{display:inline-block;padding:1px 7px;border-radius:6px;font-size:9px;font-weight:700;vertical-align:middle;margin-left:2px;cursor:pointer}
+.expiry-ok{background:rgba(0,184,148,0.2);color:#00b894}
+.expiry-soon{background:rgba(253,203,110,0.2);color:#fdcb6e}
+.expiry-expired{background:rgba(231,76,60,0.2);color:#e74c3c}
+.user-email-text{cursor:pointer}
+/* ────────────────────────────────────────────────────────────────────────── */
+
 /* Sharely Logo */
 .sharely-logo{display:flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0}.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;font-family:Inter,sans-serif}.logo-text{font-weight:700;font-size:16px;color:var(--text-color-dark);font-family:Inter,sans-serif}body.light-theme .logo-text{color:var(--text-color-light)}

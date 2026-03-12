@@ -4,15 +4,108 @@ let allServices = [];
 let currentCategory = 'all';
 let serverUrl = '';
 let apiKey = '';
+let currentUserSession = '';
+let currentUserEmail = '';
+let currentUserExpiry = '';
+let authMode = 'new'; // 'new' requires token, 'returning' no token
 
 async function loadStorage() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['serverUrl', 'apiKey', 'theme'], resolve);
+    chrome.storage.local.get(['serverUrl', 'apiKey', 'theme', 'userSession', 'userEmail', 'userExpiry'], resolve);
   });
 }
 
 async function saveStorage(data) {
   return new Promise(resolve => chrome.storage.local.set(data, resolve));
+}
+
+// ── Device fingerprint ────────────────────────────────────────────────────
+
+function getDeviceFingerprint() {
+  const raw = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height,
+    new Date().getTimezoneOffset(),
+    navigator.hardwareConcurrency || 0,
+    navigator.platform || '',
+  ].join('|');
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+    hash |= 0;
+  }
+  return 'ext_' + Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+// ── Auth overlay ──────────────────────────────────────────────────────────
+
+function setAuthMode(mode) {
+  authMode = mode;
+  if (mode === 'new') {
+    $('#authTitle').text('Welcome to Sharely');
+    $('#authSubtitle').text('Enter your email and access token to get started.');
+    $('#authTokenField').show();
+    $('#authSubmitBtn').text('Get Access');
+    $('#authToggleMsg').text('Already have an account?');
+    $('#authToggleLink').text('Log in without token');
+  } else {
+    $('#authTitle').text('Welcome back');
+    $('#authSubtitle').text('Enter your email to log in to your existing account.');
+    $('#authTokenField').hide();
+    $('#authSubmitBtn').text('Log In');
+    $('#authToggleMsg').text('New user?');
+    $('#authToggleLink').text('Enter your access token');
+  }
+}
+
+function showAuthScreen(error) {
+  $('#authSuccess').hide();
+  $('#authFields').show();
+  $('#authSubmitBtn').show().prop('disabled', false).text(authMode === 'returning' ? 'Log In' : 'Get Access');
+  $('#authToggle').show();
+  if (error) {
+    $('#authError').text(error).show();
+  } else {
+    $('#authError').hide();
+  }
+  setAuthMode(authMode);
+  $('#authOverlay').css('display', 'flex').hide().fadeIn(200);
+}
+
+function hideAuthScreen() {
+  $('#authOverlay').fadeOut(250);
+}
+
+function updateUserFooter(email, expiresAt) {
+  if (!email) { $('#footer').text('Sharely \u00a9 2024\u20132025'); return; }
+  const days = Math.max(0, Math.ceil((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24)));
+  const short = email.length > 20 ? email.substring(0, 17) + '\u2026' : email;
+  let badge;
+  if (days <= 0) badge = '<span class="expiry-badge expiry-expired">Expired</span>';
+  else if (days <= 7) badge = `<span class="expiry-badge expiry-soon">${days}d left</span>`;
+  else badge = `<span class="expiry-badge expiry-ok">${days}d left</span>`;
+  $('#footer').html(`${short}&nbsp;${badge}`);
+}
+
+async function doExtensionLogin(email, token) {
+  const fingerprint = getDeviceFingerprint();
+  const body = { email: email.trim().toLowerCase(), deviceFingerprint: fingerprint };
+  if (token && token.trim()) body.token = token.trim();
+  const res = await fetch(`${serverUrl}/auth/extension-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return { ok: res.ok, data: await res.json() };
+}
+
+async function verifyStoredSession(session) {
+  const res = await fetch(`${serverUrl}/auth/extension-verify`, {
+    headers: { 'X-User-Session': session },
+  });
+  if (!res.ok) return null;
+  return await res.json();
 }
 
 function showLoading() {
@@ -222,20 +315,41 @@ async function fetchConfig() {
   const stored = await loadStorage();
   serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
   apiKey = stored.apiKey || '';
+  currentUserSession = stored.userSession || '';
 
-  if (!serverUrl || !apiKey) {
-    showError('Configure your server URL and API key to connect.');
+  if (!serverUrl) {
+    showError('Configure your server URL in settings first.');
     disableFilters();
+    return;
+  }
+
+  if (!currentUserSession && !apiKey) {
+    showAuthScreen();
     return;
   }
 
   showLoading();
 
   try {
+    const headers = { 'Accept': 'application/json' };
+    if (currentUserSession) {
+      headers['X-User-Session'] = currentUserSession;
+    } else {
+      headers['X-API-Key'] = apiKey;
+    }
+
     const res = await fetch(`${serverUrl}/api/extension/config`, {
       method: 'GET',
-      headers: { 'X-API-Key': apiKey, 'Accept': 'application/json' }
+      headers,
     });
+
+    if (res.status === 401) {
+      await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
+      currentUserSession = '';
+      showAuthScreen('Your session expired. Please log in again.');
+      disableFilters();
+      return;
+    }
 
     if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
 
@@ -470,9 +584,151 @@ $('#adminButton').on('click', async () => {
   }
 });
 
+// ── Auth event handlers ───────────────────────────────────────────────────
+
+$('#authToggleLink').on('click', (e) => {
+  e.preventDefault();
+  setAuthMode(authMode === 'new' ? 'returning' : 'new');
+  $('#authError').hide();
+});
+
+$('#authHelpLink').on('click', async (e) => {
+  e.preventDefault();
+  const stored = await loadStorage();
+  const base = (stored.serverUrl || '').replace(/\/+$/, '');
+  chrome.tabs.create({ url: base ? `${base}/start` : 'https://sharely.app/start' });
+});
+
+$('#authSubmitBtn').on('click', async () => {
+  const email = $('#authEmail').val().trim();
+  const token = $('#authToken').val().trim();
+
+  if (!email) {
+    $('#authError').text('Please enter your email address.').show();
+    return;
+  }
+  if (authMode === 'new' && !token) {
+    $('#authError').text('Please enter your access token.').show();
+    return;
+  }
+  if (!serverUrl) {
+    const stored = await loadStorage();
+    serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
+  }
+  if (!serverUrl) {
+    $('#authError').text('Server URL not configured. Open Settings first.').show();
+    return;
+  }
+
+  $('#authError').hide();
+  $('#authSubmitBtn').prop('disabled', true).text('Connecting...');
+
+  try {
+    const { ok, data } = await doExtensionLogin(email, authMode === 'new' ? token : null);
+
+    if (!ok || !data.success) {
+      $('#authSubmitBtn').prop('disabled', false).text(authMode === 'new' ? 'Get Access' : 'Log In');
+      $('#authError').text(data.error || 'Login failed. Please try again.').show();
+      return;
+    }
+
+    // Save session
+    await saveStorage({
+      userSession: data.session_token,
+      userEmail: data.email,
+      userExpiry: data.access_expires_at,
+    });
+    currentUserSession = data.session_token;
+    currentUserEmail = data.email;
+    currentUserExpiry = data.access_expires_at;
+
+    // Show success state
+    const days = data.days_remaining;
+    $('#authFields').hide();
+    $('#authSubmitBtn').hide();
+    $('#authToggle').hide();
+    $('#authError').hide();
+    $('#authSuccessTitle').text(data.is_new_user ? `Welcome, ${data.email.split('@')[0]}!` : 'Welcome back!');
+    $('#authSuccessMsg').text(`Access valid for ${days} more day${days !== 1 ? 's' : ''}. Loading your services...`);
+    $('#authSuccess').fadeIn(300);
+
+    updateUserFooter(data.email, data.access_expires_at);
+
+    setTimeout(() => {
+      hideAuthScreen();
+      fetchConfig();
+    }, 1800);
+
+  } catch (err) {
+    $('#authSubmitBtn').prop('disabled', false).text(authMode === 'new' ? 'Get Access' : 'Log In');
+    $('#authError').text('Connection failed. Check your server URL in Settings.').show();
+  }
+});
+
+// Allow Enter key to submit auth form
+$('#authEmail, #authToken').on('keydown', (e) => {
+  if (e.key === 'Enter') $('#authSubmitBtn').click();
+});
+
+// ── User account sign-out ─────────────────────────────────────────────────
+// (clicking the footer email/badge signs out of the user account)
+$('#footer').on('click', '.expiry-badge, .user-email-text', async () => {
+  if (!currentUserSession) return;
+  if (!confirm('Sign out of your Sharely account?')) return;
+  await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
+  currentUserSession = '';
+  currentUserEmail = '';
+  currentUserExpiry = '';
+  $('#footer').text('Sharely \u00a9 2024\u20132025');
+  authMode = 'returning';
+  showAuthScreen();
+});
+
 // Initialise
 $(async () => {
   const stored = await loadStorage();
+  serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
+
   if (stored.theme) applyTheme(stored.theme);
+
+  // If we have a stored session, restore footer display immediately
+  if (stored.userEmail && stored.userExpiry) {
+    updateUserFooter(stored.userEmail, stored.userExpiry);
+  }
+
+  // If no server URL, show error
+  if (!serverUrl) {
+    showError('Configure your server URL in settings first.');
+    disableFilters();
+    return;
+  }
+
+  const userSession = stored.userSession || '';
+
+  // If no credentials at all, show auth
+  if (!userSession && !stored.apiKey) {
+    showAuthScreen();
+    return;
+  }
+
+  // If we have a user session, verify it's still valid
+  if (userSession) {
+    try {
+      const result = await verifyStoredSession(userSession);
+      if (!result || !result.valid) {
+        await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
+        authMode = 'returning';
+        showAuthScreen(result ? result.error : 'Session expired. Please log in again.');
+        return;
+      }
+      currentUserSession = userSession;
+      currentUserEmail = result.user.email;
+      currentUserExpiry = result.user.access_expires_at;
+      updateUserFooter(currentUserEmail, currentUserExpiry);
+    } catch (_) {
+      // Network error — try loading anyway, fetchConfig will handle 401
+    }
+  }
+
   fetchConfig();
 });

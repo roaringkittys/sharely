@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Get Started — Sharely</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple: #6c5ce7;
+      --purple-light: #a29bfe;
+      --green: #00b894;
+      --bg: #080810;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.1);
+      --text: #ffffff;
+      --muted: #888;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(8,8,16,0.85);
+      backdrop-filter: blur(16px);
+      z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: #fff;
+    }
+    .logo-text { font-size: 18px; font-weight: 800; color: #fff; }
+    .header-badge {
+      font-size: 12px; color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 620px;
+      margin: 0 auto;
+      text-align: center;
+      padding: 72px 24px 56px;
+    }
+    .hero-pill {
+      display: inline-block;
+      background: rgba(108,92,231,0.15);
+      border: 1px solid rgba(108,92,231,0.35);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--purple-light);
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+    .hero h1 span { color: var(--purple-light); }
+    .hero p {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 36px;
+    }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      color: #fff;
+      border: none; border-radius: 14px;
+      font-size: 14px; font-weight: 700;
+      font-family: Inter, sans-serif;
+      cursor: pointer; text-decoration: none;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px;
+      background: transparent;
+      color: #fff;
+      border: 1px solid var(--border); border-radius: 14px;
+      font-size: 14px; font-weight: 600;
+      font-family: Inter, sans-serif;
+      cursor: pointer; text-decoration: none;
+      transition: background .2s, border-color .2s;
+    }
+    .btn-outline:hover { background: var(--surface); border-color: rgba(255,255,255,0.2); }
+
+    /* ── Steps ── */
+    .steps-section {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    .section-label {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--purple-light);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 48px;
+    }
+    .steps { display: flex; flex-direction: column; gap: 20px; }
+    .step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      transition: border-color .2s;
+    }
+    .step:hover { border-color: rgba(108,92,231,0.4); }
+    .step-number {
+      width: 44px; height: 44px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: #fff;
+    }
+    .step-content h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .step-content p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0 0 12px; }
+    .step-action a, .step-action button {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px;
+      background: rgba(108,92,231,0.15);
+      border: 1px solid rgba(108,92,231,0.3);
+      border-radius: 10px;
+      color: var(--purple-light);
+      font-size: 12px; font-weight: 700;
+      font-family: Inter, sans-serif;
+      cursor: pointer; text-decoration: none;
+      transition: background .2s;
+    }
+    .step-action a:hover, .step-action button:hover { background: rgba(108,92,231,0.25); }
+    .step-action { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    /* ── Info grid ── */
+    .info-grid {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .info-card .icon { font-size: 24px; margin-bottom: 10px; display: block; }
+    .info-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .info-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    footer a { color: var(--purple-light); text-decoration: none; }
+
+    /* ── Download indicator ── */
+    .download-note {
+      font-size: 11px; color: var(--muted);
+      margin-top: 8px;
+    }
+    .version-badge {
+      display: inline-block;
+      background: rgba(0,184,148,0.15);
+      border: 1px solid rgba(0,184,148,0.3);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--green);
+      margin-left: 6px;
+    }
+
+    @media (max-width: 480px) {
+      header { padding: 14px 20px; }
+      .hero { padding: 48px 20px 40px; }
+      .steps-section { padding: 0 16px 60px; }
+      .info-grid { padding: 0 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">
+    <div class="logo-icon">S</div>
+    <span class="logo-text">Sharely</span>
+  </a>
+  <span class="header-badge">Setup Guide</span>
+</header>
+
+<section class="hero">
+  <div class="hero-pill">🚀 Get started in 3 steps</div>
+  <h1>Start using <span>Sharely</span> today</h1>
+  <p>You've already purchased access. Follow the steps below to install the extension and start using your shared services in seconds.</p>
+  <div class="hero-actions">
+    <a href="/sharely-extension.zip" download class="btn-primary">
+      ⬇ Download Extension
+    </a>
+    <a href="#steps" class="btn-outline">See how it works</a>
+  </div>
+  <p class="download-note">Chrome / Edge extension &nbsp; <span class="version-badge">Latest</span></p>
+</section>
+
+<section class="steps-section" id="steps">
+  <p class="section-label">How it works</p>
+  <h2 class="section-title">Up and running in minutes</h2>
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h3>Install the Sharely extension</h3>
+        <p>Download the extension file and load it into Chrome or Edge. It only takes 30 seconds — no account required at this step.</p>
+        <div class="step-action">
+          <a href="/sharely-extension.zip" download>⬇ Download .zip file</a>
+          <a href="https://support.google.com/chrome/a/answer/2714278" target="_blank" rel="noopener">How to load a .zip →</a>
+        </div>
+        <div class="download-note" style="margin-top:10px">
+          1. Unzip the file &nbsp;·&nbsp; 2. Go to <code style="color:#a29bfe">chrome://extensions</code> &nbsp;·&nbsp; 3. Enable Developer mode &nbsp;·&nbsp; 4. Click "Load unpacked" &nbsp;·&nbsp; 5. Select the unzipped folder
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h3>Configure the server</h3>
+        <p>Open the extension by clicking the Sharely icon in Chrome. Click the ⚙ Settings icon at the bottom and enter the server URL you received.</p>
+        <div class="step-action">
+          <a href="javascript:void(0)" onclick="copyServerUrl()">📋 Copy server URL</a>
+        </div>
+        <div class="download-note" style="margin-top:10px" id="serverUrlDisplay">Server URL: <code style="color:#a29bfe" id="serverUrlCode">Loading...</code></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h3>Enter your email and access token</h3>
+        <p>After setting the server, a login screen will appear. Enter the email address you used to purchase access and paste in your <strong>access token</strong>. Then click <strong>Get Access</strong>.</p>
+        <div class="step-action">
+          <a href="/register">Register on web instead →</a>
+        </div>
+        <div class="download-note" style="margin-top:10px">Your access token was sent to you after purchase. It looks like: <code style="color:#a29bfe">6d899532571fae9e</code></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="info-grid">
+  <div class="info-card">
+    <span class="icon">🔒</span>
+    <h4>One device per account</h4>
+    <p>Your account is bound to the device you first log in with. Contact support if you need to switch devices.</p>
+  </div>
+  <div class="info-card">
+    <span class="icon">⏰</span>
+    <h4>Access duration</h4>
+    <p>Your access is valid for the duration shown in the extension footer. You'll receive an email reminder before it expires.</p>
+  </div>
+  <div class="info-card">
+    <span class="icon">✉️</span>
+    <h4>Magic link login</h4>
+    <p>After registering, you log in by email only — no password needed. Just open the extension and enter your email.</p>
+  </div>
+  <div class="info-card">
+    <span class="icon">🔄</span>
+    <h4>Always up to date</h4>
+    <p>Reload this page or re-download the extension to get the latest version with new services and improvements.</p>
+  </div>
+</div>
+
+<footer>
+  <p>Sharely &copy; 2024–2025 &nbsp;·&nbsp; <a href="/">Back to app</a></p>
+</footer>
+
+<script>
+  // Show the current server URL
+  const url = window.location.origin;
+  document.getElementById('serverUrlCode').textContent = url;
+
+  function copyServerUrl() {
+    navigator.clipboard.writeText(url).then(() => {
+      const el = document.querySelector('.step-action a[onclick]');
+      if (el) { const orig = el.textContent; el.textContent = '✓ Copied!'; setTimeout(() => el.textContent = orig, 1500); }
+    });
+  }
+</script>
+</body>
+</html>

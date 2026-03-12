@@ -117,6 +117,49 @@
     </div>
   </div>
 
+  <!-- Auth Overlay -->
+  <div class="auth-overlay" id="authOverlay" style="display:none">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <span class="logo-icon">S</span>
+        <span class="logo-text">Sharely</span>
+      </div>
+      <h2 class="auth-title" id="authTitle">Welcome to Sharely</h2>
+      <p class="auth-subtitle" id="authSubtitle">Enter your email and access token to get started.</p>
+
+      <div id="authError" class="auth-error" style="display:none"></div>
+
+      <div class="auth-fields" id="authFields">
+        <div class="auth-field">
+          <label>Email address</label>
+          <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="auth-field" id="authTokenField">
+          <label>Access token</label>
+          <input type="text" id="authToken" placeholder="Paste your access token here" autocomplete="off">
+          <div class="auth-field-hint">Provided when you purchased access</div>
+        </div>
+      </div>
+
+      <button class="auth-btn" id="authSubmitBtn">Get Access</button>
+
+      <div class="auth-toggle" id="authToggle">
+        <span id="authToggleMsg">Already have an account?</span>
+        <a href="#" id="authToggleLink">Log in without token</a>
+      </div>
+
+      <div class="auth-success" id="authSuccess" style="display:none">
+        <div class="auth-success-icon">✓</div>
+        <h3 id="authSuccessTitle">Welcome!</h3>
+        <p id="authSuccessMsg">Loading your services...</p>
+      </div>
+
+      <div class="auth-help">
+        <a href="#" id="authHelpLink">Need help? View setup guide</a>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Overlay -->
   <div class="settingsOverlay" id="settingsOverlay" style="display:none">
     <div class="settingsBox">

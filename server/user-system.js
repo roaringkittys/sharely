@@ -34,6 +34,8 @@ function init(database) {
       access_token_id   INTEGER REFERENCES access_tokens(id),
       access_expires_at DATETIME NOT NULL,
       is_active         INTEGER DEFAULT 1,
+      welcome_sent      INTEGER DEFAULT 0,
+      reminder_sent     INTEGER DEFAULT 0,
       created_at        DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -56,6 +58,17 @@ function init(database) {
       last_seen          DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Migrate older DBs — add columns if missing
+  for (const col of [
+    "ALTER TABLE users ADD COLUMN welcome_sent INTEGER DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN reminder_sent INTEGER DEFAULT 0",
+  ]) {
+    try { db.exec(col); } catch (_) {}
+  }
+
+  // Scheduled expiry reminder — check every hour
+  setInterval(sendExpiryReminders, 60 * 60 * 1000);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -76,6 +89,109 @@ function addDays(days) {
 
 function isExpired(dateStr) {
   return new Date(dateStr) < new Date();
+}
+
+function mailerTransport() {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return null;
+  const nodemailer = require('nodemailer');
+  return nodemailer.createTransport({
+    host,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: { user, pass },
+  });
+}
+
+function fromAddr() {
+  return process.env.SMTP_FROM || process.env.SMTP_USER || 'Sharely <noreply@sharely.app>';
+}
+
+function daysUntil(dateStr) {
+  return Math.max(0, Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24)));
+}
+
+async function sendWelcomeEmail(to, accessExpiresAt) {
+  const transport = mailerTransport();
+  if (!transport) return false;
+  const until = new Date(accessExpiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const days = daysUntil(accessExpiresAt);
+  try {
+    await transport.sendMail({
+      from: fromAddr(),
+      to,
+      subject: '🎉 Welcome to Sharely — you\'re in!',
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#0f0f1a;padding:32px;border-radius:16px;color:#fff">
+          <h2 style="color:#a29bfe;margin-top:0">You're all set! 🚀</h2>
+          <p>Your Sharely account is active. Here's a summary:</p>
+          <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px 20px;margin:20px 0">
+            <p style="margin:0 0 8px;font-size:13px;color:#aaa">Your access</p>
+            <p style="margin:0;font-size:18px;font-weight:700;color:#fff">Valid for <span style="color:#a29bfe">${days} days</span></p>
+            <p style="margin:4px 0 0;font-size:12px;color:#888">Expires on ${until}</p>
+          </div>
+          <p style="font-size:13px">To log in, open the Sharely extension and enter your email. A login link will be sent here.</p>
+          <p style="color:#555;font-size:11px;margin-top:24px">If you didn't create this account, please ignore this email.</p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (_) { return false; }
+}
+
+async function sendExpiryReminderEmail(to, accessExpiresAt) {
+  const transport = mailerTransport();
+  if (!transport) return false;
+  const until = new Date(accessExpiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const days = daysUntil(accessExpiresAt);
+  try {
+    await transport.sendMail({
+      from: fromAddr(),
+      to,
+      subject: `⏳ Your Sharely access expires in ${days} day${days !== 1 ? 's' : ''}`,
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#0f0f1a;padding:32px;border-radius:16px;color:#fff">
+          <h2 style="color:#fdcb6e;margin-top:0">Your access is expiring soon</h2>
+          <p>Just a heads-up — your Sharely access will expire in <strong style="color:#fdcb6e">${days} day${days !== 1 ? 's' : ''}</strong> (${until}).</p>
+          <p style="font-size:13px;color:#aaa">To renew your access, contact your Sharely administrator and get a new access token. Then re-register with your email.</p>
+          <p style="color:#555;font-size:11px;margin-top:24px">You're receiving this because you have an active Sharely account linked to this email.</p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (_) { return false; }
+}
+
+async function sendExpiryReminders() {
+  if (!db) return;
+  try {
+    // Users expiring within 7 days who haven't had reminder sent
+    const users = db.prepare(`
+      SELECT * FROM users
+      WHERE is_active = 1
+        AND reminder_sent = 0
+        AND datetime(access_expires_at) > datetime('now')
+        AND datetime(access_expires_at) < datetime('now', '+7 days')
+    `).all();
+    for (const user of users) {
+      const sent = await sendExpiryReminderEmail(user.email, user.access_expires_at);
+      if (sent) {
+        db.prepare('UPDATE users SET reminder_sent = 1 WHERE id = ?').run(user.id);
+      }
+    }
+  } catch (_) {}
+}
+
+function verifyUserSession(token) {
+  if (!db || !token) return null;
+  const session = db.prepare('SELECT * FROM user_sessions WHERE session_token = ?').get(token);
+  if (!session || isExpired(session.expires_at)) return null;
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id);
+  if (!user || !user.is_active || isExpired(user.access_expires_at)) return null;
+  db.prepare('UPDATE user_sessions SET last_seen = ? WHERE id = ?').run(now(), session.id);
+  return { user, session };
 }
 
 async function sendMagicEmail(to, link) {
@@ -128,10 +244,113 @@ function requireUserSession(req, res, next) {
 // ── User Auth Routes ──────────────────────────────────────────────────────
 
 /**
+ * POST /auth/extension-login
+ * One-step register OR login for the Chrome extension.
+ * Body: { email, token?, deviceFingerprint }
+ * Returns: { success, session_token, access_expires_at, days_remaining, is_new_user }
+ */
+router.post('/auth/extension-login', async (req, res) => {
+  const { email, token, deviceFingerprint } = req.body;
+  if (!email || !deviceFingerprint) {
+    return res.status(400).json({ error: 'email and deviceFingerprint are required' });
+  }
+  const normalizedEmail = email.toLowerCase().trim();
+
+  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(normalizedEmail);
+  let isNewUser = false;
+
+  if (token) {
+    // ── Registration path ────────────────────────────────────────────
+    const accessToken = db.prepare('SELECT * FROM access_tokens WHERE token = ?').get(token.trim());
+    if (!accessToken) return res.status(400).json({ error: 'Invalid access token. Check your token and try again.' });
+    if (accessToken.used) return res.status(400).json({ error: 'This access token has already been used.' });
+    if (isExpired(accessToken.expires_at)) return res.status(400).json({ error: 'This access token has expired.' });
+    if (user) return res.status(400).json({ error: 'Email already registered. Log in without a token.' });
+
+    const accessExpiresAt = accessToken.expires_at;
+    const result = db.prepare(
+      'INSERT INTO users (email, device_fingerprint, access_token_id, access_expires_at) VALUES (?, ?, ?, ?)'
+    ).run(normalizedEmail, deviceFingerprint, accessToken.id, accessExpiresAt);
+    db.prepare('UPDATE access_tokens SET used = 1, used_by = ?, used_at = ? WHERE id = ?')
+      .run(normalizedEmail, now(), accessToken.id);
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    isNewUser = true;
+
+    // Welcome email (async, don't block)
+    sendWelcomeEmail(normalizedEmail, accessExpiresAt).then(sent => {
+      if (sent) db.prepare('UPDATE users SET welcome_sent = 1 WHERE id = ?').run(user.id);
+    });
+
+  } else {
+    // ── Login path ───────────────────────────────────────────────────
+    if (!user) return res.status(404).json({ error: 'No account found. Please enter your access token to register.' });
+    if (!user.is_active) return res.status(403).json({ error: 'Your account has been disabled. Contact support.' });
+    if (isExpired(user.access_expires_at)) return res.status(403).json({ error: 'Your access has expired. Contact your administrator.' });
+
+    // Device fingerprint check — allow if user has no fingerprint set (after admin reset)
+    if (user.device_fingerprint && user.device_fingerprint !== deviceFingerprint) {
+      return res.status(403).json({
+        error: 'This account is bound to a different device. Contact your administrator to reset.',
+        device_mismatch: true,
+      });
+    }
+
+    // Update fingerprint if it was cleared
+    if (!user.device_fingerprint) {
+      db.prepare('UPDATE users SET device_fingerprint = ? WHERE id = ?').run(deviceFingerprint, user.id);
+    }
+  }
+
+  // Kill old sessions for this user (1-session-per-device rule for extension)
+  db.prepare('DELETE FROM user_sessions WHERE user_id = ?').run(user.id);
+
+  // Create new 90-day session
+  const sessionToken = randomToken(32);
+  const sessionExpiry = addDays(90);
+  db.prepare(
+    'INSERT INTO user_sessions (user_id, session_token, device_fingerprint, expires_at) VALUES (?, ?, ?, ?)'
+  ).run(user.id, sessionToken, deviceFingerprint, sessionExpiry);
+
+  const days = daysUntil(user.access_expires_at);
+
+  res.json({
+    success: true,
+    session_token: sessionToken,
+    access_expires_at: user.access_expires_at,
+    days_remaining: days,
+    is_new_user: isNewUser,
+    email: normalizedEmail,
+  });
+});
+
+/**
+ * GET /auth/extension-verify
+ * Header: X-User-Session: <token>
+ * Returns: { valid, user: { email, access_expires_at, days_remaining } }
+ */
+router.get('/auth/extension-verify', (req, res) => {
+  const token = req.headers['x-user-session'];
+  if (!token) return res.status(401).json({ valid: false, error: 'No session provided' });
+
+  const result = verifyUserSession(token);
+  if (!result) return res.status(401).json({ valid: false, error: 'Session expired or invalid' });
+
+  const { user } = result;
+  res.json({
+    valid: true,
+    user: {
+      email: user.email,
+      access_expires_at: user.access_expires_at,
+      days_remaining: daysUntil(user.access_expires_at),
+    },
+  });
+});
+
+/**
  * POST /auth/register
  * Body: { email, token, deviceFingerprint }
  */
-router.post('/auth/register', (req, res) => {
+router.post('/auth/register', async (req, res) => {
   const { email, token, deviceFingerprint } = req.body;
   if (!email || !token || !deviceFingerprint) {
     return res.status(400).json({ error: 'email, token, and deviceFingerprint are required' });
@@ -158,6 +377,11 @@ router.post('/auth/register', (req, res) => {
   // Mark token as used
   db.prepare('UPDATE access_tokens SET used = 1, used_by = ?, used_at = ? WHERE id = ?')
     .run(normalizedEmail, now(), accessToken.id);
+
+  // Welcome email (async)
+  sendWelcomeEmail(normalizedEmail, accessExpiresAt).then(sent => {
+    if (sent) db.prepare('UPDATE users SET welcome_sent = 1 WHERE id = ?').run(userResult.lastInsertRowid);
+  });
 
   res.json({ success: true, message: 'Account created. Use magic login to sign in.' });
 });
@@ -397,4 +621,4 @@ router.get('/admin/analytics', requireAdminSession, (req, res) => {
   res.json({ totalUsers, activeUsers, expiredUsers, totalTokens, usedTokens, expiredTokens, activeSessions });
 });
 
-module.exports = { router, init };
+module.exports = { router, init, verifyUserSession };
