@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sharely</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -12,195 +12,298 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="/sharely-logo.png">
     <style>
-        body { 
-            background: #000; 
-            min-width: unset; 
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-        .gpy { 
-            max-width: 100%; 
-            padding-top: 80px;
-            padding-bottom: 70px;
-            min-height: 100vh;
-        }
-        header {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 2000;
-        }
-        footer.card-footer {
-            padding-bottom: env(safe-area-inset-bottom, 15px);
-            height: auto;
-        }
+        body { min-width: unset !important; min-height: 100vh; }
+        .gpy { max-width: 100%; padding-top: 80px; padding-bottom: 70px; min-height: 100vh; }
+        header { position: fixed; top: 0; width: 100%; z-index: 2000; }
+        footer.card-footer { padding-bottom: env(safe-area-inset-bottom, 15px); }
         .container { max-width: 600px; }
         #loaded.row { margin: 0; padding: 10px; }
-        .service { margin-bottom: 20px; }
-        /* Hide extension-specific icons on web version */
-        #safeLogout, #captureButton { display: none !important; }
+        #safeLogout, #captureButton, #adminButton { display: none !important; }
+
+        /* Auth screen for /app */
+        .app-auth {
+            position: fixed; inset: 0;
+            background: rgba(8,8,16,0.97);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+        }
+        .app-auth-box {
+            width: 90%; max-width: 360px;
+            text-align: center; padding: 32px 24px;
+        }
+        .app-auth-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; }
+        .app-auth-logo .logo-icon { width: 40px; height: 40px; border-radius: 12px; font-size: 20px; }
+        .app-auth-logo .logo-text { font-size: 22px; font-weight: 800; color: #fff; font-family: Inter, sans-serif; }
+        .app-auth h2 { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px; font-family: Inter, sans-serif; }
+        .app-auth p { font-size: 13px; color: #888; margin-bottom: 24px; line-height: 1.6; font-family: Inter, sans-serif; }
+        .app-auth .auth-field { margin-bottom: 14px; text-align: left; }
+        .app-auth .auth-field label { display: block; font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; font-family: Inter, sans-serif; }
+        .app-auth .auth-field input { width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; color: #fff; font-size: 13px; font-family: Inter, sans-serif; outline: none; }
+        .app-auth .auth-field input:focus { border-color: #6c5ce7; }
+        .app-auth .auth-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, #6c5ce7, #a29bfe); border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: Inter, sans-serif; }
+        .app-auth .auth-error { background: rgba(231,76,60,0.12); border: 1px solid rgba(231,76,60,0.3); border-radius: 10px; padding: 9px 14px; font-size: 12px; color: #e74c3c; margin-bottom: 14px; text-align: left; font-family: Inter, sans-serif; display: none; }
+        .app-auth .auth-hint { font-size: 11px; color: #555; margin-top: 14px; font-family: Inter, sans-serif; }
+        .app-auth .auth-hint a { color: #a29bfe; text-decoration: none; }
     </style>
 </head>
 <body>
+    <!-- Auth screen (shown if session invalid) -->
+    <div class="app-auth" id="appAuth" style="display:none">
+        <div class="app-auth-box">
+            <div class="app-auth-logo">
+                <span class="logo-icon" style="width:40px;height:40px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff">S</span>
+                <span class="logo-text">Sharely</span>
+            </div>
+            <h2>Welcome back</h2>
+            <p>Enter your email to receive a login link.</p>
+            <div id="appAuthError" class="auth-error"></div>
+            <div class="auth-field">
+                <label>Email address</label>
+                <input type="email" id="appAuthEmail" placeholder="you@example.com">
+            </div>
+            <button class="auth-btn" id="appAuthBtn">Send Login Link</button>
+            <p class="auth-hint">New user? <a href="/start">Get your access token →</a></p>
+        </div>
+    </div>
+
     <header class="sticky-top">
-        <div class="header-top-content container">
-            <div class="sharely-logo">
+        <div class="header-top-content container centered500px">
+            <div class="sharely-logo" id="logoImage">
                 <span class="logo-icon">S</span>
                 <span class="logo-text">Sharely</span>
             </div>
-            <div class="search-container">
+            <div class="search-container" id="searchContainer">
                 <i class="fa fa-search search-icon"></i>
-                <input type="text" id="appSearch" class="form-control" placeholder="Search services...">
+                <input type="text" id="appSearch" class="form-control" autocomplete="off" placeholder="Search services...">
             </div>
         </div>
-        <div class="filters-toggle-wrapper container">
+        <div class="filters-toggle-wrapper container centered500px">
             <span class="filters-label">Categories</span>
             <i class="fas fa-chevron-down" id="toggleFilters"></i>
         </div>
-        <div class="category-filters-container container" id="categoryFiltersContainer">
-            <div class="category-filters">
+        <div class="category-filters-container" id="categoryFiltersContainer">
+            <div class="category-filters centered500px">
                 <button class="btn btn-outline-light category-filter active" data-category="all">♾️ All</button>
                 <button class="btn btn-outline-light category-filter" data-category="productivity">⚡ Productivity</button>
                 <button class="btn btn-outline-light category-filter" data-category="streaming">🍿 Entertainment</button>
                 <button class="btn btn-outline-light category-filter" data-category="design">🖼️ Visual</button>
                 <button class="btn btn-outline-light category-filter" data-category="music">🎧 Music</button>
                 <button class="btn btn-outline-light category-filter" data-category="education">📚 Learning</button>
+                <button class="btn btn-outline-light category-filter" data-category="utilities">⚙️ Essentials</button>
             </div>
         </div>
     </header>
 
-    <main class="card text-center card-body gpy">
-        <div id="loading" class="full-page-container">
+    <main class="card text-center card-body gpy" style="padding-bottom:56px">
+        <div id="loading" class="full-page-container fadeIn">
             <div class="bouncing-loader"><div></div><div></div><div></div></div>
         </div>
-        <div id="loaded" class="row menu d-none"></div>
+        <div id="loaded" class="row menu d-none fadeIn"></div>
+        <div id="errored" class="full-page-container fadeIn d-none">
+            <div class="error-box">
+                <i class="fas fa-plug error-icon"></i>
+                <h3 class="error-title">Not Connected</h3>
+                <p class="error-msg" id="errorMsg">Could not load services.</p>
+            </div>
+        </div>
     </main>
 
     <footer class="py-2 card-footer justify-content-between">
         <div class="icon-container">
-            <i id="refreshButton" class="fas fa-sync-alt icon"></i>
-            <i id="settingsButton" class="fas fa-cog icon"></i>
+            <i id="safeLogout" class="fas fa-right-from-bracket icon"></i>
+            <i id="refreshButton" class="fas fa-sync-alt icon" title="Refresh"></i>
+            <i id="captureButton" class="fas fa-camera icon"></i>
+            <i id="settingsButton" class="fas fa-cog icon" title="Settings"></i>
+            <i id="adminButton" class="fas fa-shield-alt icon"></i>
         </div>
         <div class="theme-switcher">
-            <span class="footer-text">Sharely &copy; 2026</span>
-            <i id="theme-light" class="fas fa-sun icon"></i>
-            <i id="theme-dark" class="fas fa-moon icon d-none"></i>
+            <span class="footer-text" id="footer">Sharely &copy; 2025</span>
+            <i id="theme-light" class="fas fa-sun icon" title="Light Mode"></i>
+            <i id="theme-dark" class="fas fa-moon icon d-none" title="Dark Mode"></i>
         </div>
     </footer>
 
-    <!-- Account Picker Overlay -->
+    <!-- Account Picker -->
     <div class="account-picker-overlay" id="accountPickerOverlay">
-        <div class="account-picker-box">
+        <div class="account-picker-box" id="accountPicker">
             <div class="account-picker-header">
-                <h3 id="accountPickerTitle">Select Account</h3>
+                <h3 id="accountPickerTitle"></h3>
                 <i class="fas fa-times account-picker-close" id="accountPickerClose"></i>
             </div>
+            <p style="font-size:11px;color:#aaa;margin-bottom:12px">Select an account to log in:</p>
             <div id="accountPickerList"></div>
         </div>
     </div>
 
-    <!-- Settings Overlay -->
-    <div class="settingsOverlay" id="settingsOverlay" style="display:none">
-        <div class="settingsBox">
-            <div class="settingsBox-header">
-                <h2>Settings</h2>
-                <i class="fas fa-times close-icon" id="closeSettings"></i>
-            </div>
-            <div class="settings-field">
-                <label>API Key</label>
-                <input type="password" id="settingApiKey" placeholder="sk_sharely_...">
-            </div>
-            <button class="btn btn-primary w-100" id="saveSettingsBtn">Save & Connect</button>
-        </div>
+    <!-- Notification Modal -->
+    <div class="notificationModal" id="notification-0" style="display:none">
+        <div class="notificationModal-content"></div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script>
-        // Simplified Mobile Web Version of sharely-extension.js
-        let servicesCache = [];
+        // /app — Web version using sharely_user_session cookie (set by magic link)
         const API_BASE = window.location.origin;
+        let allServices = [];
+        let currentCategory = 'all';
 
-        async function init() {
-            const apiKey = localStorage.getItem('sharely_api_key');
-            if (!apiKey) {
-                $('#settingsOverlay').show();
-                $('#loading').hide();
-                return;
-            }
-            loadServices();
-        }
+        function showLoading() { $('#loading').removeClass('d-none'); $('#loaded').addClass('d-none'); $('#errored').addClass('d-none'); }
+        function showLoaded()  { $('#loading').addClass('d-none'); $('#loaded').removeClass('d-none'); $('#errored').addClass('d-none'); }
+        function showError(m)  { $('#loading').addClass('d-none'); $('#errored').removeClass('d-none'); if (m) $('#errorMsg').text(m); }
 
         async function loadServices() {
+            showLoading();
             try {
-                const res = await fetch(`${API_BASE}/api/config`, {
-                    headers: { 'X-API-Key': localStorage.getItem('sharely_api_key') }
+                const res = await fetch(`${API_BASE}/api/extension/config`, {
+                    credentials: 'include' // send sharely_user_session cookie automatically
                 });
-                const data = await res.json();
-                if (data.success) {
-                    servicesCache = data.services;
-                    renderServices(servicesCache);
-                    $('#loading').hide();
-                    $('#loaded').removeClass('d-none');
+                if (res.status === 401) {
+                    $('#appAuth').show();
+                    showError('Please log in.');
+                    return;
                 }
+                if (!res.ok) throw new Error('Server error');
+
+                const data = await res.json();
+                allServices = data.services || [];
+                if (data.theme === 'light') $('body').addClass('light-theme');
+                renderServices(allServices);
+                showLoaded();
             } catch (e) {
-                alert('Connection failed');
+                showError('Could not connect. Pull down to refresh.');
             }
+        }
+
+        function buildIcon(s) {
+            if (s.icon_url) return `<div class="service-img-icon"><img src="${s.icon_url}" alt="${s.name}" onerror="this.parentElement.innerHTML='<span style=\\'font-size:28px\\'>${s.icon||'🌐'}</span>'"></div>`;
+            if (s.icon && s.icon.length <= 4) return `<div class="service-emoji-icon">${s.icon}</div>`;
+            return `<div class="service-emoji-icon">🌐</div>`;
         }
 
         function renderServices(services) {
-            const $menu = $('#loaded');
-            $menu.empty();
+            const $menu = $('#loaded').empty();
+            if (!services.length) {
+                $menu.html('<div style="padding:40px;color:#888;font-family:Inter,sans-serif">No services available.</div>');
+                showLoaded(); return;
+            }
             services.forEach(s => {
-                const icon = s.icon_url ? `<div class="service-img-icon"><img src="${s.icon_url}"></div>` : `<div class="service-emoji-icon">${s.icon || '🌐'}</div>`;
-                const badge = s.accounts.length > 1 ? `<span class="account-badge">${s.accounts.length}</span>` : '';
-                const $item = $(`
-                    <div class="col-4 text-center service" data-id="${s.id}">
-                        <div style="position:relative;display:inline-block">
-                            ${icon}${badge}
-                        </div>
-                        <p class="menu-text">${s.name}</p>
+                const badge = s.accounts && s.accounts.length > 1 ? `<span class="account-badge">${s.accounts.length}</span>` : '';
+                const $item = $(`<div class="col-2 text-center service-item" data-id="${s.id}" style="margin-bottom:20px;cursor:pointer;padding:4px">
+                    <div style="position:relative;display:inline-block">
+                        ${buildIcon(s)}${badge}
                     </div>
-                `);
-                $item.on('click', () => showAccounts(s));
+                    <p class="menu-text" style="margin-top:6px;font-size:11px">${s.name}</p>
+                </div>`);
+                $item.on('click', () => {
+                    if (!s.accounts || s.accounts.length === 0) {
+                        alert('No accounts available for this service.');
+                        return;
+                    }
+                    if (s.accounts.length === 1) {
+                        showNotif('⚠️ Web App', 'Cookie injection requires the Chrome extension. Download it from the setup guide.');
+                        return;
+                    }
+                    showAccountPicker(s);
+                });
                 $menu.append($item);
             });
         }
 
-        function showAccounts(service) {
-            const $list = $('#accountPickerList').empty();
+        function filterAndRender() {
+            const q = $('#appSearch').val().toLowerCase();
+            let filtered = allServices;
+            if (currentCategory !== 'all') filtered = filtered.filter(s => s.category === currentCategory);
+            if (q) filtered = filtered.filter(s => s.name.toLowerCase().includes(q));
+            renderServices(filtered);
+        }
+
+        function showAccountPicker(service) {
             $('#accountPickerTitle').text(service.name);
+            const $list = $('#accountPickerList').empty();
             service.accounts.forEach(acc => {
-                const $btn = $(`<button class="account-pick-btn w-100 mb-2">
-                    <span>${acc.label}</span>
-                    <i class="fas fa-copy"></i>
+                const $btn = $(`<button class="account-pick-btn">
+                    <span class="account-pick-label">${acc.label}</span>
+                    <span class="account-pick-count">${acc.cookies.length} cookie${acc.cookies.length !== 1 ? 's' : ''}</span>
                 </button>`);
                 $btn.on('click', () => {
-                    // In web app, we just copy cookies to clipboard since we can't inject
-                    const cookieStr = JSON.stringify(acc.cookies);
-                    navigator.clipboard.writeText(cookieStr);
-                    alert('Cookies copied to clipboard! (Injection requires Chrome Extension)');
+                    $('#accountPickerOverlay').fadeOut(150);
+                    showNotif('⚠️ Web App', 'Cookie injection requires the Chrome extension. Install it from your setup guide to use Sharely.');
                 });
                 $list.append($btn);
             });
-            $('#accountPickerOverlay').css('display', 'flex');
+            $('#accountPickerOverlay').css('display','flex').hide().fadeIn(150);
         }
 
-        $('#saveSettingsBtn').on('click', () => {
-            localStorage.setItem('sharely_api_key', $('#settingApiKey').val());
-            $('#settingsOverlay').hide();
-            $('#loading').show();
-            loadServices();
+        function showNotif(title, msg) {
+            const $m = $('#notification-0');
+            $m.find('.notificationModal-content').html(`
+                <i class="fas fa-times close-icon" id="closeNotif"></i>
+                <h2>${title}</h2>
+                <p style="font-size:12px;line-height:1.6">${msg}</p>
+            `);
+            $m.css({ display:'flex', opacity:1, visibility:'visible' });
+            $('#closeNotif').on('click', () => $m.css({ opacity:0, visibility:'hidden' }));
+            setTimeout(() => $m.css({ opacity:0, visibility:'hidden' }), 5000);
+        }
+
+        // App auth — magic link request
+        $('#appAuthBtn').on('click', async () => {
+            const email = $('#appAuthEmail').val().trim();
+            if (!email) { $('#appAuthError').text('Enter your email address.').show(); return; }
+            $('#appAuthBtn').prop('disabled', true).text('Sending...');
+            try {
+                const res = await fetch(`${API_BASE}/auth/magic-login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, deviceFingerprint: 'web_app' }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.magic_link) {
+                        // Dev mode: redirect directly
+                        window.location.href = data.magic_link;
+                    } else {
+                        $('#appAuth .app-auth-box').html(`
+                            <div style="text-align:center;font-family:Inter,sans-serif">
+                                <div style="font-size:48px;margin-bottom:16px">✉️</div>
+                                <h2 style="color:#fff;font-size:20px;font-weight:800;margin-bottom:8px">Check your email</h2>
+                                <p style="color:#888;font-size:13px">We sent a login link to <strong style="color:#a29bfe">${email}</strong>. Click it to access Sharely.</p>
+                            </div>
+                        `);
+                    }
+                } else {
+                    $('#appAuthError').text(data.error || 'Login failed.').show();
+                    $('#appAuthBtn').prop('disabled', false).text('Send Login Link');
+                }
+            } catch (_) {
+                $('#appAuthError').text('Connection failed.').show();
+                $('#appAuthBtn').prop('disabled', false).text('Send Login Link');
+            }
         });
+        $('#appAuthEmail').on('keydown', e => { if (e.key === 'Enter') $('#appAuthBtn').click(); });
 
-        $('#accountPickerClose').on('click', () => $('#accountPickerOverlay').hide());
-        $('#closeSettings').on('click', () => $('#settingsOverlay').hide());
-        $('#settingsButton').on('click', () => $('#settingsOverlay').show());
-        $('#refreshButton').on('click', () => loadServices());
+        // Filters
+        $(document).on('click', '.category-filter', function() {
+            $('.category-filter').removeClass('active');
+            $(this).addClass('active');
+            currentCategory = $(this).data('category');
+            filterAndRender();
+        });
+        $('#appSearch').on('input', filterAndRender);
+        $('#toggleFilters').on('click', function() {
+            $(this).toggleClass('rotated');
+            $('#categoryFiltersContainer').toggleClass('hidden');
+        });
+        $('#refreshButton').on('click', loadServices);
+        $('#accountPickerClose').on('click', () => $('#accountPickerOverlay').fadeOut(150));
+        $('#accountPickerOverlay').on('click', function(e) { if (e.target === this) $(this).fadeOut(150); });
 
-        init();
+        // Theme
+        $('#theme-light').on('click', () => { $('body').removeClass('light-theme'); $('#theme-light').addClass('d-none'); $('#theme-dark').removeClass('d-none'); });
+        $('#theme-dark').on('click', () => { $('body').addClass('light-theme'); $('#theme-dark').addClass('d-none'); $('#theme-light').removeClass('d-none'); });
+
+        loadServices();
     </script>
 </body>
 </html>

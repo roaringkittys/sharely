@@ -166,14 +166,21 @@ function requireApiKey(req, res, next) {
   const stored = db.prepare("SELECT value FROM extension_settings WHERE key = 'api_key'").get();
   if (apiKey && stored && apiKey === stored.value) return next();
 
-  // Also accept a valid user session token
+  // Accept user session from header (extension)
   const userSession = req.headers['x-user-session'];
   if (userSession && verifyUserSession(userSession)) {
     req.isUserSession = true;
     return next();
   }
 
-  res.status(401).json({ error: 'Authentication required. Please log in via the extension.' });
+  // Accept user session from cookie (web /app page — same-origin)
+  const cookieSession = req.cookies && req.cookies.sharely_user_session;
+  if (cookieSession && verifyUserSession(cookieSession)) {
+    req.isUserSession = true;
+    return next();
+  }
+
+  res.status(401).json({ error: 'Authentication required. Please log in.' });
 }
 
 app.get('/app', (req, res) => {

@@ -7,7 +7,6 @@ let apiKey = '';
 let currentUserSession = '';
 let currentUserEmail = '';
 let currentUserExpiry = '';
-let authMode = 'new'; // 'new' requires token, 'returning' no token
 
 async function loadStorage() {
   return new Promise(resolve => {
@@ -40,36 +39,15 @@ function getDeviceFingerprint() {
 
 // ── Auth overlay ──────────────────────────────────────────────────────────
 
-function setAuthMode(mode) {
-  authMode = mode;
-  if (mode === 'new') {
-    $('#authTitle').text('Welcome to Sharely');
-    $('#authSubtitle').text('Enter your email and access token to get started.');
-    $('#authTokenField').show();
-    $('#authSubmitBtn').text('Get Access');
-    $('#authToggleMsg').text('Already have an account?');
-    $('#authToggleLink').text('Log in without token');
-  } else {
-    $('#authTitle').text('Welcome back');
-    $('#authSubtitle').text('Enter your email to log in to your existing account.');
-    $('#authTokenField').hide();
-    $('#authSubmitBtn').text('Log In');
-    $('#authToggleMsg').text('New user?');
-    $('#authToggleLink').text('Enter your access token');
-  }
-}
-
 function showAuthScreen(error) {
   $('#authSuccess').hide();
-  $('#authFields').show();
-  $('#authSubmitBtn').show().prop('disabled', false).text(authMode === 'returning' ? 'Log In' : 'Get Access');
-  $('#authToggle').show();
+  $('#authForm').show();
+  $('#authSubmitBtn').prop('disabled', false).text('Continue');
   if (error) {
     $('#authError').text(error).show();
   } else {
     $('#authError').hide();
   }
-  setAuthMode(authMode);
   $('#authOverlay').css('display', 'flex').hide().fadeIn(200);
 }
 
@@ -586,12 +564,6 @@ $('#adminButton').on('click', async () => {
 
 // ── Auth event handlers ───────────────────────────────────────────────────
 
-$('#authToggleLink').on('click', (e) => {
-  e.preventDefault();
-  setAuthMode(authMode === 'new' ? 'returning' : 'new');
-  $('#authError').hide();
-});
-
 $('#authHelpLink').on('click', async (e) => {
   e.preventDefault();
   const stored = await loadStorage();
@@ -607,16 +579,12 @@ $('#authSubmitBtn').on('click', async () => {
     $('#authError').text('Please enter your email address.').show();
     return;
   }
-  if (authMode === 'new' && !token) {
-    $('#authError').text('Please enter your access token.').show();
-    return;
-  }
   if (!serverUrl) {
     const stored = await loadStorage();
     serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
   }
   if (!serverUrl) {
-    $('#authError').text('Server URL not configured. Open Settings first.').show();
+    $('#authError').text('Server URL not set. Open Settings and paste your server URL.').show();
     return;
   }
 
@@ -624,11 +592,19 @@ $('#authSubmitBtn').on('click', async () => {
   $('#authSubmitBtn').prop('disabled', true).text('Connecting...');
 
   try {
-    const { ok, data } = await doExtensionLogin(email, authMode === 'new' ? token : null);
+    // Smart: pass token only if provided; backend handles both register and login
+    const { ok, data } = await doExtensionLogin(email, token || null);
 
     if (!ok || !data.success) {
-      $('#authSubmitBtn').prop('disabled', false).text(authMode === 'new' ? 'Get Access' : 'Log In');
-      $('#authError').text(data.error || 'Login failed. Please try again.').show();
+      const errMsg = data.error || 'Login failed. Please try again.';
+      // If no account found and no token was entered, guide them to enter token
+      if (!token && (errMsg.toLowerCase().includes('no account') || errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('invalid token'))) {
+        $('#authError').text('No account found for this email. Paste your access token below to register.').show();
+        $('#authToken').focus();
+      } else {
+        $('#authError').text(errMsg).show();
+      }
+      $('#authSubmitBtn').prop('disabled', false).text('Continue');
       return;
     }
 
@@ -644,10 +620,7 @@ $('#authSubmitBtn').on('click', async () => {
 
     // Show success state
     const days = data.days_remaining;
-    $('#authFields').hide();
-    $('#authSubmitBtn').hide();
-    $('#authToggle').hide();
-    $('#authError').hide();
+    $('#authForm').hide();
     $('#authSuccessTitle').text(data.is_new_user ? `Welcome, ${data.email.split('@')[0]}!` : 'Welcome back!');
     $('#authSuccessMsg').text(`Access valid for ${days} more day${days !== 1 ? 's' : ''}. Loading your services...`);
     $('#authSuccess').fadeIn(300);
@@ -660,7 +633,7 @@ $('#authSubmitBtn').on('click', async () => {
     }, 1800);
 
   } catch (err) {
-    $('#authSubmitBtn').prop('disabled', false).text(authMode === 'new' ? 'Get Access' : 'Log In');
+    $('#authSubmitBtn').prop('disabled', false).text('Continue');
     $('#authError').text('Connection failed. Check your server URL in Settings.').show();
   }
 });
@@ -680,7 +653,6 @@ $('#footer').on('click', '.expiry-badge, .user-email-text', async () => {
   currentUserEmail = '';
   currentUserExpiry = '';
   $('#footer').text('Sharely \u00a9 2024\u20132025');
-  authMode = 'returning';
   showAuthScreen();
 });
 
@@ -696,18 +668,18 @@ $(async () => {
     updateUserFooter(stored.userEmail, stored.userExpiry);
   }
 
-  // If no server URL, show error
-  if (!serverUrl) {
-    showError('Configure your server URL in settings first.');
-    disableFilters();
+  const userSession = stored.userSession || '';
+
+  // If no credentials at all, show auth (server URL is checked on submit)
+  if (!userSession && !stored.apiKey) {
+    showAuthScreen();
     return;
   }
 
-  const userSession = stored.userSession || '';
-
-  // If no credentials at all, show auth
-  if (!userSession && !stored.apiKey) {
-    showAuthScreen();
+  // If no server URL but has credentials, show error
+  if (!serverUrl) {
+    showError('Configure your server URL in settings first.');
+    disableFilters();
     return;
   }
 
@@ -717,7 +689,6 @@ $(async () => {
       const result = await verifyStoredSession(userSession);
       if (!result || !result.valid) {
         await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
-        authMode = 'returning';
         showAuthScreen(result ? result.error : 'Session expired. Please log in again.');
         return;
       }
