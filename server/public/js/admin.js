@@ -65,6 +65,8 @@ async function loadPage(page) {
     case 'services': await loadServices(); break;
     case 'cookies': await loadCookies(); break;
     case 'settings': await loadSettings(); break;
+    case 'users': await loadUsers(); break;
+    case 'tokens': await loadTokens(); break;
   }
 }
 
@@ -474,6 +476,165 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   await API.post('/api/auth/logout');
   window.location.href = '/login';
 });
+
+// ── Users Page ─────────────────────────────────────────────────────────────
+
+async function loadUsers() {
+  const [users, analytics] = await Promise.all([
+    API.get('/admin/users'),
+    API.get('/admin/analytics')
+  ]);
+  if (!users) return;
+
+  if (analytics) {
+    document.getElementById('userAnalytics').textContent =
+      `${analytics.activeUsers} active · ${analytics.expiredUsers} expired · ${analytics.activeSessions} sessions online`;
+  }
+
+  if (users.length === 0) {
+    document.getElementById('usersTable').innerHTML = '<div class="empty-state"><p>No users registered yet. Share the <a href="/register" target="_blank" style="color:var(--primary)">registration page</a> with your users.</p></div>';
+    return;
+  }
+
+  document.getElementById('usersTable').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Email</th>
+        <th>Status</th>
+        <th>Access Expires</th>
+        <th>Last Seen</th>
+        <th>Registered</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${users.map(u => {
+          const expired = u.is_expired;
+          const active = u.is_active && !expired;
+          const statusBadge = !u.is_active
+            ? '<span class="badge badge-danger">Revoked</span>'
+            : expired
+              ? '<span class="badge badge-warning">Expired</span>'
+              : '<span class="badge badge-success">Active</span>';
+          const expiresStr = u.access_expires_at ? new Date(u.access_expires_at).toLocaleDateString() : '—';
+          const lastSeen = u.last_seen ? new Date(u.last_seen).toLocaleString() : 'Never';
+          const registered = new Date(u.created_at).toLocaleDateString();
+          return `<tr>
+            <td><strong>${escapeHtml(u.email)}</strong></td>
+            <td>${statusBadge}</td>
+            <td>${expiresStr}</td>
+            <td style="font-size:12px;color:var(--text-secondary)">${lastSeen}</td>
+            <td style="font-size:12px;color:var(--text-secondary)">${registered}</td>
+            <td style="white-space:nowrap">
+              ${u.is_active
+                ? `<button class="btn btn-outline btn-sm" onclick="revokeUser(${u.id},'${escapeAttr(u.email)}')">Revoke</button>`
+                : `<button class="btn btn-outline btn-sm" onclick="restoreUser(${u.id})">Restore</button>`}
+              <button class="btn btn-outline btn-sm" style="margin-left:6px" onclick="resetDevice(${u.id},'${escapeAttr(u.email)}')" title="Reset device binding">Reset Device</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function revokeUser(id, email) {
+  if (!confirm(`Revoke access for "${email}"? They won't be able to log in.`)) return;
+  const res = await API.del(`/admin/users/${id}`);
+  if (res.success) { showToast('User revoked'); loadUsers(); }
+}
+
+async function restoreUser(id) {
+  const res = await API.post(`/admin/users/${id}/restore`, {});
+  if (res.success) { showToast('User restored'); loadUsers(); }
+}
+
+async function resetDevice(id, email) {
+  if (!confirm(`Reset device binding for "${email}"? They can log in from any device once.`)) return;
+  const res = await API.del(`/admin/users/${id}/device`);
+  if (res.success) { showToast('Device reset'); loadUsers(); }
+}
+
+// ── Tokens Page ─────────────────────────────────────────────────────────────
+
+async function loadTokens() {
+  const tokens = await API.get('/admin/tokens');
+  if (!tokens) return;
+
+  if (tokens.length === 0) {
+    document.getElementById('tokensTable').innerHTML = '<div class="empty-state"><p>No tokens yet. Generate some above.</p></div>';
+    return;
+  }
+
+  document.getElementById('tokensTable').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Token</th>
+        <th>Duration</th>
+        <th>Status</th>
+        <th>Used By</th>
+        <th>Expires</th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${tokens.map(t => {
+          const statusBadge = t.used
+            ? `<span class="badge badge-success">Used</span>`
+            : t.is_expired
+              ? `<span class="badge badge-danger">Expired</span>`
+              : `<span class="badge badge-warning">Available</span>`;
+          const expiresStr = new Date(t.expires_at).toLocaleDateString();
+          const usedBy = t.used_by ? escapeHtml(t.used_by) : '—';
+          return `<tr>
+            <td><code style="font-size:11px;cursor:pointer" onclick="navigator.clipboard.writeText('${t.token}');showToast('Token copied')" title="Click to copy">${t.token.substring(0,16)}...</code></td>
+            <td>${t.duration_days}d</td>
+            <td>${statusBadge}</td>
+            <td style="font-size:12px;color:var(--text-secondary)">${usedBy}</td>
+            <td style="font-size:12px">${expiresStr}</td>
+            <td>
+              <button class="btn btn-outline btn-sm" onclick="deleteToken(${t.id})">Delete</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function deleteToken(id) {
+  if (!confirm('Delete this token?')) return;
+  const res = await API.del(`/admin/tokens/${id}`);
+  if (res.success) { showToast('Token deleted'); loadTokens(); }
+}
+
+document.getElementById('generateTokensBtn').addEventListener('click', async () => {
+  const count = parseInt(document.getElementById('tokenCount').value) || 10;
+  const durationDays = parseInt(document.getElementById('tokenDuration').value) || 30;
+  const btn = document.getElementById('generateTokensBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+
+  const res = await API.post('/admin/generate-tokens', { count, durationDays });
+  btn.disabled = false;
+  btn.textContent = 'Generate';
+
+  if (res && res.success) {
+    const box = document.getElementById('generatedTokensBox');
+    document.getElementById('generatedTokensText').value = res.tokens.join('\n');
+    box.style.display = 'block';
+    showToast(`${res.count} tokens generated`);
+    loadTokens();
+  } else {
+    showToast((res && res.error) || 'Failed', 'error');
+  }
+});
+
+document.getElementById('copyTokensBtn').addEventListener('click', () => {
+  const text = document.getElementById('generatedTokensText').value;
+  navigator.clipboard.writeText(text);
+  showToast('All tokens copied to clipboard');
+});
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 const hash = window.location.hash.replace('#', '') || 'dashboard';
 const navLink = document.querySelector(`[data-page="${hash}"]`);

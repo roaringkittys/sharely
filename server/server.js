@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const crypto = require('crypto');
+const userSystem = require('./user-system');
 
 const app = express();
 const PORT = 5000;
@@ -148,6 +149,10 @@ app.use(session({
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── User Access System ────────────────────────────────────────────────────
+userSystem.init(db);
+app.use('/', userSystem.router);
+
 function requireAuth(req, res, next) {
   if (req.session && req.session.userId) return next();
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });
@@ -167,6 +172,18 @@ app.get('/app', (req, res) => {
 
 app.get('/safari', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'safari.html'));
+});
+
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+app.get('/user-login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'user-login.html'));
+});
+
+app.get('/magic-sent', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'magic-sent.html'));
 });
 
 app.get('/login', (req, res) => {
