@@ -115,13 +115,29 @@ async function loadServices() {
     document.getElementById('servicesTable').innerHTML = '<div class="empty-state"><p>No services yet. Click "Add Service" to get started.</p></div>';
     return;
   }
-  document.getElementById('servicesTable').innerHTML = `<table><thead><tr><th>Logo</th><th>Name</th><th>Domain</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead><tbody>${services.map(s => {
+
+  // Separate parents and children
+  const parents = services.filter(s => !s.parent_id);
+  const childrenOf = {};
+  services.filter(s => s.parent_id).forEach(s => {
+    if (!childrenOf[s.parent_id]) childrenOf[s.parent_id] = [];
+    childrenOf[s.parent_id].push(s);
+  });
+
+  const rows = [];
+  parents.forEach(s => {
+    const children = childrenOf[s.id] || [];
+    const childCount = children.length;
     const iconCell = s.icon_url
       ? `<img src="${s.icon_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover">`
       : `<span style="font-size:24px">${s.icon || '🌐'}</span>`;
-    return `<tr>
+    const namePart = childCount > 0
+      ? `<strong>${s.name}</strong> <span class="badge badge-info" style="margin-left:4px">${childCount} sub-services</span>`
+      : `<strong>${s.name}</strong>`;
+
+    rows.push(`<tr>
       <td>${iconCell}</td>
-      <td><strong>${s.name}</strong></td>
+      <td>${namePart}</td>
       <td><code>${s.domain}</code></td>
       <td><span class="badge badge-info">${s.category}</span></td>
       <td><span class="badge ${s.enabled ? 'badge-success' : 'badge-danger'}">${s.enabled ? 'Active' : 'Disabled'}</span></td>
@@ -129,8 +145,35 @@ async function loadServices() {
         <button class="btn btn-outline btn-sm" onclick="editService(${s.id})">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteService(${s.id}, '${s.name}')">Delete</button>
       </td>
-    </tr>`;
-  }).join('')}</tbody></table>`;
+    </tr>`);
+
+    // Render children indented under parent
+    children.forEach(c => {
+      const cIcon = c.icon_url
+        ? `<img src="${c.icon_url}" style="width:28px;height:28px;border-radius:6px;object-fit:cover">`
+        : `<span style="font-size:20px">${c.icon || '🌐'}</span>`;
+      rows.push(`<tr style="background:rgba(108,92,231,0.05)">
+        <td style="padding-left:24px">${cIcon}</td>
+        <td style="padding-left:8px"><span style="color:#888;margin-right:6px">↳</span>${c.name}</td>
+        <td><code>${c.domain}</code></td>
+        <td><span class="badge badge-info">${c.category}</span></td>
+        <td><span class="badge ${c.enabled ? 'badge-success' : 'badge-danger'}">${c.enabled ? 'Active' : 'Disabled'}</span></td>
+        <td class="actions-cell">
+          <button class="btn btn-outline btn-sm" onclick="editService(${c.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteService(${c.id}, '${c.name}')">Delete</button>
+        </td>
+      </tr>`);
+    });
+  });
+
+  document.getElementById('servicesTable').innerHTML = `<table><thead><tr><th>Logo</th><th>Name</th><th>Domain</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+
+function populateParentDropdown(excludeId = null) {
+  const select = document.getElementById('serviceParent');
+  const topLevel = servicesCache.filter(s => !s.parent_id && s.id !== excludeId);
+  select.innerHTML = '<option value="">— Top-level service (no parent) —</option>' +
+    topLevel.map(s => `<option value="${s.id}">${s.icon || '🌐'} ${s.name}</option>`).join('');
 }
 
 async function loadCookies() {
@@ -307,6 +350,8 @@ document.getElementById('addServiceBtn').addEventListener('click', () => {
   document.getElementById('serviceIcon').value = '';
   document.getElementById('serviceCategory').value = 'productivity';
   resetServiceIconUI(null);
+  populateParentDropdown(null);
+  document.getElementById('serviceParent').value = '';
   openModal('serviceModal');
 });
 
@@ -320,17 +365,21 @@ window.editService = async function(id) {
   document.getElementById('serviceIcon').value = s.icon;
   document.getElementById('serviceCategory').value = s.category;
   resetServiceIconUI(s.icon_url || null);
+  populateParentDropdown(s.id);
+  document.getElementById('serviceParent').value = s.parent_id || '';
   openModal('serviceModal');
 };
 
 document.getElementById('saveServiceBtn').addEventListener('click', async () => {
   const id = document.getElementById('serviceId').value;
+  const parentVal = document.getElementById('serviceParent').value;
   const data = {
     name: document.getElementById('serviceName').value,
     domain: document.getElementById('serviceDomain').value,
     icon: document.getElementById('serviceIcon').value || '🌐',
     category: document.getElementById('serviceCategory').value,
     enabled: true,
+    parent_id: parentVal ? parseInt(parentVal) : null,
   };
   if (!data.name || !data.domain) { showToast('Name and domain are required', 'error'); return; }
 

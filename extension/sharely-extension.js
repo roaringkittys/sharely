@@ -144,21 +144,35 @@ function renderServices(services) {
 
   services.forEach(service => {
     const accounts = service.accounts || [];
+    const subServices = service.sub_services || [];
+    const hasSubServices = subServices.length > 0;
     const hasAccounts = accounts.length > 0;
     const accountCount = accounts.length;
+
+    // Badge: sub-service count (purple) takes priority over account count
+    let badge = '';
+    if (hasSubServices) {
+      badge = `<span class="account-badge" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)">${subServices.length}</span>`;
+    } else if (accountCount > 1) {
+      badge = `<span class="account-badge">${accountCount}</span>`;
+    }
 
     const $item = $(`
       <div class="col-2 text-center service" data-category="${service.category}" data-id="${service.id}">
         <div style="position:relative;display:inline-block">
           ${buildServiceIcon(service)}
-          ${!hasAccounts ? '<span class="overlay">–</span>' : ''}
-          ${accountCount > 1 ? `<span class="account-badge">${accountCount}</span>` : ''}
+          ${!hasSubServices && !hasAccounts ? '<span class="overlay">–</span>' : ''}
+          ${badge}
         </div>
         <p class="menu-text">${service.name}</p>
       </div>
     `);
 
     $item.on('click', function () {
+      if (hasSubServices) {
+        showSubServicesView(service);
+        return;
+      }
       if (!hasAccounts) {
         showNotification('No accounts', `${service.name} has no cookies configured yet.`);
         return;
@@ -175,6 +189,70 @@ function renderServices(services) {
 
   showLoaded();
   enableFilters();
+}
+
+// ── Sub-services view ─────────────────────────────────────────────────────
+
+function showSubServicesView(parentService) {
+  const subServices = parentService.sub_services || [];
+  const $sub = $('#subView').empty();
+
+  if (subServices.length === 0) {
+    $sub.html(`<div class="col-12 mt-4"><p style="color:#aaa;font-size:13px">No sub-services configured.</p></div>`);
+  } else {
+    subServices.forEach(service => {
+      const accounts = service.accounts || [];
+      const hasAccounts = accounts.length > 0;
+      const accountCount = accounts.length;
+      const badge = accountCount > 1 ? `<span class="account-badge">${accountCount}</span>` : '';
+
+      const $item = $(`
+        <div class="col-2 text-center service" data-id="${service.id}">
+          <div style="position:relative;display:inline-block">
+            ${buildServiceIcon(service)}
+            ${!hasAccounts ? '<span class="overlay">–</span>' : ''}
+            ${badge}
+          </div>
+          <p class="menu-text">${service.name}</p>
+        </div>
+      `);
+
+      $item.on('click', function () {
+        if (!hasAccounts) {
+          showNotification('No accounts', `${service.name} has no cookies configured yet.`);
+          return;
+        }
+        if (accountCount === 1) {
+          doInject(service, accounts[0]);
+        } else {
+          showAccountPicker(service, accounts);
+        }
+      });
+
+      $sub.append($item);
+    });
+  }
+
+  // Switch header to sub-view mode
+  $('#mainViewHeader').css('display', 'none');
+  $('#subViewHeader').css('display', 'flex');
+  $('#subViewTitle').text(parentService.name);
+  $('#filtersToggleRow').hide();
+  $('#categoryFiltersContainer').hide();
+
+  // Switch content
+  $('#loaded').addClass('d-none');
+  $('#subView').removeClass('d-none');
+}
+
+function closeSubServicesView() {
+  $('#subView').addClass('d-none');
+  $('#subViewHeader').css('display', 'none');
+  $('#mainViewHeader').css('display', 'contents');
+  $('#filtersToggleRow').show();
+  const filtersHidden = $('#categoryFiltersContainer').hasClass('hidden');
+  if (!filtersHidden) $('#categoryFiltersContainer').show();
+  $('#loaded').removeClass('d-none');
 }
 
 function filterAndRender() {
@@ -383,8 +461,14 @@ $('#toggleFilters').on('click', function () {
   $('#categoryFiltersContainer').toggleClass('hidden');
 });
 
-// Refresh
-$('#refreshButton').on('click', fetchConfig);
+// Back button — exit sub-services view
+$('#backBtn').on('click', closeSubServicesView);
+
+// Refresh — also close sub-view if open
+$('#refreshButton').on('click', () => {
+  if ($('#subView').is(':visible')) closeSubServicesView();
+  fetchConfig();
+});
 
 // Safe logout
 $('#safeLogout').on('click', clearAllCookies);

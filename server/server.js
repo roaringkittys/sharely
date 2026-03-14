@@ -71,9 +71,12 @@ db.exec(`
 // Add icon_url column to existing databases (migration)
 try {
   db.exec(`ALTER TABLE services ADD COLUMN icon_url TEXT DEFAULT NULL`);
-} catch (e) {
-  // Column already exists — ignore
-}
+} catch (e) { /* already exists */ }
+
+// Add parent_id column for sub-services feature (migration)
+try {
+  db.exec(`ALTER TABLE services ADD COLUMN parent_id INTEGER DEFAULT NULL REFERENCES services(id)`);
+} catch (e) { /* already exists */ }
 
 const adminExists = db.prepare('SELECT COUNT(*) as count FROM admin_users').get();
 if (adminExists.count === 0) {
@@ -244,20 +247,24 @@ app.post('/api/auth/change-password', requireAuth, (req, res) => {
 });
 
 app.get('/api/services', requireAuth, (req, res) => {
-  const services = db.prepare('SELECT * FROM services ORDER BY name').all();
+  const services = db.prepare('SELECT * FROM services ORDER BY parent_id NULLS FIRST, name').all();
   res.json(services);
 });
 
 app.post('/api/services', requireAuth, (req, res) => {
-  const { name, domain, icon, category } = req.body;
+  const { name, domain, icon, category, parent_id } = req.body;
   if (!name || !domain) return res.status(400).json({ error: 'Name and domain are required' });
-  const result = db.prepare('INSERT INTO services (name, domain, icon, category) VALUES (?, ?, ?, ?)').run(name, domain, icon || '🌐', category || 'other');
+  const result = db.prepare('INSERT INTO services (name, domain, icon, category, parent_id) VALUES (?, ?, ?, ?, ?)').run(
+    name, domain, icon || '🌐', category || 'other', parent_id || null
+  );
   res.json({ id: result.lastInsertRowid, success: true });
 });
 
 app.put('/api/services/:id', requireAuth, (req, res) => {
-  const { name, domain, icon, category, enabled } = req.body;
-  db.prepare('UPDATE services SET name=?, domain=?, icon=?, category=?, enabled=? WHERE id=?').run(name, domain, icon, category, enabled ? 1 : 0, req.params.id);
+  const { name, domain, icon, category, enabled, parent_id } = req.body;
+  db.prepare('UPDATE services SET name=?, domain=?, icon=?, category=?, enabled=?, parent_id=? WHERE id=?').run(
+    name, domain, icon, category, enabled ? 1 : 0, parent_id || null, req.params.id
+  );
   res.json({ success: true });
 });
 
@@ -395,10 +402,9 @@ app.get('/api/extension/config', requireApiKey, (req, res) => {
     'SELECT c.*, s.domain as service_domain, s.name as service_name FROM cookies c JOIN services s ON c.service_id = s.id WHERE c.enabled = 1 AND s.enabled = 1 ORDER BY c.label, c.cookie_name'
   ).all();
 
-  const serviceData = services.map(s => {
-    const serviceCookies = allCookies.filter(c => c.service_id === s.id);
-
-    // Group cookies by label → accounts
+  // Helper: build accounts array for a service
+  function buildAccounts(serviceId) {
+    const serviceCookies = allCookies.filter(c => c.service_id === serviceId);
     const accountMap = {};
     for (const c of serviceCookies) {
       const lbl = c.label || 'Default';
@@ -414,19 +420,31 @@ app.get('/api/extension/config', requireApiKey, (req, res) => {
         expirationDate: c.expiry || undefined,
       });
     }
+    return Object.entries(accountMap).map(([label, cookies]) => ({ label, cookies }));
+  }
 
-    const accounts = Object.entries(accountMap).map(([label, cookies]) => ({ label, cookies }));
-
-    return {
+  function buildServiceObj(s, includeChildren = true) {
+    const obj = {
       id: s.id,
       name: s.name,
       domain: s.domain,
       icon: s.icon,
       icon_url: s.icon_url || null,
       category: s.category,
-      accounts,
+      accounts: buildAccounts(s.id),
     };
-  });
+    if (includeChildren) {
+      const children = services.filter(c => c.parent_id === s.id);
+      if (children.length > 0) {
+        obj.sub_services = children.map(c => buildServiceObj(c, false));
+      }
+    }
+    return obj;
+  }
+
+  // Only top-level services (no parent_id) in the main list
+  const topLevel = services.filter(s => !s.parent_id);
+  const serviceData = topLevel.map(s => buildServiceObj(s));
 
   res.json({
     extension_name: settings.extension_name || 'Sharely',
