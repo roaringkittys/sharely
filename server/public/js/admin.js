@@ -196,18 +196,69 @@ async function loadCookies() {
     document.getElementById('cookiesTable').innerHTML = '<div class="empty-state"><p>No cookies found. Click "Add Cookie" to add one.</p></div>';
     return;
   }
-  document.getElementById('cookiesTable').innerHTML = `<table><thead><tr><th>Service</th><th>Label</th><th>Name</th><th>Value</th><th>Domain</th><th>Status</th><th>Actions</th></tr></thead><tbody>${cookies.map(c => `<tr>
-    <td>${c.service_name}</td>
-    <td>${c.label}</td>
-    <td><code>${c.cookie_name}</code></td>
-    <td class="cookie-value-cell" title="${escapeAttr(c.cookie_value)}">${c.cookie_value.substring(0, 30)}${c.cookie_value.length > 30 ? '...' : ''}</td>
-    <td>${c.cookie_domain}</td>
-    <td><span class="badge ${c.enabled ? 'badge-success' : 'badge-danger'}">${c.enabled ? 'Active' : 'Disabled'}</span></td>
-    <td class="actions-cell">
-      <button class="btn btn-outline btn-sm" onclick="editCookie(${c.id})">Edit</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteCookie(${c.id})">Delete</button>
-    </td>
-  </tr>`).join('')}</tbody></table>`;
+
+  // Group cookies by service_id, then by label
+  const groupedByService = {};
+  cookies.forEach(c => {
+    if (!groupedByService[c.service_id]) {
+      groupedByService[c.service_id] = { service_name: c.service_name, labels: {} };
+    }
+    if (!groupedByService[c.service_id].labels[c.label]) {
+      groupedByService[c.service_id].labels[c.label] = [];
+    }
+    groupedByService[c.service_id].labels[c.label].push(c);
+  });
+
+  let html = '';
+  for (const serviceId in groupedByService) {
+    const serviceGroup = groupedByService[serviceId];
+    const labels = Object.keys(serviceGroup.labels).sort();
+    
+    // Service header
+    html += `<div style="margin-bottom:20px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <div style="background:rgba(108,92,231,0.15);padding:12px 14px;border-bottom:1px solid var(--border);font-weight:600;color:var(--text-primary);font-size:14px">
+        ${serviceGroup.service_name}
+        <span style="background:rgba(108,92,231,0.3);padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;font-weight:500">${labels.length} account${labels.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div style="padding:0">`;
+
+    labels.forEach((label, idx) => {
+      const cookiesInLabel = serviceGroup.labels[label];
+      html += `<div style="border-bottom:${idx < labels.length - 1 ? '1px solid var(--border)' : 'none'};padding:12px 14px">
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
+          📌 ${label} 
+          <span style="background:rgba(100,100,100,0.3);padding:2px 6px;border-radius:3px;font-size:10px;font-weight:500;margin-left:6px">${cookiesInLabel.length} cookie${cookiesInLabel.length !== 1 ? 's' : ''}</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
+              <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--text-secondary);font-size:11px;text-transform:uppercase">Name</th>
+              <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--text-secondary);font-size:11px;text-transform:uppercase">Value</th>
+              <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--text-secondary);font-size:11px;text-transform:uppercase">Domain</th>
+              <th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--text-secondary);font-size:11px;text-transform:uppercase">Status</th>
+              <th style="padding:6px 8px;text-align:center;font-weight:600;color:var(--text-secondary);font-size:11px;text-transform:uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cookiesInLabel.map(c => `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:${c.enabled ? 'transparent' : 'rgba(231,76,60,0.05)'}">
+              <td style="padding:8px;"><code style="font-size:11px;background:rgba(0,0,0,0.3);padding:3px 6px;border-radius:4px">${c.cookie_name}</code></td>
+              <td style="padding:8px;font-family:monospace;font-size:11px;color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeAttr(c.cookie_value)}">${c.cookie_value.substring(0, 25)}${c.cookie_value.length > 25 ? '…' : ''}</td>
+              <td style="padding:8px;font-size:11px;color:var(--text-secondary)">${c.cookie_domain}</td>
+              <td style="padding:8px;text-align:center"><span class="badge ${c.enabled ? 'badge-success' : 'badge-danger'}">${c.enabled ? 'Active' : 'Disabled'}</span></td>
+              <td style="padding:8px;text-align:center;display:flex;gap:4px;justify-content:center">
+                <button class="btn btn-outline btn-sm" onclick="editCookie(${c.id})">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCookie(${c.id})">Delete</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    });
+
+    html += '</div></div>';
+  }
+
+  document.getElementById('cookiesTable').innerHTML = html;
 }
 
 function escapeAttr(str) {
