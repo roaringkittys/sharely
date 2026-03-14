@@ -1,5 +1,11 @@
 /* sharely-extension.js for Sharely Extension 1.1 */
 
+// ── DEFAULT SERVER URL ─────────────────────────────────────────────────────
+// Set this to your deployed server URL before distributing the extension.
+// Users will never need to configure this manually.
+const DEFAULT_SERVER_URL = 'https://6cbfb053-e399-4cf0-a649-373f485ef582-00-386xnci2vytem.pike.replit.dev';
+// ──────────────────────────────────────────────────────────────────────────
+
 let allServices = [];
 let currentCategory = 'all';
 let serverUrl = '';
@@ -394,41 +400,91 @@ $('#accountPicker').on('click', function (e) { e.stopPropagation(); });
 // Settings
 $('#settingsButton, #openSettingsFromError').on('click', async () => {
   const stored = await loadStorage();
-  $('#settingServerUrl').val(stored.serverUrl || '');
+
+  // Populate developer fields (hidden by default)
+  $('#settingServerUrl').val(stored.serverUrl || serverUrl || '');
   $('#settingApiKey').val(stored.apiKey || '');
   $('#settingsStatus').text('');
+  $('#devSection').hide();
+  $('#devChevron').css('transform', '');
+
+  // Show account info if logged in
+  if (currentUserEmail && currentUserExpiry) {
+    const days = Math.max(0, Math.ceil((new Date(currentUserExpiry) - new Date()) / 86400000));
+    $('#settingsEmail').text(currentUserEmail);
+    $('#settingsExpiry').text(days > 0 ? `Access valid for ${days} more day${days !== 1 ? 's' : ''}` : 'Access expired');
+    $('#settingsAccountInfo').show();
+    $('#signOutBtn').show();
+    $('#settingsNotLoggedIn').hide();
+  } else {
+    $('#settingsAccountInfo').hide();
+    $('#signOutBtn').hide();
+    $('#settingsNotLoggedIn').show();
+  }
+
   $('#settingsOverlay').show();
 });
 
 $('#closeSettings').on('click', () => $('#settingsOverlay').hide());
 
-$('#saveSettingsBtn').on('click', async () => {
-  const url = $('#settingServerUrl').val().trim().replace(/\/+$/, '');
-  const key = $('#settingApiKey').val().trim();
+// Developer section toggle
+$('#devToggle').on('click', () => {
+  const $sec = $('#devSection');
+  const open = $sec.is(':visible');
+  $sec.slideToggle(150);
+  $('#devChevron').css('transform', open ? '' : 'rotate(180deg)');
+});
 
-  if (!url || !key) {
-    $('#settingsStatus').css('color', '#e74c3c').text('Both fields are required.');
+// Sign out from Settings
+$('#signOutBtn').on('click', async () => {
+  if (!confirm('Sign out of your Sharely account?')) return;
+  await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
+  currentUserSession = '';
+  currentUserEmail = '';
+  currentUserExpiry = '';
+  $('#footer').text('Sharely \u00a9 2024\u20132025');
+  $('#settingsOverlay').hide();
+  showAuthScreen();
+});
+
+// Login link from Settings (for non-logged-in users)
+$('#settingsLoginLink').on('click', (e) => {
+  e.preventDefault();
+  $('#settingsOverlay').hide();
+  showAuthScreen();
+});
+
+$('#saveSettingsBtn').on('click', async () => {
+  const url = ($('#settingServerUrl').val() || '').trim().replace(/\/+$/, '');
+  const key = ($('#settingApiKey').val() || '').trim();
+
+  if (!url) {
+    $('#settingsStatus').css('color', '#e74c3c').text('Server URL is required.');
     return;
   }
 
   $('#settingsStatus').css('color', '#aaa').text('Testing connection...');
 
   try {
-    const res = await fetch(`${url}/api/extension/config`, {
-      headers: { 'X-API-Key': key }
-    });
+    const headers = {};
+    if (key) headers['X-API-Key'] = key;
+    else if (currentUserSession) headers['X-User-Session'] = currentUserSession;
 
-    if (!res.ok) throw new Error('Invalid API key or server URL');
+    const res = await fetch(`${url}/api/extension/config`, { headers });
 
-    await saveStorage({ serverUrl: url, apiKey: key });
-    $('#settingsStatus').css('color', '#2ecc71').text('Connected successfully!');
+    if (!res.ok) throw new Error('Could not connect — check URL and key');
+
+    await saveStorage({ serverUrl: url, apiKey: key || '' });
+    serverUrl = url;
+    apiKey = key || '';
+    $('#settingsStatus').css('color', '#2ecc71').text('Connected!');
     setTimeout(() => {
       $('#settingsOverlay').hide();
       fetchConfig();
-    }, 800);
+    }, 700);
 
   } catch (err) {
-    $('#settingsStatus').css('color', '#e74c3c').text('Connection failed: ' + err.message);
+    $('#settingsStatus').css('color', '#e74c3c').text('Failed: ' + err.message);
   }
 });
 
@@ -659,7 +715,14 @@ $('#footer').on('click', '.expiry-badge, .user-email-text', async () => {
 // Initialise
 $(async () => {
   const stored = await loadStorage();
-  serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
+
+  // Auto-apply default server URL if none stored — users never need to configure this
+  if (!stored.serverUrl && DEFAULT_SERVER_URL) {
+    await saveStorage({ serverUrl: DEFAULT_SERVER_URL });
+    serverUrl = DEFAULT_SERVER_URL;
+  } else {
+    serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
+  }
 
   if (stored.theme) applyTheme(stored.theme);
 
@@ -670,15 +733,15 @@ $(async () => {
 
   const userSession = stored.userSession || '';
 
-  // If no credentials at all, show auth (server URL is checked on submit)
+  // If no credentials at all, show auth
   if (!userSession && !stored.apiKey) {
     showAuthScreen();
     return;
   }
 
-  // If no server URL but has credentials, show error
+  // Should not happen with DEFAULT_SERVER_URL, but guard anyway
   if (!serverUrl) {
-    showError('Configure your server URL in settings first.');
+    showError('Server not configured. Contact support.');
     disableFilters();
     return;
   }
