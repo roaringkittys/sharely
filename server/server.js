@@ -12,7 +12,7 @@ const userSystem = require('./user-system');
 const { verifyUserSession } = userSystem;
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 
 const dbPath = path.join(__dirname, 'data', 'sharely.db');
@@ -536,4 +536,5 @@ app.get('/', requireAuth, (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Sharely Admin running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
