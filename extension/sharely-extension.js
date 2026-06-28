@@ -3,7 +3,7 @@
 // ── DEFAULT SERVER URL ─────────────────────────────────────────────────────
 // Set this to your deployed server URL before distributing the extension.
 // Users will never need to configure this manually.
-const DEFAULT_SERVER_URL = 'https://your-railway-domain.up.railway.app';
+const DEFAULT_SERVER_URL = 'https://sharely-production-bc58.up.railway.app';
 // ──────────────────────────────────────────────────────────────────────────
 
 let allServices = [];
