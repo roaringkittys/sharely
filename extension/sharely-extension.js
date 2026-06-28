@@ -800,8 +800,8 @@ $('#footer').on('click', '.expiry-badge, .user-email-text', async () => {
 $(async () => {
   const stored = await loadStorage();
 
-  // Auto-apply default server URL if none stored — users never need to configure this
-  if (!stored.serverUrl && DEFAULT_SERVER_URL) {
+  // Always sync to the baked-in default URL — migrates users from old URLs automatically
+  if (DEFAULT_SERVER_URL) {
     await saveStorage({ serverUrl: DEFAULT_SERVER_URL });
     serverUrl = DEFAULT_SERVER_URL;
   } else {
