@@ -3,7 +3,7 @@
 // ── DEFAULT SERVER URL ─────────────────────────────────────────────────────
 // Set this to your deployed server URL before distributing the extension.
 // Users will never need to configure this manually.
-const DEFAULT_SERVER_URL = 'https://6cbfb053-e399-4cf0-a649-373f485ef582-00-386xnci2vytem.pike.replit.dev';
+const DEFAULT_SERVER_URL = 'https://your-railway-domain.up.railway.app';
 // ──────────────────────────────────────────────────────────────────────────
 
 let allServices = [];
