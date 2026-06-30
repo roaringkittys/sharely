@@ -1,4 +1,4 @@
-/* popup.js — Sharely Manager (Admin) */
+/* popup.js — Sharely Manager (Admin) v1.1 */
 
 // ── Storage helpers ───────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ async function renderDomainList(activeDomain) {
     const lastText = lastEntry
       ? (lastEntry.ok
           ? `✓ ${lastEntry.count} cookies — ${timeAgo(lastEntry.ts)}`
-          : `✗ Error — ${timeAgo(lastEntry.ts)}`)
+          : `✗ ${lastEntry.error} — ${timeAgo(lastEntry.ts)}`)
       : 'Never synced';
     const lastClass = lastEntry ? (lastEntry.ok ? 'log-ok' : 'log-err') : '';
     const active = domain === activeDomain ? ' style="border-color:rgba(108,92,231,0.5)"' : '';
@@ -72,7 +72,6 @@ async function renderDomainList(activeDomain) {
       </div>`;
   }).join('');
 
-  // Per-domain sync
   list.querySelectorAll('.domain-sync-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const domain = btn.dataset.domain;
@@ -85,7 +84,13 @@ async function renderDomainList(activeDomain) {
       if (result.success) {
         setStatus(`✓ Synced ${result.count} cookies for ${domain}`, 'ok');
       } else if (result.skipped) {
-        setStatus(`${domain}: ${result.reason === 'unchanged' ? 'No changes' : result.reason}`, 'muted');
+        const reasonMap = {
+          no_api_key: '✗ No API key — open Settings',
+          no_tab: 'No open tab for this site — keep the site open in another tab',
+          no_cookies: 'No readable cookies found',
+          unchanged: 'No changes since last sync',
+        };
+        setStatus(reasonMap[result.reason] || result.reason, result.reason === 'no_api_key' ? 'err' : 'muted');
       } else {
         setStatus(`✗ ${result.error}`, 'err');
       }
@@ -93,7 +98,6 @@ async function renderDomainList(activeDomain) {
     });
   });
 
-  // Per-domain remove
   list.querySelectorAll('.domain-remove-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const domain = btn.dataset.domain;
@@ -156,13 +160,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setStatus('Navigate to a website to sync cookies', 'muted');
   }
 
-  // Set watch toggle state
   const domains = stored.trackedDomains || [];
   document.getElementById('watchToggle').checked = activeDomain ? domains.includes(activeDomain) : false;
 
   await renderDomainList(activeDomain);
 
-  // ── Watch toggle ────────────────────────────────────────────────────────────
+  // Watch toggle
   document.getElementById('watchToggle').addEventListener('change', async (e) => {
     if (!activeDomain) return;
     const stored = await loadStorage();
@@ -178,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await renderDomainList(activeDomain);
   });
 
-  // ── Sync Now button ─────────────────────────────────────────────────────────
+  // Sync Now button
   document.getElementById('syncBtn').addEventListener('click', async () => {
     if (!activeDomain) return;
     const btn = document.getElementById('syncBtn');
@@ -187,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.disabled = true;
     iconEl.textContent = '…';
     textEl.textContent = 'Syncing…';
-    setStatus(`Uploading cookies for ${activeDomain}…`, 'muted');
+    setStatus(`Reading cookies for ${activeDomain}…`, 'muted');
 
     const result = await chrome.runtime.sendMessage({ type: 'SYNC_DOMAIN', domain: activeDomain, forced: true });
 
@@ -198,12 +201,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (result.success) {
       setStatus(`✓ ${result.count} cookies synced to "${result.label}"`, 'ok');
     } else if (result.skipped) {
-      setStatus(result.reason === 'no_api_key'
-        ? '✗ No API key — open Settings'
-        : result.reason === 'no_cookies'
-          ? 'No cookies found for this site'
-          : 'Cookies unchanged — nothing to sync'
-        , result.reason === 'no_api_key' ? 'err' : 'muted');
+      const reasonMap = {
+        no_api_key: '✗ No API key — open Settings',
+        no_tab: 'No open tab — keep the site open in another tab',
+        no_cookies: 'No readable cookies found',
+        unchanged: 'No changes since last sync',
+      };
+      setStatus(reasonMap[result.reason] || result.reason, result.reason === 'no_api_key' ? 'err' : 'muted');
     } else {
       setStatus(`✗ ${result.error}`, 'err');
     }
@@ -211,7 +215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await renderDomainList(activeDomain);
   });
 
-  // ── Sync All button ─────────────────────────────────────────────────────────
+  // Sync All button
   document.getElementById('syncAllBtn').addEventListener('click', async () => {
     const btn = document.getElementById('syncAllBtn');
     btn.disabled = true;
@@ -224,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await renderDomainList(activeDomain);
   });
 
-  // ── Settings overlay ────────────────────────────────────────────────────────
+  // Settings overlay
   document.getElementById('settingsBtn').addEventListener('click', () => {
     document.getElementById('settingsOverlay').classList.add('open');
   });
@@ -246,7 +250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => setStatus('Ready', 'muted'), 2000);
   });
 
-  // ── Sync Log overlay ────────────────────────────────────────────────────────
+  // Sync Log overlay
   document.getElementById('viewLogBtn').addEventListener('click', async () => {
     await renderLog();
     document.getElementById('logOverlay').classList.add('open');

