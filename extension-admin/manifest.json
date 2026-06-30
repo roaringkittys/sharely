@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Sharely Manager",
+  "version": "1.0",
+  "description": "Admin tool for auto-syncing session cookies to the Sharely dashboard.",
+  "action": {
+    "default_popup": "./popup.html",
+    "default_icon": {
+      "16": "./icons/icon-16.png",
+      "128": "./icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "./background.js"
+  },
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "permissions": [
+    "cookies",
+    "storage",
+    "alarms",
+    "activeTab",
+    "tabs"
+  ],
+  "icons": {
+    "16": "./icons/icon-16.png",
+    "128": "./icons/icon-128.png"
+  }
+}

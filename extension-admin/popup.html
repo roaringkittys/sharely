@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sharely Manager</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <div>
+        <div class="logo-title">Sharely Manager</div>
+        <div class="logo-sub">ADMIN SYNC TOOL</div>
+      </div>
+    </div>
+    <button id="settingsBtn" title="Settings">⚙</button>
+  </header>
+
+  <main>
+
+    <!-- Active site card -->
+    <div class="site-card">
+      <div class="site-card-header">
+        <span class="site-label">Active Tab</span>
+        <span id="cookieCount" class="site-meta">— cookies</span>
+      </div>
+      <div id="siteDomain" class="site-domain">—</div>
+      <div id="siteTitle" class="site-meta"></div>
+      <div class="toggle-row">
+        <span class="toggle-label">Auto-sync this site</span>
+        <label class="toggle">
+          <input type="checkbox" id="watchToggle" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Sync now button -->
+    <button class="sync-btn" id="syncBtn">
+      <span id="syncBtnIcon">↑</span>
+      <span id="syncBtnText">Sync Now</span>
+    </button>
+
+    <!-- Status message -->
+    <div class="status-msg muted" id="statusMsg">Ready</div>
+
+    <!-- Tracked domains -->
+    <div class="section-header">
+      <span class="section-title">Watched Sites (<span id="watchCount">0</span>)</span>
+      <button class="sync-all-btn" id="syncAllBtn">↑ Sync All</button>
+    </div>
+    <div class="domain-list" id="domainList">
+      <div class="empty-state">
+        No sites watched yet.<br>Enable "Auto-sync this site" above to start.
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <span>Sharely Manager v1.0</span>
+    <button id="viewLogBtn">View Sync Log</button>
+  </footer>
+
+  <!-- Settings overlay -->
+  <div class="overlay" id="settingsOverlay">
+    <div class="settings-box">
+      <div class="settings-header">
+        <span class="settings-title">Settings</span>
+        <button class="settings-close" id="settingsClose">✕</button>
+      </div>
+      <div class="field">
+        <label>Server URL</label>
+        <input type="text" id="inputServerUrl" placeholder="https://your-app.up.railway.app" />
+        <div class="field-hint">Your deployed Sharely dashboard URL</div>
+      </div>
+      <div class="field">
+        <label>API Key</label>
+        <input type="password" id="inputApiKey" placeholder="Your admin API key" />
+        <div class="field-hint">Found in the dashboard under Settings</div>
+      </div>
+      <button class="save-btn" id="saveSettingsBtn">Save Settings</button>
+    </div>
+  </div>
+
+  <!-- Sync log overlay -->
+  <div class="overlay" id="logOverlay">
+    <div class="settings-box" style="max-height:420px;overflow-y:auto;">
+      <div class="settings-header">
+        <span class="settings-title">Sync Log</span>
+        <button class="settings-close" id="logClose">✕</button>
+      </div>
+      <div id="logEntries">
+        <div class="empty-state">No syncs yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
