@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "dtgftVU9tzeI-FJ6_dH1E"
+uri = "file://server/public/groupy-guard-patched.zip"
+type = "unspecified"
+title = "Groupy Guard — Patched (detection disabled)"
