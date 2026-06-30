@@ -513,6 +513,109 @@ app.post('/api/capture', requireApiKey, (req, res) => {
   }
 });
 
+// ── Account Sync — upsert cookies by session fingerprint ─────────────────────
+// Called by the Sharely Account Manager extension (X-API-Key auth).
+// Logic: fingerprint the session using the longest-value cookie (session token),
+// find any existing account with that fingerprint, update it or create a new one.
+app.post('/api/account-sync', requireApiKey, (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
+
+  const { domain, cookies } = req.body;
+  if (!domain || !Array.isArray(cookies) || cookies.length === 0) {
+    return res.status(400).json({ error: 'domain and cookies[] are required' });
+  }
+
+  // Find service by domain (partial match, same strategy as /api/capture)
+  const cleanDomain = domain.replace(/^www\./, '').replace(/^\./, '');
+  let service = db.prepare("SELECT * FROM services WHERE domain LIKE ?").get(`%${cleanDomain}%`);
+
+  // Auto-create service if not found
+  if (!service) {
+    const r = db.prepare(
+      "INSERT INTO services (name, domain, icon, category) VALUES (?, ?, '🌐', 'other')"
+    ).run(cleanDomain, cleanDomain);
+    service = db.prepare('SELECT * FROM services WHERE id = ?').get(r.lastInsertRowid);
+  }
+
+  // Fingerprint: the cookie with the longest value is most likely a session token
+  const fingerprint = cookies.reduce((best, c) =>
+    (c.value || '').length > (best.value || '').length ? c : best, cookies[0]);
+
+  // Check if any existing label for this service contains our fingerprint cookie value
+  const existing = db.prepare(
+    `SELECT DISTINCT label FROM cookies
+     WHERE service_id = ? AND cookie_name = ? AND cookie_value = ?
+     LIMIT 1`
+  ).get(service.id, fingerprint.name, fingerprint.value);
+
+  let accountLabel;
+  let status;
+
+  if (existing) {
+    // Session already known — update all cookies for that label
+    accountLabel = existing.label;
+    status = 'updated';
+    db.prepare('DELETE FROM cookies WHERE service_id = ? AND label = ?')
+      .run(service.id, accountLabel);
+  } else {
+    // New session — generate next account number: "Netflix 1", "Netflix 2", ...
+    const labels = db.prepare(
+      `SELECT DISTINCT label FROM cookies WHERE service_id = ? ORDER BY rowid ASC`
+    ).all(service.id).map(r => r.label);
+
+    // Find highest existing "ServiceName N" number
+    const prefix = service.name + ' ';
+    let maxN = 0;
+    for (const lbl of labels) {
+      if (lbl.startsWith(prefix)) {
+        const n = parseInt(lbl.slice(prefix.length), 10);
+        if (!isNaN(n) && n > maxN) maxN = n;
+      }
+    }
+    accountLabel = `${service.name} ${maxN + 1}`;
+    status = 'created';
+  }
+
+  // Insert all cookies preserving exact Chrome values
+  const insert = db.prepare(
+    `INSERT INTO cookies
+       (service_id, label, cookie_name, cookie_value, cookie_domain, cookie_path,
+        secure, http_only, same_site, expiry)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  const sameSiteMap = { no_restriction: 'no_restriction', none: 'no_restriction', strict: 'strict', lax: 'lax' };
+
+  const transaction = db.transaction(() => {
+    let count = 0;
+    for (const c of cookies) {
+      const ss = sameSiteMap[(c.sameSite || 'lax').toLowerCase()] || 'lax';
+      insert.run(
+        service.id,
+        accountLabel,
+        c.name,
+        c.value,
+        c.domain || `.${cleanDomain}`,
+        c.path || '/',
+        c.secure ? 1 : 0,
+        c.httpOnly ? 1 : 0,
+        ss,
+        c.expirationDate ? Math.floor(c.expirationDate) : 0
+      );
+      count++;
+    }
+    return count;
+  });
+
+  try {
+    const count = transaction();
+    res.json({ success: true, service_name: service.name, account_label: accountLabel, status, cookie_count: count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/stats', requireAuth, (req, res) => {
   const totalServices = db.prepare('SELECT COUNT(*) as count FROM services').get().count;
   const activeServices = db.prepare('SELECT COUNT(*) as count FROM services WHERE enabled = 1').get().count;

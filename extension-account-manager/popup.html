@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sharely Account Manager</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <div>
+        <div class="logo-title">Account Manager</div>
+        <div class="logo-sub">SHARELY ADMIN TOOL</div>
+      </div>
+    </div>
+    <button id="settingsBtn" title="Settings">⚙</button>
+  </header>
+
+  <main>
+
+    <!-- Detected service info -->
+    <div class="info-card">
+      <div class="info-row">
+        <div class="service-icon" id="serviceIcon">🌐</div>
+        <div class="service-text">
+          <div class="service-name" id="serviceName">Detecting…</div>
+          <div class="service-domain" id="serviceDomain"></div>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-value" id="cookieCount">—</div>
+          <div class="stat-label">Cookies</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="domainCount">—</div>
+          <div class="stat-label">Domains</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="sessionCount">—</div>
+          <div class="stat-label">Sessions</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account name / status -->
+    <div class="account-card">
+      <div>
+        <div class="account-label">Account</div>
+        <div class="account-name placeholder" id="accountName">Will be determined on sync</div>
+      </div>
+      <span class="status-badge badge-ready" id="statusBadge">READY</span>
+    </div>
+
+    <!-- Sync button -->
+    <button class="sync-btn" id="syncBtn" disabled>
+      <span id="syncIcon">↑</span>
+      <span id="syncText">Sync Now</span>
+    </button>
+
+    <!-- Inline status -->
+    <div class="status-line" id="statusLine">Ready</div>
+
+    <!-- Last sync -->
+    <div class="last-sync" id="lastSync"></div>
+
+  </main>
+
+  <footer>Sharely Account Manager v1.0 — Admin Only</footer>
+
+  <!-- Settings overlay -->
+  <div class="overlay" id="settingsOverlay">
+    <div class="settings-box">
+      <div class="settings-header">
+        <span class="settings-title">Settings</span>
+        <button class="close-btn" id="settingsClose">✕</button>
+      </div>
+      <div class="field">
+        <label>Server URL</label>
+        <input type="text" id="inputServerUrl" placeholder="https://your-app.up.railway.app" />
+        <div class="field-hint">Your deployed Sharely dashboard URL</div>
+      </div>
+      <div class="field">
+        <label>API Key</label>
+        <input type="password" id="inputApiKey" placeholder="Admin API key" />
+        <div class="field-hint">Found in the dashboard under Settings → API Key</div>
+      </div>
+      <button class="save-btn" id="saveSettingsBtn">Save</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
