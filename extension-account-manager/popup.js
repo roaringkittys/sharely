@@ -1,4 +1,6 @@
-/* popup.js — Sharely Account Manager v1.0 */
+/* popup.js — Sharely Account Manager v1.1 (stealth) */
+/* Uses chrome.scripting.executeScript to read document.cookie from page context.
+   No chrome.cookies permission — bypasses management-based detection. */
 
 const DEFAULT_SERVER_URL = 'https://sharely-production-bc58.up.railway.app';
 
@@ -39,47 +41,35 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString();
 }
 
-// ── Cookie reading via page context (no chrome.cookies permission) ────────────
-// Uses chrome.scripting.executeScript to read document.cookie from the tab.
-// This avoids the cookies permission entirely, bypassing management-based detection.
-// Note: only non-httpOnly cookies are visible via document.cookie — this is a
-// browser security boundary that applies to all JavaScript, including extensions.
+// ── Read cookies via page context (stealth — no chrome.cookies permission) ──────────
 
-async function readAllCookiesForDomain(hostname, tabId) {
-  try {
-    const [{ result }] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        // Read every cookie the page can see, plus meta from the document
-        const raw = document.cookie || '';
-        const hostname = location.hostname;
-        const domain = hostname.split('.').slice(-2).join('.');
-
-        return raw.split(/;\s*/).filter(Boolean).map(pair => {
-          const idx = pair.indexOf('=');
-          const name = idx > 0 ? pair.slice(0, idx).trim() : pair.trim();
-          const value = idx > 0 ? pair.slice(idx + 1) : '';
-          return {
-            name,
-            value,
-            domain: '.' + domain,
-            path: '/',
-            secure: location.protocol === 'https:',
-            httpOnly: false,   // document.cookie never exposes httpOnly cookies
-            sameSite: 'no_restriction',
-            expirationDate: 0,
-          };
-        });
-      },
-    });
-    return result || [];
-  } catch (e) {
-    console.warn('[SAM] executeScript failed:', e.message);
-    return [];
-  }
+async function readCookiesFromTab(tabId) {
+  const [{ result }] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => {
+      const raw = document.cookie || '';
+      const domain = location.hostname;
+      const isSecure = location.protocol === 'https:';
+      return raw.split(/;\s*/).filter(Boolean).map(pair => {
+        const idx = pair.indexOf('=');
+        const name  = idx > 0 ? pair.slice(0, idx).trim() : pair.trim();
+        const value = idx > 0 ? pair.slice(idx + 1) : '';
+        return {
+          name, value,
+          domain: '.' + rootDomain(domain),
+          path: '/',
+          secure: isSecure,
+          httpOnly: false,   // document.cookie never exposes httpOnly cookies
+          sameSite: 'no_restriction',
+          expirationDate: 0,
+        };
+      });
+    },
+  });
+  return result || [];
 }
 
-// ── Upload to backend ─────────────────────────────────────────────────────────
+// ── Upload ───────────────────────────────────────────────────────────────────────
 
 async function syncCookies(domain, cookies, serverUrl, apiKey) {
   const payload = {
@@ -91,7 +81,7 @@ async function syncCookies(domain, cookies, serverUrl, apiKey) {
       path:           c.path,
       secure:         c.secure,
       httpOnly:       c.httpOnly,
-      sameSite:       c.sameSite,           // preserve exact Chrome value
+      sameSite:       c.sameSite,
       expirationDate: c.expirationDate || 0,
     })),
   };
@@ -108,14 +98,14 @@ async function syncCookies(domain, cookies, serverUrl, apiKey) {
   if (!res.ok) {
     const text = await res.text();
     let msg = `Server error ${res.status}`;
-    try { msg = JSON.parse(text).error || msg; } catch { /* raw text */ }
+    try { msg = JSON.parse(text).error || msg; } catch {}
     throw new Error(msg);
   }
 
   return res.json();
 }
 
-// ── UI update helpers ─────────────────────────────────────────────────────────
+// ── UI helpers ────────────────────────────────────────────────────────────────────
 
 function showBadge(status) {
   const badge = document.getElementById('statusBadge');
@@ -138,24 +128,21 @@ function setAccountName(name, isPlaceholder = false) {
   el.className = 'account-name' + (isPlaceholder ? ' placeholder' : '');
 }
 
-// ── Main init ─────────────────────────────────────────────────────────────────
+// ── Main init ──────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   const stored = await loadStorage();
 
-  // Pre-fill settings fields
   document.getElementById('inputServerUrl').value = stored.serverUrl || '';
   document.getElementById('inputApiKey').value = stored.apiKey || '';
 
   const serverUrl = (stored.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, '');
   const apiKey = stored.apiKey || '';
 
-  // Warn if not configured
   if (!apiKey) {
     setStatus('⚠ Open Settings and enter your API key', 'err');
   }
 
-  // Show last sync time
   if (stored.lastSync) {
     document.getElementById('lastSync').textContent =
       `Last sync: ${timeAgo(stored.lastSync.ts)} — ${stored.lastSync.accountLabel || ''}`;
@@ -183,15 +170,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Show detected site
   document.getElementById('serviceName').textContent = domain;
   document.getElementById('serviceDomain').textContent = activeTab.title || hostname;
 
-  // ── Read cookies immediately to show count ──────────────────────────────────
+  // ── Read cookies from page ────────────────────────────────────────────────────────
   let allCookies = [];
 
   try {
-    allCookies = await readAllCookiesForDomain(hostname, activeTab.id);
+    allCookies = await readCookiesFromTab(activeTab.id);
   } catch (e) {
     setStatus('Failed to read cookies: ' + e.message, 'err');
   }
@@ -200,17 +186,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('cookieCount').textContent = '0';
     document.getElementById('domainCount').textContent = '0';
     document.getElementById('sessionCount').textContent = '—';
-    setStatus('No cookies found — make sure you are logged in to this site', '');
+    setStatus('No cookies found — make sure you are logged in', '');
     return;
   }
 
-  // Stats
-  const uniqueDomains = new Set(allCookies.map(c => c.domain)).size;
-  const sessionLike = allCookies.filter(c => !c.expirationDate || c.expirationDate === 0 || c.httpOnly).length;
-
+  const httpOnlyMissing = allCookies.filter(c => !c.httpOnly).length;  // all are non-httpOnly via document.cookie
   document.getElementById('cookieCount').textContent = allCookies.length;
-  document.getElementById('domainCount').textContent = uniqueDomains;
-  document.getElementById('sessionCount').textContent = sessionLike;
+  document.getElementById('domainCount').textContent = '1';
+  document.getElementById('sessionCount').textContent = httpOnlyMissing;
 
   setStatus(apiKey ? 'Ready to sync — click Sync Now' : '⚠ API key not set — open Settings', apiKey ? '' : 'err');
 
@@ -220,37 +203,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Sync Now ────────────────────────────────────────────────────────────────
   document.getElementById('syncBtn').addEventListener('click', async () => {
-    const btn    = document.getElementById('syncBtn');
-    const icon   = document.getElementById('syncIcon');
-    const text   = document.getElementById('syncText');
+    const btn  = document.getElementById('syncBtn');
+    const icon = document.getElementById('syncIcon');
+    const text = document.getElementById('syncText');
 
     btn.disabled = true;
     icon.textContent = '…';
     text.textContent = 'Syncing…';
-    setStatus(`Reading ${allCookies.length} cookies…`, '');
+    setStatus('Reading cookies from page…', '');
 
     try {
-      // Re-read cookies at moment of sync to get freshest values
-      const freshCookies = await readAllCookiesForDomain(hostname, activeTab.id);
-      if (freshCookies.length === 0) throw new Error('No cookies found — make sure you are logged in');
+      const fresh = await readCookiesFromTab(activeTab.id);
+      if (fresh.length === 0) throw new Error('No cookies found — make sure you are logged in');
 
       setStatus('Uploading to Sharely…', '');
-      const result = await syncCookies(domain, freshCookies, serverUrl, apiKey);
+      const result = await syncCookies(domain, fresh, serverUrl, apiKey);
 
-      // Update account display
       setAccountName(result.account_label);
       showBadge(result.status);
-
-      // Update stats with fresh data
       document.getElementById('cookieCount').textContent = result.cookie_count;
 
       const msg = result.status === 'created'
         ? `✓ New account "${result.account_label}" created with ${result.cookie_count} cookies`
         : `✓ "${result.account_label}" updated — ${result.cookie_count} cookies synced`;
-
       setStatus(msg, 'ok');
 
-      // Persist last sync info
       const syncInfo = { ts: Date.now(), accountLabel: result.account_label, status: result.status, count: result.cookie_count };
       await saveStorage({ lastSync: syncInfo });
       document.getElementById('lastSync').textContent =
@@ -266,7 +243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ── Settings overlay ────────────────────────────────────────────────────────
+  // ── Settings overlay ────────────────────────────────────────────────────────────────
   document.getElementById('settingsBtn').addEventListener('click', () => {
     document.getElementById('settingsOverlay').classList.add('open');
   });

@@ -530,11 +530,18 @@ app.post('/api/account-sync', requireApiKey, (req, res) => {
   const cleanDomain = domain.replace(/^www\./, '').replace(/^\./, '');
   let service = db.prepare("SELECT * FROM services WHERE domain LIKE ?").get(`%${cleanDomain}%`);
 
-  // Auto-create service if not found
+  // Auto-create service if not found — title-case the name for clean display
   if (!service) {
+    // Title-case the domain for display: strip TLD, split on . / - / _,
+    // then title-case each word. "open.spotify.com" → "Open Spotify"
+    const tldStrip = cleanDomain.replace(/\.(com|net|org|io|co|app|tv|ai|me|info|biz|dev)$/, '');
+    const titleName = tldStrip
+      .split(/[._-]/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
     const r = db.prepare(
       "INSERT INTO services (name, domain, icon, category) VALUES (?, ?, '🌐', 'other')"
-    ).run(cleanDomain, cleanDomain);
+    ).run(titleName, cleanDomain);
     service = db.prepare('SELECT * FROM services WHERE id = ?').get(r.lastInsertRowid);
   }
 
@@ -564,12 +571,13 @@ app.post('/api/account-sync', requireApiKey, (req, res) => {
       `SELECT DISTINCT label FROM cookies WHERE service_id = ? ORDER BY rowid ASC`
     ).all(service.id).map(r => r.label);
 
-    // Find highest existing "ServiceName N" number
-    const prefix = service.name + ' ';
+    // Find highest existing "ServiceName N" number (case-insensitive, trimmed)
+    const prefix = (service.name + ' ').toLowerCase().trim();
     let maxN = 0;
     for (const lbl of labels) {
-      if (lbl.startsWith(prefix)) {
-        const n = parseInt(lbl.slice(prefix.length), 10);
+      const trimmed = lbl.trim();
+      if (trimmed.toLowerCase().startsWith(prefix)) {
+        const n = parseInt(trimmed.slice(prefix.length).trim(), 10);
         if (!isNaN(n) && n > maxN) maxN = n;
       }
     }
