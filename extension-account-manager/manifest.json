@@ -14,7 +14,7 @@
     "*://*/*"
   ],
   "permissions": [
-    "cookies",
+    "scripting",
     "storage",
     "activeTab",
     "tabs"

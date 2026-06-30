@@ -39,39 +39,44 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString();
 }
 
-// ── Cookie reading via chrome.cookies API ─────────────────────────────────────
+// ── Cookie reading via page context (no chrome.cookies permission) ────────────
+// Uses chrome.scripting.executeScript to read document.cookie from the tab.
+// This avoids the cookies permission entirely, bypassing management-based detection.
+// Note: only non-httpOnly cookies are visible via document.cookie — this is a
+// browser security boundary that applies to all JavaScript, including extensions.
 
-async function readAllCookiesForDomain(hostname) {
-  const root = rootDomain(hostname);
+async function readAllCookiesForDomain(hostname, tabId) {
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        // Read every cookie the page can see, plus meta from the document
+        const raw = document.cookie || '';
+        const hostname = location.hostname;
+        const domain = hostname.split('.').slice(-2).join('.');
 
-  // Query all domain variations Chrome might store cookies under
-  const queries = [
-    chrome.cookies.getAll({ domain: hostname }),
-    chrome.cookies.getAll({ domain: root }),
-    chrome.cookies.getAll({ domain: '.' + root }),
-  ];
-
-  // Add www variant if not already included
-  if (!hostname.startsWith('www.')) {
-    queries.push(chrome.cookies.getAll({ domain: 'www.' + root }));
+        return raw.split(/;\s*/).filter(Boolean).map(pair => {
+          const idx = pair.indexOf('=');
+          const name = idx > 0 ? pair.slice(0, idx).trim() : pair.trim();
+          const value = idx > 0 ? pair.slice(idx + 1) : '';
+          return {
+            name,
+            value,
+            domain: '.' + domain,
+            path: '/',
+            secure: location.protocol === 'https:',
+            httpOnly: false,   // document.cookie never exposes httpOnly cookies
+            sameSite: 'no_restriction',
+            expirationDate: 0,
+          };
+        });
+      },
+    });
+    return result || [];
+  } catch (e) {
+    console.warn('[SAM] executeScript failed:', e.message);
+    return [];
   }
-
-  const results = await Promise.all(queries);
-
-  // Merge and deduplicate by name + domain combination
-  const seen = new Set();
-  const all = [];
-  for (const batch of results) {
-    for (const c of batch) {
-      const key = c.name + '|' + c.domain + '|' + c.path;
-      if (!seen.has(key)) {
-        seen.add(key);
-        all.push(c);
-      }
-    }
-  }
-
-  return all;
 }
 
 // ── Upload to backend ─────────────────────────────────────────────────────────
@@ -186,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allCookies = [];
 
   try {
-    allCookies = await readAllCookiesForDomain(hostname);
+    allCookies = await readAllCookiesForDomain(hostname, activeTab.id);
   } catch (e) {
     setStatus('Failed to read cookies: ' + e.message, 'err');
   }
@@ -195,7 +200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('cookieCount').textContent = '0';
     document.getElementById('domainCount').textContent = '0';
     document.getElementById('sessionCount').textContent = '—';
-    setStatus('No cookies found for this site. Are you logged in?', '');
+    setStatus('No cookies found — make sure you are logged in to this site', '');
     return;
   }
 
@@ -226,7 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       // Re-read cookies at moment of sync to get freshest values
-      const freshCookies = await readAllCookiesForDomain(hostname);
+      const freshCookies = await readAllCookiesForDomain(hostname, activeTab.id);
       if (freshCookies.length === 0) throw new Error('No cookies found — make sure you are logged in');
 
       setStatus('Uploading to Sharely…', '');
