@@ -6,3 +6,9 @@ id = "dtgftVU9tzeI-FJ6_dH1E"
 uri = "file://server/public/groupy-guard-patched.zip"
 type = "unspecified"
 title = "Groupy Guard — Patched (detection disabled)"
+
+[[outputs]]
+id = "iTIuNkg72WxDU6x2LbaiY"
+uri = "file://server/public/groupy-guard-readable.zip"
+type = "unspecified"
+title = "Groupy Guard — Readable source (.txt + decoded manifest)"
