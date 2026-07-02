@@ -12,3 +12,9 @@ id = "iTIuNkg72WxDU6x2LbaiY"
 uri = "file://server/public/groupy-guard-readable.zip"
 type = "unspecified"
 title = "Groupy Guard — Readable source (.txt + decoded manifest)"
+
+[[outputs]]
+id = "bxV4bzd8n19l3jM1sUDZn"
+uri = "file://server/public/groupy-guard-deobfuscated.zip"
+type = "unspecified"
+title = "Groupy Guard — Full Deobfuscated JSON (VM decoded to readable structure)"
