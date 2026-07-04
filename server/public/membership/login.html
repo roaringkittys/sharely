@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+</head>
+<body class="mp">
+  <div class="mp-auth-wrap">
+    <div class="mp-auth-card">
+      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase</a>
+      <h1>Welcome back</h1>
+      <p class="mp-auth-sub">Log in to access your dashboard.</p>
+
+      <div id="alertBox" class="mp-alert mp-alert-error"></div>
+
+      <form id="loginForm">
+        <div class="mp-field">
+          <label>Email</label>
+          <input type="email" id="email" required autocomplete="email" />
+        </div>
+        <div class="mp-field">
+          <label>Password</label>
+          <input type="password" id="password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="mp-btn mp-btn-primary mp-btn-block" id="submitBtn">Log in</button>
+      </form>
+
+      <div class="mp-auth-footer">
+        <a href="/membership/forgot-password">Forgot your password?</a>
+      </div>
+      <div class="mp-auth-footer">
+        Don't have an account? <a href="/membership/signup">Sign up</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const alertBox = document.getElementById('alertBox');
+      alertBox.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Logging in…';
+
+      try {
+        const res = await fetch('/api/membership/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Login failed');
+        window.location.href = '/membership/dashboard';
+      } catch (err) {
+        alertBox.textContent = err.message;
+        alertBox.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Log in';
+      }
+    });
+  </script>
+</body>
+</html>

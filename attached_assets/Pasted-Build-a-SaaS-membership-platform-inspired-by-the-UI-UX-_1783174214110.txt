@@ -1,0 +1,102 @@
+Build a SaaS membership platform inspired by the UI/UX quality, section structure, and conversion flow of https://groupy.id/home, but for a legitimate digital membership / software access marketplace.
+
+Project goal:
+Create a modern website + web app that looks and feels as polished as Groupy, but for my own platform where users can browse membership plans, sign up, subscribe, manage their account, and access approved digital services / partner tools / software benefits from one dashboard.
+
+Important rule:
+This platform must be built as a legitimate SaaS membership product. Do not frame it as shared or unauthorized access to third-party personal accounts. Instead, structure it as a platform for approved subscriptions, bundled partner tools, team licenses, digital memberships, or curated member benefits.
+
+What to build:
+
+1. Public landing page
+   Make the landing page heavily inspired by Groupy’s visual quality and structure:
+
+* Hero section with CTA
+* Benefits/features section
+* How it works section
+* Pricing / plans section
+* FAQ
+* Testimonials / trust section
+* Footer
+* Responsive desktop + mobile layout
+* Premium SaaS feel
+
+2. User authentication
+   Build:
+
+* Sign up page
+* Login page
+* Forgot password / reset password
+* Email verification flow placeholder if needed
+* Protected dashboard routes
+
+3. User dashboard
+   After login, users should see a clean dashboard with:
+
+* Current plan
+* Subscription status
+* Billing section
+* Available tools / benefits / products
+* Account settings
+* Upgrade plan button
+* Support/help section
+
+4. Subscription / payment flow
+   Build a clean payment and subscription flow:
+
+* Pricing page
+* Checkout page
+* Plan upgrade / downgrade flow
+* Success / failed payment pages
+* Billing history page
+  Use a clean abstraction so Stripe or Xendit can be integrated later.
+
+5. Admin panel
+   Build a basic admin area for platform management:
+
+* View users
+* View subscriptions
+* Manage plans
+* Manage product/tool listings
+* Update landing page content placeholders if possible
+* Track user status and payments
+
+6. Product architecture
+   I want the codebase to be structured like a production SaaS:
+
+* Clean component architecture
+* Reusable UI components
+* Clear frontend/backend separation
+* Database models for users, subscriptions, plans, products, billing records
+* Middleware for auth and protected routes
+
+7. What I want you to do first
+   Before coding:
+
+* Audit Groupy’s homepage and identify the visible layout patterns, sections, and UX flow
+* Recreate an original equivalent structure for my own brand/product
+* Propose the sitemap and app flow
+* Propose database schema
+* Propose folder structure
+* Then implement page by page
+
+Output format:
+
+1. First give me:
+
+   * page list
+   * component list
+   * database schema
+   * auth flow
+   * payment flow
+   * admin flow
+2. Then start building the actual app step by step
+
+Design direction:
+
+* Modern, clean, premium, startup SaaS
+* Similar visual polish and conversion flow to Groupy
+* Original branding and implementation
+* Fast, modular, easy to edit later
+
+If needed, use placeholder demo content and dummy products, but keep the system ready for real plans, real subscriptions, and real users.

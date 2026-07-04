@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Membership Admin — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+<style>
+  .mp-tab-bar { display:flex; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--mp-border); }
+  .mp-tab { padding:10px 4px; margin-right:20px; color:var(--mp-text-dim); font-size:14.5px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; }
+  .mp-tab.active { color:var(--mp-text); border-bottom-color:var(--mp-accent); }
+  .mp-tab-panel { display:none; }
+  .mp-tab-panel.active { display:block; }
+  .mp-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:100; }
+  .mp-modal { background:var(--mp-surface); border:1px solid var(--mp-border); border-radius:var(--mp-radius); padding:28px; width:420px; max-width:90vw; }
+</style>
+</head>
+<body class="mp">
+  <div class="mp-app">
+    <aside class="mp-app-sidebar">
+      <a href="/" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase Admin</a>
+      <nav class="mp-app-nav">
+        <a href="/admin.html">🍪 Sharely Admin</a>
+        <a href="/membership/admin" class="active">📦 Membership</a>
+      </nav>
+    </aside>
+
+    <main class="mp-app-main">
+      <div class="mp-app-header">
+        <div>
+          <h1>Membership overview</h1>
+          <p>Manage plans, tools, members and billing.</p>
+        </div>
+      </div>
+
+      <div class="mp-stat-grid">
+        <div class="mp-stat-card"><span>Total members</span><strong id="statMembers">—</strong></div>
+        <div class="mp-stat-card"><span>Active subscriptions</span><strong id="statActiveSubs">—</strong></div>
+        <div class="mp-stat-card"><span>Monthly recurring revenue</span><strong id="statMrr">—</strong></div>
+        <div class="mp-stat-card"><span>Total revenue</span><strong id="statRevenue">—</strong></div>
+      </div>
+
+      <div class="mp-tab-bar">
+        <div class="mp-tab active" data-tab="plans">Plans</div>
+        <div class="mp-tab" data-tab="products">Tools</div>
+        <div class="mp-tab" data-tab="members">Members</div>
+        <div class="mp-tab" data-tab="subscriptions">Subscriptions</div>
+        <div class="mp-tab" data-tab="billing">Billing</div>
+      </div>
+
+      <div class="mp-tab-panel active" id="panel-plans">
+        <div class="mp-app-header" style="margin-bottom:16px;">
+          <div></div>
+          <button class="mp-btn mp-btn-primary mp-btn-sm" id="newPlanBtn">+ New plan</button>
+        </div>
+        <div class="mp-table-wrap">
+          <table class="mp-table">
+            <thead><tr><th>Name</th><th>Price</th><th>Interval</th><th>Active</th><th>Tools</th><th></th></tr></thead>
+            <tbody id="plansRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="mp-tab-panel" id="panel-products">
+        <div class="mp-app-header" style="margin-bottom:16px;">
+          <div></div>
+          <button class="mp-btn mp-btn-primary mp-btn-sm" id="newProductBtn">+ New tool</button>
+        </div>
+        <div class="mp-table-wrap">
+          <table class="mp-table">
+            <thead><tr><th>Icon</th><th>Name</th><th>Category</th><th>Active</th><th></th></tr></thead>
+            <tbody id="productsRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="mp-tab-panel" id="panel-members">
+        <div class="mp-table-wrap">
+          <table class="mp-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+            <tbody id="membersRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="mp-tab-panel" id="panel-subscriptions">
+        <div class="mp-table-wrap">
+          <table class="mp-table">
+            <thead><tr><th>Member</th><th>Plan</th><th>Status</th><th>Renews</th></tr></thead>
+            <tbody id="subscriptionsRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="mp-tab-panel" id="panel-billing">
+        <div class="mp-table-wrap">
+          <table class="mp-table">
+            <thead><tr><th>Date</th><th>Member</th><th>Amount</th><th>Status</th><th>Reference</th></tr></thead>
+            <tbody id="billingRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="mp-modal-backdrop mp-hidden" id="planModal">
+    <div class="mp-modal">
+      <h3 style="margin-bottom:18px;" id="planModalTitle">New plan</h3>
+      <input type="hidden" id="planId" />
+      <div class="mp-field"><label>Name</label><input type="text" id="planName" /></div>
+      <div class="mp-field"><label>Description</label><input type="text" id="planDescription" /></div>
+      <div class="mp-grid-2">
+        <div class="mp-field"><label>Price (USD)</label><input type="number" id="planPrice" step="0.01" /></div>
+        <div class="mp-field"><label>Interval</label>
+          <select id="planInterval"><option value="month">Monthly</option><option value="year">Yearly</option></select>
+        </div>
+      </div>
+      <div class="mp-field"><label>Features (one per line)</label>
+        <textarea id="planFeatures" rows="4" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--mp-border); background:var(--mp-bg-soft); color:var(--mp-text); font-family:inherit;"></textarea>
+      </div>
+      <div class="mp-flex mp-gap-8" style="margin-top:20px;">
+        <button class="mp-btn mp-btn-primary" id="savePlanBtn">Save</button>
+        <button class="mp-btn mp-btn-ghost" id="cancelPlanBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mp-modal-backdrop mp-hidden" id="productModal">
+    <div class="mp-modal">
+      <h3 style="margin-bottom:18px;" id="productModalTitle">New tool</h3>
+      <input type="hidden" id="productId" />
+      <div class="mp-field"><label>Name</label><input type="text" id="productName" /></div>
+      <div class="mp-field"><label>Description</label><input type="text" id="productDescription" /></div>
+      <div class="mp-grid-2">
+        <div class="mp-field"><label>Icon (emoji)</label><input type="text" id="productIcon" placeholder="🧰" /></div>
+        <div class="mp-field"><label>Category</label><input type="text" id="productCategory" /></div>
+      </div>
+      <div class="mp-flex mp-gap-8" style="margin-top:20px;">
+        <button class="mp-btn mp-btn-primary" id="saveProductBtn">Save</button>
+        <button class="mp-btn mp-btn-ghost" id="cancelProductBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/membership/js/membership.js"></script>
+  <script src="/membership/js/admin.js"></script>
+</body>
+</html>

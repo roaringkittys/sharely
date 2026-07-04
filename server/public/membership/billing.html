@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+</head>
+<body class="mp">
+  <div class="mp-app">
+    <aside class="mp-app-sidebar">
+      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase</a>
+      <nav class="mp-app-nav">
+        <a href="/membership/dashboard">🏠 Dashboard</a>
+        <a href="/membership/tools">🧰 My tools</a>
+        <a href="/membership/billing" class="active">💳 Billing</a>
+        <a href="/membership/upgrade">⬆️ Upgrade plan</a>
+        <a href="/membership/settings">⚙️ Settings</a>
+      </nav>
+      <a href="#" id="logoutBtn" style="padding:10px 12px; color:var(--mp-text-dim); font-size:14px;">↩ Log out</a>
+    </aside>
+
+    <main class="mp-app-main">
+      <div class="mp-app-header">
+        <div>
+          <h1>Billing</h1>
+          <p>Your current plan and payment history.</p>
+        </div>
+        <a href="/membership/upgrade" class="mp-btn mp-btn-primary mp-btn-sm">Change plan</a>
+      </div>
+
+      <div class="mp-card" style="margin-bottom:28px;">
+        <h3 id="planName">No active plan</h3>
+        <p id="planMeta">—</p>
+      </div>
+
+      <div class="mp-table-wrap">
+        <table class="mp-table">
+          <thead>
+            <tr><th>Date</th><th>Amount</th><th>Status</th><th>Reference</th></tr>
+          </thead>
+          <tbody id="billingRows">
+            <tr><td colspan="4" class="mp-empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="/membership/js/membership.js"></script>
+  <script>
+    (async function () {
+      const data = await MembershipUI.requireMemberSession();
+      if (!data) return;
+
+      if (data.subscription) {
+        document.getElementById('planName').textContent = data.subscription.plan_name + ' Plan';
+        document.getElementById('planMeta').textContent =
+          `${MembershipUI.formatMoney(data.subscription.price_cents)}/${data.subscription.billing_interval} — renews ${MembershipUI.formatDate(data.subscription.current_period_end)}`;
+      }
+
+      const res = await fetch('/api/membership/billing-history');
+      const records = await res.json();
+      const rows = document.getElementById('billingRows');
+      if (records.length === 0) {
+        rows.innerHTML = '<tr><td colspan="4" class="mp-empty">No billing history yet.</td></tr>';
+      } else {
+        rows.innerHTML = records.map(r => `
+          <tr>
+            <td>${MembershipUI.formatDate(r.created_at)}</td>
+            <td>${MembershipUI.formatMoney(r.amount_cents)}</td>
+            <td><span class="mp-badge mp-badge-${r.status}">${r.status}</span></td>
+            <td>${r.provider_ref || '—'}</td>
+          </tr>
+        `).join('');
+      }
+    })();
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/membership/logout', { method: 'POST' });
+      window.location.href = '/membership/login';
+    });
+  </script>
+</body>
+</html>

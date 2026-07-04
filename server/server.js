@@ -157,6 +157,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 userSystem.init(db);
 app.use('/', userSystem.router);
 
+// ── Membership Platform ─────────────────────────────────────────────────────
+const membershipDb = require('./membership-db');
+const membershipRoutes = require('./membership-routes');
+membershipDb.init(db);
+membershipRoutes.init(app, db, path.join(__dirname, 'public'));
+
 function requireAuth(req, res, next) {
   if (req.session && req.session.userId) return next();
   if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });

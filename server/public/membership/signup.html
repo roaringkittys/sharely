@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign up — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+</head>
+<body class="mp">
+  <div class="mp-auth-wrap">
+    <div class="mp-auth-card">
+      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase</a>
+      <h1>Create your account</h1>
+      <p class="mp-auth-sub">Start your free trial in less than a minute.</p>
+
+      <div id="alertBox" class="mp-alert mp-alert-error"></div>
+
+      <form id="signupForm">
+        <div class="mp-field">
+          <label>Full name</label>
+          <input type="text" id="name" required autocomplete="name" />
+        </div>
+        <div class="mp-field">
+          <label>Email</label>
+          <input type="email" id="email" required autocomplete="email" />
+        </div>
+        <div class="mp-field">
+          <label>Password</label>
+          <input type="password" id="password" required minlength="6" autocomplete="new-password" />
+        </div>
+        <button type="submit" class="mp-btn mp-btn-primary mp-btn-block" id="submitBtn">Create account</button>
+      </form>
+
+      <div class="mp-auth-footer">
+        Already have an account? <a href="/membership/login">Log in</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const planId = params.get('plan');
+
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const alertBox = document.getElementById('alertBox');
+      alertBox.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+
+      try {
+        const res = await fetch('/api/membership/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Signup failed');
+
+        window.location.href = planId ? `/membership/checkout?plan=${planId}` : '/membership/dashboard';
+      } catch (err) {
+        alertBox.textContent = err.message;
+        alertBox.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Create account';
+      }
+    });
+  </script>
+</body>
+</html>

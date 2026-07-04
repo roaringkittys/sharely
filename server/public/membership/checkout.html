@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+</head>
+<body class="mp">
+  <nav class="mp-nav">
+    <div class="mp-nav-inner">
+      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase</a>
+      <div></div>
+      <div class="mp-nav-actions">
+        <a href="/membership/upgrade" class="mp-btn mp-btn-ghost mp-btn-sm">← Back to plans</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="mp-section">
+    <div class="mp-container">
+      <div class="mp-checkout-grid">
+        <div class="mp-card">
+          <h3 style="margin-bottom:20px;">Payment details</h3>
+          <div id="alertBox" class="mp-alert mp-alert-error"></div>
+          <form id="checkoutForm">
+            <div class="mp-field">
+              <label>Card number</label>
+              <input type="text" id="cardNumber" placeholder="4242 4242 4242 4242" maxlength="19" required />
+            </div>
+            <div class="mp-grid-2">
+              <div class="mp-field">
+                <label>Expiry</label>
+                <input type="text" id="expiry" placeholder="MM/YY" required />
+              </div>
+              <div class="mp-field">
+                <label>CVC</label>
+                <input type="text" id="cvc" placeholder="123" required />
+              </div>
+            </div>
+            <div class="mp-field">
+              <label>Name on card</label>
+              <input type="text" id="cardName" required />
+            </div>
+            <button type="submit" class="mp-btn mp-btn-primary mp-btn-block" id="payBtn">Pay & subscribe</button>
+            <p style="font-size:12.5px; color:var(--mp-text-faint); text-align:center; margin-top:14px;">This is a simulated checkout. No real payment is processed.</p>
+          </form>
+        </div>
+
+        <div class="mp-card">
+          <h3 style="margin-bottom:20px;">Order summary</h3>
+          <div id="summaryBox">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="/membership/js/membership.js"></script>
+  <script>
+    const planId = new URLSearchParams(location.search).get('plan');
+    let selectedPlan = null;
+
+    (async function () {
+      const data = await MembershipUI.requireMemberSession();
+      if (!data) return;
+
+      if (!planId) {
+        window.location.href = '/membership/pricing';
+        return;
+      }
+
+      const plans = await MembershipUI.fetchPlans();
+      selectedPlan = plans.find(p => String(p.id) === String(planId));
+      if (!selectedPlan) {
+        window.location.href = '/membership/pricing';
+        return;
+      }
+
+      document.getElementById('summaryBox').innerHTML = `
+        <div class="mp-summary-row"><span>${selectedPlan.name} Plan</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
+        <div class="mp-summary-row"><span>Billing cycle</span><span>${selectedPlan.billing_interval === 'year' ? 'Yearly' : 'Monthly'}</span></div>
+        <div class="mp-summary-row mp-summary-total"><span>Total due today</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
+      `;
+    })();
+
+    document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('payBtn');
+      const alertBox = document.getElementById('alertBox');
+      alertBox.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Processing…';
+
+      try {
+        const res = await fetch('/api/membership/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan_id: selectedPlan.id,
+            card_number: document.getElementById('cardNumber').value,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = '/membership/checkout/success';
+        } else {
+          window.location.href = '/membership/checkout/failed';
+        }
+      } catch (err) {
+        alertBox.textContent = 'Something went wrong. Please try again.';
+        alertBox.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Pay & subscribe';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+</head>
+<body class="mp">
+
+  <nav class="mp-nav">
+    <div class="mp-nav-inner">
+      <a href="/membership" class="mp-logo">
+        <div class="mp-logo-mark">T</div>
+        Toolbase
+      </a>
+      <div class="mp-nav-links">
+        <a href="/membership#features">Features</a>
+        <a href="/membership#how-it-works">How it works</a>
+        <a href="/membership/pricing">Pricing</a>
+        <a href="/membership#faq">FAQ</a>
+      </div>
+      <div class="mp-nav-actions">
+        <a href="/membership/login" class="mp-btn mp-btn-ghost mp-btn-sm">Log in</a>
+        <a href="/membership/signup" class="mp-btn mp-btn-primary mp-btn-sm">Get started</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="mp-hero" style="padding: 64px 0 40px;">
+    <div class="mp-container">
+      <div class="mp-eyebrow">Pricing</div>
+      <h1 style="font-size:44px;">Simple plans that <span class="mp-grad-text">scale with you</span></h1>
+      <p>Every plan includes a curated bundle of tools, one dashboard, and one bill. No hidden fees.</p>
+    </div>
+  </header>
+
+  <section class="mp-section" style="padding-top: 0;">
+    <div class="mp-container">
+      <div class="mp-pricing-grid" id="pricingGrid"></div>
+    </div>
+  </section>
+
+  <section class="mp-section mp-section-alt">
+    <div class="mp-container">
+      <div class="mp-section-head">
+        <div class="mp-eyebrow">FAQ</div>
+        <h2>Pricing questions</h2>
+      </div>
+      <div class="mp-faq">
+        <div class="mp-faq-item">
+          <div class="mp-faq-q">Can I change plans later? <span class="mp-faq-icon">+</span></div>
+          <div class="mp-faq-a">Yes — upgrade or downgrade anytime from your dashboard's billing page.</div>
+        </div>
+        <div class="mp-faq-item">
+          <div class="mp-faq-q">What payment methods are accepted? <span class="mp-faq-icon">+</span></div>
+          <div class="mp-faq-a">We support all major credit and debit cards.</div>
+        </div>
+        <div class="mp-faq-item">
+          <div class="mp-faq-q">Is there a contract or commitment? <span class="mp-faq-icon">+</span></div>
+          <div class="mp-faq-a">No. All plans are billed monthly or yearly and can be canceled anytime.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="mp-footer">
+    <div class="mp-container">
+      <div class="mp-footer-bottom">
+        <span>© 2026 Toolbase. All rights reserved.</span>
+        <span>Made for modern teams.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/membership/js/membership.js"></script>
+  <script>
+    document.querySelectorAll('.mp-faq-q').forEach(q => {
+      q.addEventListener('click', () => q.parentElement.classList.toggle('open'));
+    });
+    MembershipUI.renderPricingGrid('pricingGrid');
+  </script>
+</body>
+</html>

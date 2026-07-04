@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+</head>
+<body class="mp">
+  <div class="mp-app">
+    <aside class="mp-app-sidebar">
+      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase</a>
+      <nav class="mp-app-nav">
+        <a href="/membership/dashboard" class="active">🏠 Dashboard</a>
+        <a href="/membership/tools">🧰 My tools</a>
+        <a href="/membership/billing">💳 Billing</a>
+        <a href="/membership/upgrade">⬆️ Upgrade plan</a>
+        <a href="/membership/settings">⚙️ Settings</a>
+      </nav>
+      <a href="#" id="logoutBtn" style="padding:10px 12px; color:var(--mp-text-dim); font-size:14px;">↩ Log out</a>
+    </aside>
+
+    <main class="mp-app-main">
+      <div class="mp-app-header">
+        <div>
+          <h1>Welcome back<span id="memberName"></span></h1>
+          <p>Here's what's happening with your membership.</p>
+        </div>
+      </div>
+
+      <div class="mp-stat-grid">
+        <div class="mp-stat-card">
+          <span>Current plan</span>
+          <strong id="statPlan">—</strong>
+        </div>
+        <div class="mp-stat-card">
+          <span>Status</span>
+          <strong id="statStatus">—</strong>
+        </div>
+        <div class="mp-stat-card">
+          <span>Renews on</span>
+          <strong id="statRenews">—</strong>
+        </div>
+        <div class="mp-stat-card">
+          <span>Included tools</span>
+          <strong id="statToolCount">—</strong>
+        </div>
+      </div>
+
+      <div id="noPlanBanner" class="mp-card mp-hidden" style="margin-bottom:28px;">
+        <h3>You don't have an active plan yet</h3>
+        <p style="margin-bottom:16px;">Choose a plan to unlock your tool bundle.</p>
+        <a href="/membership/pricing" class="mp-btn mp-btn-primary">View plans</a>
+      </div>
+
+      <div class="mp-app-header" style="margin-bottom:16px;">
+        <div><h1 style="font-size:19px;">Your tools</h1></div>
+        <a href="/membership/tools" class="mp-btn mp-btn-ghost mp-btn-sm">View all</a>
+      </div>
+      <div class="mp-tool-grid" id="toolsPreview"></div>
+    </main>
+  </div>
+
+  <script src="/membership/js/membership.js"></script>
+  <script>
+    (async function () {
+      const data = await MembershipUI.requireMemberSession();
+      if (!data) return;
+
+      document.getElementById('memberName').textContent = `, ${data.member.name.split(' ')[0]}`;
+
+      if (data.subscription) {
+        document.getElementById('statPlan').textContent = data.subscription.plan_name;
+        document.getElementById('statStatus').textContent = data.subscription.status;
+        document.getElementById('statRenews').textContent = MembershipUI.formatDate(data.subscription.current_period_end);
+        document.getElementById('statToolCount').textContent = data.subscription.features.length + '+';
+      } else {
+        document.getElementById('noPlanBanner').classList.remove('mp-hidden');
+        document.getElementById('statPlan').textContent = 'None';
+        document.getElementById('statStatus').textContent = 'Inactive';
+      }
+
+      const toolsRes = await fetch('/api/membership/my-tools');
+      const { tools } = await toolsRes.json();
+      const grid = document.getElementById('toolsPreview');
+      if (tools.length === 0) {
+        grid.innerHTML = '<div class="mp-empty">No tools available yet — choose a plan to get started.</div>';
+      } else {
+        grid.innerHTML = tools.slice(0, 3).map(t => `
+          <div class="mp-tool-card">
+            <div class="mp-feature-icon">${t.icon}</div>
+            <h3>${t.name}</h3>
+            <p>${t.description}</p>
+          </div>
+        `).join('');
+      }
+    })();
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/membership/logout', { method: 'POST' });
+      window.location.href = '/membership/login';
+    });
+  </script>
+</body>
+</html>

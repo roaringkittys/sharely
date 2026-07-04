@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upgrade plan — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+</head>
+<body class="mp">
+  <div class="mp-app">
+    <aside class="mp-app-sidebar">
+      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase</a>
+      <nav class="mp-app-nav">
+        <a href="/membership/dashboard">🏠 Dashboard</a>
+        <a href="/membership/tools">🧰 My tools</a>
+        <a href="/membership/billing">💳 Billing</a>
+        <a href="/membership/upgrade" class="active">⬆️ Upgrade plan</a>
+        <a href="/membership/settings">⚙️ Settings</a>
+      </nav>
+      <a href="#" id="logoutBtn" style="padding:10px 12px; color:var(--mp-text-dim); font-size:14px;">↩ Log out</a>
+    </aside>
+
+    <main class="mp-app-main">
+      <div class="mp-app-header">
+        <div>
+          <h1>Choose a plan</h1>
+          <p>Upgrade, downgrade, or start a new membership.</p>
+        </div>
+      </div>
+      <div class="mp-pricing-grid" id="plansGrid"></div>
+    </main>
+  </div>
+
+  <script src="/membership/js/membership.js"></script>
+  <script>
+    (async function () {
+      const data = await MembershipUI.requireMemberSession();
+      if (!data) return;
+
+      const plans = await MembershipUI.fetchPlans();
+      const currentPlanId = data.subscription ? data.subscription.plan_id : null;
+      const grid = document.getElementById('plansGrid');
+
+      grid.innerHTML = plans.map(p => {
+        const isCurrent = p.id === currentPlanId;
+        const features = (p.features || []).map(f => `<li>${f}</li>`).join('');
+        return `
+          <div class="mp-plan ${isCurrent ? 'mp-plan-featured' : ''}">
+            ${isCurrent ? '<div class="mp-plan-badge">Current plan</div>' : ''}
+            <div class="mp-plan-name">${p.name}</div>
+            <p class="mp-plan-desc">${p.description || ''}</p>
+            <div class="mp-plan-price">${MembershipUI.formatPrice(p.price_cents, p.billing_interval)}</div>
+            ${isCurrent
+              ? '<button class="mp-btn mp-btn-ghost mp-btn-block mp-plan-cta" disabled>Current plan</button>'
+              : `<a href="/membership/checkout?plan=${p.id}" class="mp-btn mp-btn-primary mp-btn-block mp-plan-cta">Choose ${p.name}</a>`}
+            <ul class="mp-plan-features">${features}</ul>
+          </div>
+        `;
+      }).join('');
+    })();
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/membership/logout', { method: 'POST' });
+      window.location.href = '/membership/login';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Toolbase</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+</head>
+<body class="mp">
+  <div class="mp-app">
+    <aside class="mp-app-sidebar">
+      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase</a>
+      <nav class="mp-app-nav">
+        <a href="/membership/dashboard">🏠 Dashboard</a>
+        <a href="/membership/tools">🧰 My tools</a>
+        <a href="/membership/billing">💳 Billing</a>
+        <a href="/membership/upgrade">⬆️ Upgrade plan</a>
+        <a href="/membership/settings" class="active">⚙️ Settings</a>
+      </nav>
+      <a href="#" id="logoutBtn" style="padding:10px 12px; color:var(--mp-text-dim); font-size:14px;">↩ Log out</a>
+    </aside>
+
+    <main class="mp-app-main" style="max-width:560px;">
+      <div class="mp-app-header">
+        <div>
+          <h1>Account settings</h1>
+          <p>Update your profile and password.</p>
+        </div>
+      </div>
+
+      <div id="alertBox" class="mp-alert"></div>
+
+      <div class="mp-card" style="margin-bottom:24px;">
+        <h3 style="margin-bottom:18px;">Profile</h3>
+        <form id="profileForm">
+          <div class="mp-field">
+            <label>Full name</label>
+            <input type="text" id="name" required />
+          </div>
+          <div class="mp-field">
+            <label>Email</label>
+            <input type="email" id="email" disabled />
+          </div>
+          <button type="submit" class="mp-btn mp-btn-primary">Save changes</button>
+        </form>
+      </div>
+
+      <div class="mp-card">
+        <h3 style="margin-bottom:18px;">Change password</h3>
+        <form id="passwordForm">
+          <div class="mp-field">
+            <label>Current password</label>
+            <input type="password" id="currentPassword" autocomplete="current-password" />
+          </div>
+          <div class="mp-field">
+            <label>New password</label>
+            <input type="password" id="newPassword" minlength="6" autocomplete="new-password" />
+          </div>
+          <button type="submit" class="mp-btn mp-btn-ghost">Update password</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="/membership/js/membership.js"></script>
+  <script>
+    let member;
+    (async function () {
+      const data = await MembershipUI.requireMemberSession();
+      if (!data) return;
+      member = data.member;
+      document.getElementById('name').value = member.name;
+      document.getElementById('email').value = member.email;
+    })();
+
+    const alertBox = document.getElementById('alertBox');
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const res = await fetch('/api/membership/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: document.getElementById('name').value }),
+      });
+      const data = await res.json();
+      MembershipUI.showAlert(alertBox, res.ok ? 'Profile updated.' : (data.error || 'Update failed'), res.ok ? 'success' : 'error');
+    });
+
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const res = await fetch('/api/membership/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_password: document.getElementById('currentPassword').value,
+          new_password: document.getElementById('newPassword').value,
+        }),
+      });
+      const data = await res.json();
+      MembershipUI.showAlert(alertBox, res.ok ? 'Password updated.' : (data.error || 'Update failed'), res.ok ? 'success' : 'error');
+      if (res.ok) e.target.reset();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/membership/logout', { method: 'POST' });
+      window.location.href = '/membership/login';
+    });
+  </script>
+</body>
+</html>
