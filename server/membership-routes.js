@@ -29,9 +29,11 @@ function init(app, db, publicDir) {
 
   // ── Static pages ─────────────────────────────────────────────────────────
 
+  router.get('/membership', (req, res) => res.redirect('/membership/home'));
+
   const pages = {
-    '/membership': 'index.html',
     '/membership/home': 'home.html',
+    '/membership/index.html': 'index.html',
     '/membership/pricing': 'pricing.html',
     '/membership/signup': 'signup.html',
     '/membership/login': 'login.html',
