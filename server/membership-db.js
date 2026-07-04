@@ -5,6 +5,13 @@
  */
 
 function init(db) {
+  // Migration: add access_token if missing (table may exist from earlier version)
+  try {
+    db.exec('ALTER TABLE members ADD COLUMN access_token TEXT DEFAULT NULL');
+  } catch (e) {
+    // column already exists
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS members (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -12,6 +19,7 @@ function init(db) {
       password      TEXT NOT NULL,
       name          TEXT NOT NULL,
       status        TEXT DEFAULT 'active',
+      access_token  TEXT DEFAULT NULL,
       reset_token   TEXT DEFAULT NULL,
       reset_expires DATETIME DEFAULT NULL,
       created_at    DATETIME DEFAULT CURRENT_TIMESTAMP

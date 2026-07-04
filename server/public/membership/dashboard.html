@@ -6,6 +6,12 @@
 <title>Dashboard — Toolbase</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/membership/css/membership.css">
+<style>
+  .mp-token-card { background: var(--mp-surface-2); border: 1px dashed var(--mp-border); border-radius: var(--mp-radius-sm); padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .mp-token-card code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; color: var(--mp-accent-2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mp-token-card button { padding: 6px 12px; font-size: 12.5px; }
+  .mp-token-note { font-size: 12.5px; color: var(--mp-text-faint); margin-top: 8px; }
+</style>
 </head>
 <body class="mp">
   <div class="mp-app">
@@ -54,6 +60,19 @@
         <a href="/membership/pricing" class="mp-btn mp-btn-primary">View plans</a>
       </div>
 
+      <div class="mp-card" style="margin-bottom:28px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h3 style="margin:0;">Your access token</h3>
+          <button class="mp-btn mp-btn-ghost mp-btn-sm" id="refreshTokenBtn">Regenerate</button>
+        </div>
+        <p style="margin:0 0 14px; font-size:14.5px; color:var(--mp-text-dim);">Use this token to authenticate the browser extension and access your plan.</p>
+        <div class="mp-token-card" id="tokenBox">
+          <code id="tokenValue">No token yet — generate one below.</code>
+          <button class="mp-btn mp-btn-primary mp-btn-sm" id="copyTokenBtn">Copy</button>
+        </div>
+        <div class="mp-token-note" id="tokenNote">Click Regenerate to create a new token.</div>
+      </div>
+
       <div class="mp-app-header" style="margin-bottom:16px;">
         <div><h1 style="font-size:19px;">Your tools</h1></div>
         <a href="/membership/tools" class="mp-btn mp-btn-ghost mp-btn-sm">View all</a>
@@ -81,6 +100,11 @@
         document.getElementById('statStatus').textContent = 'Inactive';
       }
 
+      if (data.member.access_token) {
+        document.getElementById('tokenValue').textContent = data.member.access_token;
+        document.getElementById('tokenNote').textContent = 'This token authenticates your browser extension.';
+      }
+
       const toolsRes = await fetch('/api/membership/my-tools');
       const { tools } = await toolsRes.json();
       const grid = document.getElementById('toolsPreview');
@@ -96,6 +120,27 @@
         `).join('');
       }
     })();
+
+    document.getElementById('refreshTokenBtn').addEventListener('click', async () => {
+      const res = await fetch('/api/membership/token', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('tokenValue').textContent = data.token;
+        document.getElementById('tokenNote').textContent = 'Token regenerated successfully.';
+      }
+    });
+
+    document.getElementById('copyTokenBtn').addEventListener('click', () => {
+      const token = document.getElementById('tokenValue').textContent;
+      if (token && !token.startsWith('No token')) {
+        navigator.clipboard.writeText(token).then(() => {
+          const btn = document.getElementById('copyTokenBtn');
+          const old = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = old, 1500);
+        });
+      }
+    });
 
     document.getElementById('logoutBtn').addEventListener('click', async (e) => {
       e.preventDefault();

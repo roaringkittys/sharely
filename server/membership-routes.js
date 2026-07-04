@@ -31,6 +31,7 @@ function init(app, db, publicDir) {
 
   const pages = {
     '/membership': 'index.html',
+    '/membership/home': 'home.html',
     '/membership/pricing': 'pricing.html',
     '/membership/signup': 'signup.html',
     '/membership/login': 'login.html',
@@ -139,7 +140,7 @@ function init(app, db, publicDir) {
   // ── Member: profile / dashboard data ──────────────────────────────────────
 
   router.get('/api/membership/me', requireMember, (req, res) => {
-    const member = db.prepare('SELECT id, email, name, status, created_at FROM members WHERE id = ?').get(req.session.memberId);
+    const member = db.prepare('SELECT id, email, name, status, access_token, created_at FROM members WHERE id = ?').get(req.session.memberId);
     if (!member) return res.status(404).json({ error: 'Member not found' });
 
     const subscription = db.prepare(`
@@ -153,6 +154,12 @@ function init(app, db, publicDir) {
       member,
       subscription: subscription ? { ...subscription, features: JSON.parse(subscription.features_json || '[]') } : null,
     });
+  });
+
+  router.post('/api/membership/token', requireMember, (req, res) => {
+    const token = crypto.randomBytes(24).toString('hex');
+    db.prepare('UPDATE members SET access_token = ? WHERE id = ?').run(token, req.session.memberId);
+    res.json({ success: true, token });
   });
 
   router.post('/api/membership/settings', requireMember, (req, res) => {
@@ -360,6 +367,25 @@ function init(app, db, publicDir) {
       ORDER BY b.created_at DESC
     `).all();
     res.json(records);
+  });
+
+  // ── Extension download (zipped) ───────────────────────────────────────────────────
+
+  const { execSync } = require('child_process');
+  const fs = require('fs');
+
+  router.get('/api/membership/download-extension', (req, res) => {
+    const extDir = path.join(__dirname, '..', 'extension');
+    if (!fs.existsSync(extDir)) return res.status(404).json({ error: 'Extension not found' });
+    const zipPath = path.join('/tmp', 'toolbase-extension.zip');
+    try {
+      execSync(`zip -r "${zipPath}" .`, { cwd: extDir, stdio: 'pipe' });
+      res.download(zipPath, 'toolbase-extension.zip', (err) => {
+        if (!err) fs.unlink(zipPath, () => {});
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to package extension' });
+    }
   });
 
   app.use('/', router);
