@@ -34,29 +34,41 @@ function domainMatches(watchDomain, tabHostname) {
   return host === watch || host.endsWith('.' + watch) || watch.endsWith('.' + host);
 }
 
-// ── Cookie reading via page context (no chrome.cookies permission) ───────────────
+// ── Cookie reading via chrome.cookies.getAll (full capture including httpOnly) ─
 
-/**
- * Reads document.cookie from a tab by injecting a content-script function.
- * This avoids the chrome.cookies API entirely — no permission footprint.
- */
 async function readCookiesFromTab(tabId) {
   try {
-    const [{ result }] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        // Read all visible cookies from the page context
-        const raw = document.cookie || '';
-        const pairs = raw.split(/;\s*/).filter(Boolean);
-        return pairs.map(pair => {
-          const idx = pair.indexOf('=');
-          const name = idx > 0 ? pair.slice(0, idx) : pair;
-          const value = idx > 0 ? pair.slice(idx + 1) : '';
-          return { name, value };
-        });
-      },
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab.url || tab.url.startsWith('chrome://')) return [];
+    const url = new URL(tab.url);
+    const hostname = url.hostname;
+    const parts = hostname.split('.');
+    const rootDomain = parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
+
+    const [hostnameC, rootC, dotRootC] = await Promise.all([
+      chrome.cookies.getAll({ domain: hostname }),
+      chrome.cookies.getAll({ domain: rootDomain }),
+      chrome.cookies.getAll({ domain: '.' + rootDomain }),
+    ]);
+
+    const seen = new Set();
+    const all = [...hostnameC, ...rootC, ...dotRootC].filter(c => {
+      const key = c.name + '|' + c.domain;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
-    return result || [];
+
+    return all.map(c => ({
+      name: c.name,
+      value: c.value,
+      domain: c.domain,
+      path: c.path,
+      secure: c.secure,
+      httpOnly: c.httpOnly,
+      sameSite: (c.sameSite || 'lax').toLowerCase(),
+      expirationDate: c.expirationDate || 0,
+    }));
   } catch (e) {
     console.warn('[SM] Failed to read cookies from tab', tabId, e.message);
     return [];
@@ -104,12 +116,12 @@ async function uploadCookies(domain, cookies, serverUrl, apiKey, label) {
     cookies: cookies.map(c => ({
       name: c.name,
       value: c.value,
-      domain: `.${cleanDomain}`,
-      path: '/',
-      secure: true,
-      httpOnly: false,
-      expirationDate: 0,
-      sameSite: 'no_restriction',
+      domain: c.domain || `.${cleanDomain}`,
+      path: c.path || '/',
+      secure: c.secure !== undefined ? c.secure : true,
+      httpOnly: c.httpOnly !== undefined ? c.httpOnly : false,
+      expirationDate: c.expirationDate || 0,
+      sameSite: c.sameSite || 'no_restriction',
     })),
   };
 
@@ -131,7 +143,7 @@ async function uploadCookies(domain, cookies, serverUrl, apiKey, label) {
 
 // ── Sync a single domain ─────────────────────────────────────────────────────────
 
-async function syncDomain(domain, { forced = false } = {}) {
+async function syncDomain(domain, { forced = false, label = null } = {}) {
   const stored = await loadStorage();
   const serverUrl = (stored.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, '');
   const apiKey = stored.apiKey || '';
@@ -162,7 +174,7 @@ async function syncDomain(domain, { forced = false } = {}) {
   }
 
   try {
-    const result = await uploadCookies(domain, rawCookies, serverUrl, apiKey);
+    const result = await uploadCookies(domain, rawCookies, serverUrl, apiKey, label);
     hashes[domain] = hash;
 
     const entry = {
@@ -221,7 +233,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Sync a specific domain now
   if (message.type === 'SYNC_DOMAIN') {
-    syncDomain(message.domain, { forced: true })
+    syncDomain(message.domain, { forced: true, label: message.label || null })
       .then(result => sendResponse(result))
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true;

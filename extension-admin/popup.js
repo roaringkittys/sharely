@@ -78,7 +78,8 @@ async function renderDomainList(activeDomain) {
       btn.disabled = true;
       btn.textContent = '…';
       setStatus(`Syncing ${domain}…`, 'muted');
-      const result = await chrome.runtime.sendMessage({ type: 'SYNC_DOMAIN', domain, forced: true });
+      const label = document.getElementById('accountLabel').value.trim() || null;
+      const result = await chrome.runtime.sendMessage({ type: 'SYNC_DOMAIN', domain, forced: true, label });
       btn.disabled = false;
       btn.textContent = '↑';
       if (result.success) {
@@ -192,7 +193,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     textEl.textContent = 'Syncing…';
     setStatus(`Reading cookies for ${activeDomain}…`, 'muted');
 
-    const result = await chrome.runtime.sendMessage({ type: 'SYNC_DOMAIN', domain: activeDomain, forced: true });
+    const label = document.getElementById('accountLabel').value.trim() || null;
+    const result = await chrome.runtime.sendMessage({ type: 'SYNC_DOMAIN', domain: activeDomain, forced: true, label });
 
     btn.disabled = false;
     iconEl.textContent = '↑';
