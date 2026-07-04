@@ -1,0 +1,55 @@
+Build my website to closely match the look, structure, and user flow of Groupy’s homepage and product flow: https://groupy.id/home
+
+Goal:
+Use Groupy as the main reference for UI/UX, layout, sections, and onboarding flow. I want my website to feel similar in style and functionality, but adapted to my own branding/project.
+
+What I need:
+
+1. Create a landing page inspired by Groupy’s homepage:
+
+* Similar modern layout, section flow, pricing presentation, CTA placement, FAQ, testimonials/social proof style, and overall visual feel
+* Responsive design for desktop and mobile
+* Clean premium SaaS/startup style
+
+2. Include all visible core flows/features that appear on Groupy’s website, such as:
+
+* Landing page sections
+* Pricing / package section
+* User signup / registration flow for new users
+* Login flow
+* Dashboard / user interface pages needed after signup
+* Payment/checkout entry flow
+* Any feature cards, plans, benefit sections, or onboarding elements visible on the site
+
+3. Use my site as:
+
+* Landing page
+* Payment page / upgrade page
+* Main user interface for customers after login
+
+4. Important implementation notes:
+
+* First, analyze the structure of https://groupy.id/home and reproduce the same style of user journey and page architecture
+* Do not copy branding, logos, text, or exact assets from Groupy
+* Recreate the design system, spacing, section structure, hierarchy, and product flow in an original version for my project
+* Build reusable components so the site is easy to expand later
+
+5. Output I want from you:
+
+* Full page/component plan before coding
+* Folder structure
+* Frontend pages to build
+* Backend/auth/payment flow needed
+* Then implement the website step by step
+
+Tech direction:
+
+* Build it in a clean modern stack suitable for production
+* Make auth, pricing, onboarding, and dashboard structure ready to use
+* Keep code modular and easy to edit
+
+Start by:
+
+1. Auditing Groupy’s homepage and listing all visible sections/features/pages/flows
+2. Proposing the equivalent structure for my project
+3. Then generate the actual code page by page
