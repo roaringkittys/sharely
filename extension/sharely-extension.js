@@ -14,6 +14,10 @@ let currentUserSession = '';
 let currentUserEmail = '';
 let currentUserExpiry = '';
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 async function loadStorage() {
   return new Promise(resolve => {
     chrome.storage.local.get(['serverUrl', 'apiKey', 'theme', 'userSession', 'userEmail', 'userExpiry'], resolve);
@@ -273,25 +277,37 @@ function filterAndRender() {
   renderServices(filtered);
 }
 
-// Account picker overlay
+// Account picker overlay — icon card grid like screenshots
 function showAccountPicker(service, accounts) {
   const iconHtml = service.icon_url
     ? `<img src="${serverUrl}${service.icon_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover" onerror="this.outerHTML='<span style=\\'font-size:28px\\'>${service.icon || '🌐'}</span>'">`
     : `<span style="font-size:28px">${service.icon || '🌐'}</span>`;
 
-  const accountButtons = accounts.map((acc, i) => `
-    <button class="account-pick-btn" data-idx="${i}">
-      <span class="account-pick-label">${acc.label}</span>
-      <span class="account-pick-count">${acc.cookies.length} cookie${acc.cookies.length !== 1 ? 's' : ''}</span>
-    </button>
+  // Reuse the service icon for every account card
+  const pickIcon = (acc) => {
+    if (service.icon_url) {
+      return `<div class="pick-icon"><img src="${serverUrl}${service.icon_url}" alt="" onerror="this.parentElement.innerHTML='<span style=font-size:28px>${service.icon || '🌐'}</span>'"></div>`;
+    }
+    if (service.icon && service.icon.length <= 4) {
+      return `<div class="pick-icon">${service.icon}</div>`;
+    }
+    return `<div class="pick-icon">🌐</div>`;
+  };
+
+  const cards = accounts.map((acc, i) => `
+    <div class="account-pick-card" data-idx="${i}">
+      ${pickIcon(acc)}
+      <div class="pick-label">${escapeHtml(acc.label)}</div>
+      <div class="pick-count">${acc.cookies.length} cookie${acc.cookies.length !== 1 ? 's' : ''}</div>
+    </div>
   `).join('');
 
-  $('#accountPickerTitle').html(`${iconHtml} <span>${service.name}</span>`);
-  $('#accountPickerList').html(accountButtons);
+  $('#accountPickerTitle').html(`${iconHtml} <span>${escapeHtml(service.name)}</span>`);
+  $('#accountPickerList').html(cards);
   $('#accountPickerOverlay').css('display', 'flex').hide().fadeIn(150);
 
-  // Bind account buttons
-  $('#accountPickerList').off('click', '.account-pick-btn').on('click', '.account-pick-btn', function () {
+  // Bind card clicks
+  $('#accountPickerList').off('click', '.account-pick-card').on('click', '.account-pick-card', function () {
     const idx = parseInt($(this).data('idx'));
     closeAccountPicker();
     doInject(service, accounts[idx]);
