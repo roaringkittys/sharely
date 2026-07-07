@@ -1,11 +1,12 @@
-/* popup.js — Sharely Manager (Admin) v1.1 */
+/* popup.js — Sharely Manager (Admin) v2.0 */
+/* Session Profile Manager: create, sync, view, delete profiles per domain */
 
-// ── Storage helpers ───────────────────────────────────────────────────────────
+// ── Storage helpers ───────────────────────────────────────────────────────────────────────────
 
 async function loadStorage() {
   return new Promise(resolve =>
     chrome.storage.local.get(
-      ['serverUrl', 'apiKey', 'trackedDomains', 'cookieHashes', 'syncLog'],
+      ['serverUrl', 'apiKey', 'syncLog'],
       resolve
     )
   );
@@ -15,7 +16,7 @@ async function saveStorage(data) {
   return new Promise(resolve => chrome.storage.local.set(data, resolve));
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────────────────────
 
 function setStatus(msg, type = 'muted') {
   const el = document.getElementById('statusMsg');
@@ -34,86 +35,110 @@ function timeAgo(ts) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// ── Render tracked domains list ───────────────────────────────────────────────
+// ── State ──────────────────────────────────────────────────────────────────────────────────────────────
 
-async function renderDomainList(activeDomain) {
-  const stored = await loadStorage();
-  const domains = stored.trackedDomains || [];
-  const log = stored.syncLog || [];
-  const list = document.getElementById('domainList');
-  const countEl = document.getElementById('watchCount');
+let activeDomain = null;
+let activeTabTitle = '';
+let activeCookieCount = 0;
 
-  countEl.textContent = domains.length;
+// ── Render profiles ──────────────────────────────────────────────────────────────────────────────
 
-  if (domains.length === 0) {
-    list.innerHTML = '<div class="empty-state">No sites watched yet.<br>Enable "Auto-sync this site" above to start.</div>';
+async function renderProfiles() {
+  const result = await chrome.runtime.sendMessage({ type: 'GET_PROFILES', domain: activeDomain });
+  const profiles = result.success ? result.profiles : [];
+
+  document.getElementById('profileCount').textContent = profiles.length;
+  const list = document.getElementById('profileList');
+
+  if (profiles.length === 0) {
+    list.innerHTML = '<div class="empty-state">No profiles saved yet for this site.<br>Create one above to start.</div>';
     return;
   }
 
-  list.innerHTML = domains.map(domain => {
-    const lastEntry = log.find(e => e.domain === domain);
-    const lastText = lastEntry
-      ? (lastEntry.ok
-          ? `✓ ${lastEntry.count} cookies — ${timeAgo(lastEntry.ts)}`
-          : `✗ ${lastEntry.error} — ${timeAgo(lastEntry.ts)}`)
-      : 'Never synced';
-    const lastClass = lastEntry ? (lastEntry.ok ? 'log-ok' : 'log-err') : '';
-    const active = domain === activeDomain ? ' style="border-color:rgba(108,92,231,0.5)"' : '';
+  list.innerHTML = profiles.map(p => {
+    const updated = p.updatedAt ? timeAgo(p.updatedAt) : 'never';
     return `
-      <div class="domain-item"${active}>
-        <div class="domain-item-left">
-          <div class="domain-name">${domain}</div>
-          <div class="domain-last ${lastClass}">${lastText}</div>
+      <div class="profile-card">
+        <div class="profile-card-left">
+          <div class="profile-name">${escapeHtml(p.name)}</div>
+          <div class="profile-meta">${p.cookieCount || 0} cookies · ${updated}</div>
         </div>
-        <div class="domain-actions">
-          <button class="domain-sync-btn" data-domain="${domain}" title="Sync now">↑</button>
-          <button class="domain-remove-btn" data-domain="${domain}" title="Stop watching">✕</button>
+        <div class="profile-actions">
+          <button class="profile-btn profile-btn-sync" data-id="${p.id}" title="Sync current session to this profile">↑ Sync</button>
+          <button class="profile-btn profile-btn-view" data-id="${p.id}" title="View cookies">View</button>
+          <button class="profile-btn profile-btn-del" data-id="${p.id}" title="Delete profile">✕</button>
         </div>
       </div>`;
   }).join('');
 
-  list.querySelectorAll('.domain-sync-btn').forEach(btn => {
+  // Sync button: overwrite profile with current tab cookies
+  list.querySelectorAll('.profile-btn-sync').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const domain = btn.dataset.domain;
+      const id = btn.dataset.id;
+      const name = profiles.find(p => p.id === id)?.name || '';
       btn.disabled = true;
       btn.textContent = '…';
-      setStatus(`Syncing ${domain}…`, 'muted');
-      const label = document.getElementById('accountLabel').value.trim() || null;
-      const result = await chrome.runtime.sendMessage({ type: 'SYNC_DOMAIN', domain, forced: true, label });
+      setStatus(`Syncing ${name}…`, 'muted');
+
+      const result = await chrome.runtime.sendMessage({ type: 'SAVE_PROFILE', id, name, domain: activeDomain });
+
       btn.disabled = false;
-      btn.textContent = '↑';
+      btn.textContent = '↑ Sync';
       if (result.success) {
-        setStatus(`✓ Synced ${result.count} cookies for ${domain}`, 'ok');
-      } else if (result.skipped) {
-        const reasonMap = {
-          no_api_key: '✗ No API key — open Settings',
-          no_tab: 'No open tab for this site — keep the site open in another tab',
-          no_cookies: 'No readable cookies found',
-          unchanged: 'No changes since last sync',
-        };
-        setStatus(reasonMap[result.reason] || result.reason, result.reason === 'no_api_key' ? 'err' : 'muted');
+        setStatus(`✓ ${result.cookieCount} cookies saved to "${name}"`, 'ok');
+        await renderProfiles();
       } else {
         setStatus(`✗ ${result.error}`, 'err');
       }
-      await renderDomainList(activeDomain);
     });
   });
 
-  list.querySelectorAll('.domain-remove-btn').forEach(btn => {
+  // View button: show cookies overlay
+  list.querySelectorAll('.profile-btn-view').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const domain = btn.dataset.domain;
-      const stored = await loadStorage();
-      const domains = (stored.trackedDomains || []).filter(d => d !== domain);
-      await saveStorage({ trackedDomains: domains });
-      if (domain === activeDomain) {
-        document.getElementById('watchToggle').checked = false;
-      }
-      await renderDomainList(activeDomain);
+      const id = btn.dataset.id;
+      const profile = profiles.find(p => p.id === id);
+      if (!profile) return;
+      showCookiesOverlay(profile);
+    });
+  });
+
+  // Delete button
+  list.querySelectorAll('.profile-btn-del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const profile = profiles.find(p => p.id === id);
+      if (!confirm(`Delete "${profile?.name}"? This cannot be undone.`)) return;
+      await chrome.runtime.sendMessage({ type: 'DELETE_PROFILE', id });
+      setStatus(`Deleted "${profile?.name}"`, 'ok');
+      await renderProfiles();
     });
   });
 }
 
-// ── Render sync log ───────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showCookiesOverlay(profile) {
+  document.getElementById('cookiesOverlayTitle').textContent = `${escapeHtml(profile.name)} — Cookies`;
+  const container = document.getElementById('cookiesOverlayList');
+  const cookies = profile.cookies || [];
+  if (cookies.length === 0) {
+    container.innerHTML = '<div class="empty-state">No cookies stored.</div>';
+  } else {
+    container.innerHTML = cookies.map(c => `
+      <div class="log-entry">
+        <div class="log-domain">${escapeHtml(c.name)}</div>
+        <div class="log-detail">
+          domain: ${escapeHtml(c.domain || '')} · path: ${escapeHtml(c.path || '/')} · secure: ${c.secure} · httpOnly: ${c.httpOnly} · sameSite: ${escapeHtml(c.sameSite || 'lax')}
+        </div>
+      </div>`).join('');
+  }
+  document.getElementById('cookiesOverlay').classList.add('open');
+}
+
+// ── Render sync log ────────────────────────────────────────────────────────────────────────────
 
 async function renderLog() {
   const stored = await loadStorage();
@@ -137,7 +162,7 @@ async function renderLog() {
   }).join('');
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   const stored = await loadStorage();
@@ -148,86 +173,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Get active tab info from background
   const tabInfo = await chrome.runtime.sendMessage({ type: 'GET_ACTIVE_COOKIES' });
-  const activeDomain = tabInfo.domain || null;
+  activeDomain = tabInfo.domain || null;
+  activeTabTitle = tabInfo.tabTitle || '';
+  activeCookieCount = tabInfo.count || 0;
 
   if (activeDomain) {
     document.getElementById('siteDomain').textContent = activeDomain;
-    document.getElementById('siteTitle').textContent = tabInfo.tabTitle || '';
-    document.getElementById('cookieCount').textContent = `${tabInfo.count} cookie${tabInfo.count !== 1 ? 's' : ''}`;
+    document.getElementById('siteTitle').textContent = activeTabTitle;
+    document.getElementById('cookieCount').textContent = `${activeCookieCount} cookie${activeCookieCount !== 1 ? 's' : ''}`;
   } else {
     document.getElementById('siteDomain').textContent = 'No active site';
     document.getElementById('cookieCount').textContent = '';
-    document.getElementById('syncBtn').disabled = true;
-    setStatus('Navigate to a website to sync cookies', 'muted');
+    document.getElementById('addProfileBtn').disabled = true;
+    document.getElementById('newProfileName').disabled = true;
+    setStatus('Navigate to a website to manage profiles', 'muted');
   }
 
-  const domains = stored.trackedDomains || [];
-  document.getElementById('watchToggle').checked = activeDomain ? domains.includes(activeDomain) : false;
+  await renderProfiles();
 
-  await renderDomainList(activeDomain);
-
-  // Watch toggle
-  document.getElementById('watchToggle').addEventListener('change', async (e) => {
+  // Add profile
+  document.getElementById('addProfileBtn').addEventListener('click', async () => {
     if (!activeDomain) return;
-    const stored = await loadStorage();
-    let domains = stored.trackedDomains || [];
-    if (e.target.checked) {
-      if (!domains.includes(activeDomain)) domains.push(activeDomain);
-      setStatus(`Now watching ${activeDomain}`, 'ok');
-    } else {
-      domains = domains.filter(d => d !== activeDomain);
-      setStatus(`Stopped watching ${activeDomain}`, 'muted');
+    const input = document.getElementById('newProfileName');
+    const name = input.value.trim();
+    if (!name) {
+      setStatus('Enter a profile name first', 'err');
+      return;
     }
-    await saveStorage({ trackedDomains: domains });
-    await renderDomainList(activeDomain);
-  });
-
-  // Sync Now button
-  document.getElementById('syncBtn').addEventListener('click', async () => {
-    if (!activeDomain) return;
-    const btn = document.getElementById('syncBtn');
-    const iconEl = document.getElementById('syncBtnIcon');
-    const textEl = document.getElementById('syncBtnText');
+    const btn = document.getElementById('addProfileBtn');
     btn.disabled = true;
-    iconEl.textContent = '…';
-    textEl.textContent = 'Syncing…';
-    setStatus(`Reading cookies for ${activeDomain}…`, 'muted');
+    btn.textContent = '…';
+    setStatus(`Creating "${name}" and saving current session…`, 'muted');
 
-    const label = document.getElementById('accountLabel').value.trim() || null;
-    const result = await chrome.runtime.sendMessage({ type: 'SYNC_DOMAIN', domain: activeDomain, forced: true, label });
+    const result = await chrome.runtime.sendMessage({ type: 'SAVE_PROFILE', name, domain: activeDomain });
 
     btn.disabled = false;
-    iconEl.textContent = '↑';
-    textEl.textContent = 'Sync Now';
-
+    btn.textContent = '+';
     if (result.success) {
-      setStatus(`✓ ${result.count} cookies synced to "${result.label}"`, 'ok');
-    } else if (result.skipped) {
-      const reasonMap = {
-        no_api_key: '✗ No API key — open Settings',
-        no_tab: 'No open tab — keep the site open in another tab',
-        no_cookies: 'No readable cookies found',
-        unchanged: 'No changes since last sync',
-      };
-      setStatus(reasonMap[result.reason] || result.reason, result.reason === 'no_api_key' ? 'err' : 'muted');
+      input.value = '';
+      setStatus(`✓ Created "${name}" with ${result.cookieCount} cookies`, 'ok');
+      await renderProfiles();
     } else {
       setStatus(`✗ ${result.error}`, 'err');
     }
-
-    await renderDomainList(activeDomain);
   });
 
-  // Sync All button
-  document.getElementById('syncAllBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('syncAllBtn');
-    btn.disabled = true;
-    btn.textContent = '…';
-    setStatus('Syncing all watched sites…', 'muted');
-    await chrome.runtime.sendMessage({ type: 'SYNC_ALL' });
-    btn.disabled = false;
-    btn.textContent = '↑ Sync All';
-    setStatus('All sites synced', 'ok');
-    await renderDomainList(activeDomain);
+  // Enter key on input
+  document.getElementById('newProfileName').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('addProfileBtn').click();
   });
 
   // Settings overlay
@@ -263,6 +256,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('logOverlay').addEventListener('click', (e) => {
     if (e.target === document.getElementById('logOverlay')) {
       document.getElementById('logOverlay').classList.remove('open');
+    }
+  });
+
+  // Cookies overlay close
+  document.getElementById('cookiesClose').addEventListener('click', () => {
+    document.getElementById('cookiesOverlay').classList.remove('open');
+  });
+  document.getElementById('cookiesOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('cookiesOverlay')) {
+      document.getElementById('cookiesOverlay').classList.remove('open');
     }
   });
 });

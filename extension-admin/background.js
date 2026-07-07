@@ -11,7 +11,7 @@ const HEARTBEAT_MINUTES = 30;
 async function loadStorage() {
   return new Promise(resolve =>
     chrome.storage.local.get(
-      ['serverUrl', 'apiKey', 'trackedDomains', 'cookieHashes', 'syncLog'],
+      ['serverUrl', 'apiKey', 'trackedDomains', 'cookieHashes', 'syncLog', 'profiles'],
       resolve
     )
   );
@@ -260,6 +260,95 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return { domain, hostname: url.hostname, count: cookies.length, tabTitle: tab.title || domain };
     };
     run().then(r => sendResponse(r)).catch(err => sendResponse({ error: err.message }));
+    return true;
+  }
+
+  // ── Profile management ──────────────────────────────────────────────────────
+
+  if (message.type === 'GET_PROFILES') {
+    const run = async () => {
+      const stored = await loadStorage();
+      const all = stored.profiles || [];
+      const domain = message.domain || null;
+      if (domain) {
+        return all.filter(p => domainMatches(p.domain, domain));
+      }
+      return all;
+    };
+    run().then(r => sendResponse({ success: true, profiles: r })).catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.type === 'SAVE_PROFILE') {
+    const run = async () => {
+      const stored = await loadStorage();
+      let profiles = stored.profiles || [];
+      const { id, name, domain } = message;
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab || !tab.url || tab.url.startsWith('chrome://')) {
+        throw new Error('No active website tab found');
+      }
+      const cookies = await readCookiesFromTab(tab.id);
+      if (cookies.length === 0) throw new Error('No cookies found on this tab');
+
+      const now = Date.now();
+      const profileId = id || `prof_${now}_${Math.random().toString(36).slice(2, 8)}`;
+      const profileDomain = domain || rootDomain(new URL(tab.url).hostname);
+
+      // Remove existing with same id
+      profiles = profiles.filter(p => p.id !== profileId);
+
+      profiles.push({
+        id: profileId,
+        name: name || `Profile ${profiles.filter(p => p.domain === profileDomain).length + 1}`,
+        domain: profileDomain,
+        cookies,
+        cookieCount: cookies.length,
+        updatedAt: now,
+        hash: hashCookies(cookies),
+      });
+
+      await saveStorage({ profiles });
+
+      // Also sync to server if credentials available
+      const serverUrl = (stored.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, '');
+      const apiKey = stored.apiKey || '';
+      if (apiKey) {
+        try {
+          await uploadCookies(profileDomain, cookies, serverUrl, apiKey, name);
+        } catch (e) { /* silent server sync failure */ }
+      }
+
+      return { id: profileId, cookieCount: cookies.length };
+    };
+    run().then(r => sendResponse({ success: true, ...r })).catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.type === 'DELETE_PROFILE') {
+    const run = async () => {
+      const stored = await loadStorage();
+      let profiles = (stored.profiles || []).filter(p => p.id !== message.id);
+      await saveStorage({ profiles });
+      return { deleted: true };
+    };
+    run().then(r => sendResponse({ success: true, ...r })).catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.type === 'SYNC_PROFILE_TO_SERVER') {
+    const run = async () => {
+      const stored = await loadStorage();
+      const profiles = stored.profiles || [];
+      const profile = profiles.find(p => p.id === message.id);
+      if (!profile) throw new Error('Profile not found');
+      const serverUrl = (stored.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, '');
+      const apiKey = stored.apiKey || '';
+      if (!apiKey) throw new Error('No API key configured');
+      const result = await uploadCookies(profile.domain, profile.cookies, serverUrl, apiKey, profile.name);
+      return result;
+    };
+    run().then(r => sendResponse({ success: true, ...r })).catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
 });

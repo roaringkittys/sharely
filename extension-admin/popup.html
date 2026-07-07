@@ -13,7 +13,7 @@
       <div class="logo-icon">S</div>
       <div>
         <div class="logo-title">Sharely Manager</div>
-        <div class="logo-sub">ADMIN SYNC TOOL</div>
+        <div class="logo-sub">SESSION PROFILES</div>
       </div>
     </div>
     <button id="settingsBtn" title="Settings">⚙</button>
@@ -24,54 +24,35 @@
     <!-- Active site card -->
     <div class="site-card">
       <div class="site-card-header">
-        <span class="site-label">Active Tab</span>
+        <span class="site-label">Active Site</span>
         <span id="cookieCount" class="site-meta">— cookies</span>
       </div>
       <div id="siteDomain" class="site-domain">—</div>
       <div id="siteTitle" class="site-meta"></div>
-      <div class="toggle-row">
-        <span class="toggle-label">Auto-sync this site</span>
-        <label class="toggle">
-          <input type="checkbox" id="watchToggle" />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div class="site-meta" style="margin-top:6px;color:var(--text-muted);font-size:10px">
-        Keep the site open in another tab for background sync to work.
-      </div>
     </div>
 
-    <!-- Account label -->
-    <div class="field" style="margin-bottom:12px">
-      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Account name (e.g. netflix1, prime1)</label>
-      <input type="text" id="accountLabel" placeholder="Auto-sync label" style="width:100%;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;outline:none" />
+    <!-- New profile input -->
+    <div class="add-profile-row">
+      <input type="text" id="newProfileName" placeholder="Profile name (e.g. Netflix 1)" />
+      <button id="addProfileBtn">+</button>
     </div>
 
-    <!-- Sync now button -->
-    <button class="sync-btn" id="syncBtn">
-      <span id="syncBtnIcon">↑</span>
-      <span id="syncBtnText">Sync Now</span>
-    </button>
+    <!-- Profiles list -->
+    <div class="section-header">
+      <span class="section-title">Saved Profiles (<span id="profileCount">0</span>)</span>
+    </div>
+    <div class="profile-list" id="profileList">
+      <div class="empty-state">No profiles saved yet for this site.<br>Create one above to start.</div>
+    </div>
 
     <!-- Status message -->
     <div class="status-msg muted" id="statusMsg">Ready</div>
 
-    <!-- Tracked domains -->
-    <div class="section-header">
-      <span class="section-title">Watched Sites (<span id="watchCount">0</span>)</span>
-      <button class="sync-all-btn" id="syncAllBtn">↑ Sync All</button>
-    </div>
-    <div class="domain-list" id="domainList">
-      <div class="empty-state">
-        No sites watched yet.<br>Enable "Auto-sync this site" above to start.
-      </div>
-    </div>
-
   </main>
 
   <footer>
-    <span>Sharely Manager v1.0</span>
-    <button id="viewLogBtn">View Sync Log</button>
+    <span>Sharely Manager v2.0</span>
+    <button id="viewLogBtn">View Log</button>
   </footer>
 
   <!-- Settings overlay -->
@@ -104,6 +85,19 @@
       </div>
       <div id="logEntries">
         <div class="empty-state">No syncs yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile cookies view overlay -->
+  <div class="overlay" id="cookiesOverlay">
+    <div class="settings-box" style="max-height:420px;overflow-y:auto;">
+      <div class="settings-header">
+        <span class="settings-title" id="cookiesOverlayTitle">Profile Cookies</span>
+        <button class="settings-close" id="cookiesClose">✕</button>
+      </div>
+      <div id="cookiesOverlayList">
+        <div class="empty-state">No cookies in this profile.</div>
       </div>
     </div>
   </div>

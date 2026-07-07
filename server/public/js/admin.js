@@ -64,6 +64,7 @@ async function loadPage(page) {
     case 'dashboard': await loadDashboard(); break;
     case 'services': await loadServices(); break;
     case 'cookies': await loadCookies(); break;
+    case 'profiles': await loadProfiles(); break;
     case 'settings': await loadSettings(); break;
     case 'users': await loadUsers(); break;
     case 'tokens': await loadTokens(); break;
@@ -654,6 +655,58 @@ async function resetDevice(id, email) {
 }
 
 // ── Tokens Page ─────────────────────────────────────────────────────────────
+
+// ── Profiles Page ────────────────────────────────────────────────────────────────────────────
+
+async function loadProfiles() {
+  const serviceId = document.getElementById('profileServiceFilter').value;
+  const url = serviceId ? `/api/profiles?service_id=${serviceId}` : '/api/profiles';
+  const profiles = await API.get(url);
+  if (!profiles) return;
+
+  // Populate filter if empty
+  const filter = document.getElementById('profileServiceFilter');
+  if (filter.options.length <= 1 && servicesCache) {
+    filter.innerHTML = '<option value="">All Services</option>' +
+      servicesCache.map(s => `<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
+    if (serviceId) filter.value = serviceId;
+  }
+
+  if (profiles.length === 0) {
+    document.getElementById('profilesTable').innerHTML = '<div class="empty-state"><p>No profiles found. Create profiles from the extension popup.</p></div>';
+    return;
+  }
+
+  let html = '<table><thead><tr><th>Profile</th><th>Service</th><th>Cookies</th><th>Last Updated</th><th>Actions</th></tr></thead><tbody>';
+  for (const p of profiles) {
+    const cookiesPreview = p.cookie_names.slice(0, 4).join(', ') + (p.cookie_names.length > 4 ? '...' : '');
+    html += `<tr>
+      <td><strong>${escapeHtml(p.name)}</strong></td>
+      <td>${escapeHtml(p.service_name)}<br><span style="color:var(--text-secondary);font-size:12px">${escapeHtml(p.domain || '')}</span></td>
+      <td>${p.cookie_count} <span style="color:var(--text-secondary);font-size:12px">(${escapeHtml(cookiesPreview)})</span></td>
+      <td>${p.last_updated ? new Date(p.last_updated).toLocaleString() : '-'}</td>
+      <td>
+        <button class="btn btn-sm btn-danger" onclick="deleteProfile(${p.service_id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')">✕ Delete</button>
+      </td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('profilesTable').innerHTML = html;
+}
+
+window.deleteProfile = async function(serviceId, label) {
+  if (!confirm(`Delete profile "${label}" and all its cookies?`)) return;
+  const res = await API.del(`/api/profiles/${serviceId}/${encodeURIComponent(label)}`);
+  if (res.success) {
+    showToast(`Deleted ${res.deleted} cookies`);
+    loadProfiles();
+  }
+};
+
+document.getElementById('profileServiceFilter').addEventListener('change', loadProfiles);
+document.getElementById('refreshProfilesBtn').addEventListener('click', loadProfiles);
+
+// ── Tokens Page ────────────────────────────────────────────────────────────────────────────
 
 async function loadTokens() {
   const tokens = await API.get('/admin/tokens');

@@ -630,6 +630,57 @@ app.post('/api/account-sync', requireApiKey, (req, res) => {
   }
 });
 
+// ── Profiles ───────────────────────────────────────────────────────────────────────────
+// Returns cookies grouped by label = "profile", per service
+
+app.get('/api/profiles', requireAuth, (req, res) => {
+  const { service_id } = req.query;
+
+  let rows;
+  if (service_id) {
+    rows = db.prepare(
+      `SELECT c.service_id, c.label, s.name as service_name, s.domain as service_domain,
+              COUNT(*) as cookie_count, MAX(c.updated_at) as last_updated,
+              GROUP_CONCAT(c.cookie_name, ', ') as cookie_names
+       FROM cookies c JOIN services s ON c.service_id = s.id
+       WHERE c.service_id = ?
+       GROUP BY c.service_id, c.label
+       ORDER BY s.name, c.label`
+    ).all(service_id);
+  } else {
+    rows = db.prepare(
+      `SELECT c.service_id, c.label, s.name as service_name, s.domain as service_domain,
+              COUNT(*) as cookie_count, MAX(c.updated_at) as last_updated,
+              GROUP_CONCAT(c.cookie_name, ', ') as cookie_names
+       FROM cookies c JOIN services s ON c.service_id = s.id
+       GROUP BY c.service_id, c.label
+       ORDER BY s.name, c.label`
+    ).all();
+  }
+
+  const profiles = rows.map(r => ({
+    id: `${r.service_id}_${r.label}`,
+    name: r.label,
+    service_name: r.service_name,
+    service_id: r.service_id,
+    domain: r.service_domain,
+    cookie_count: r.cookie_count,
+    last_updated: r.last_updated,
+    cookie_names: r.cookie_names ? r.cookie_names.split(', ').slice(0, 5) : [],
+  }));
+
+  res.json(profiles);
+});
+
+app.delete('/api/profiles/:serviceId/:label', requireAuth, (req, res) => {
+  const { serviceId, label } = req.params;
+  const decodedLabel = decodeURIComponent(label);
+  const result = db.prepare(
+    'DELETE FROM cookies WHERE service_id = ? AND label = ?'
+  ).run(serviceId, decodedLabel);
+  res.json({ success: true, deleted: result.changes });
+});
+
 app.get('/api/stats', requireAuth, (req, res) => {
   const totalServices = db.prepare('SELECT COUNT(*) as count FROM services').get().count;
   const activeServices = db.prepare('SELECT COUNT(*) as count FROM services WHERE enabled = 1').get().count;

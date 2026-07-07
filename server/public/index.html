@@ -33,6 +33,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="6" cy="14" r="1"/><circle cx="14" cy="16" r="1"/></svg>
           <span>Cookies</span>
         </a>
+        <a href="#profiles" data-page="profiles">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Profiles</span>
+        </a>
         <a href="#users" data-page="users">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span>Users</span>
@@ -84,6 +88,22 @@
         </div>
         <div class="card">
           <div id="cookiesTable"></div>
+        </div>
+      </div>
+
+      <!-- Profiles Page -->
+      <div id="page-profiles" class="page" style="display:none">
+        <div class="page-header">
+          <h1>Session Profiles</h1>
+          <div style="display:flex;gap:10px;align-items:center">
+            <select id="profileServiceFilter" style="width:200px">
+              <option value="">All Services</option>
+            </select>
+            <button class="btn btn-outline" id="refreshProfilesBtn">Refresh</button>
+          </div>
+        </div>
+        <div class="card">
+          <div id="profilesTable"></div>
         </div>
       </div>
 
