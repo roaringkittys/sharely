@@ -298,7 +298,6 @@ function showAccountPicker(service, accounts) {
     <div class="account-pick-card" data-idx="${i}">
       ${pickIcon(acc)}
       <div class="pick-label">${escapeHtml(acc.label)}</div>
-      <div class="pick-count">${acc.cookies.length} cookie${acc.cookies.length !== 1 ? 's' : ''}</div>
     </div>
   `).join('');
 
