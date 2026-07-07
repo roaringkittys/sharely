@@ -302,9 +302,9 @@ app.get('/api/cookies', requireAuth, (req, res) => {
   const { service_id } = req.query;
   let cookies;
   if (service_id) {
-    cookies = db.prepare('SELECT c.*, s.name as service_name, s.domain as service_domain FROM cookies c JOIN services s ON c.service_id = s.id WHERE c.service_id = ? ORDER BY c.label, c.cookie_name').all(service_id);
+    cookies = db.prepare('SELECT c.*, s.name as service_name, s.domain as service_domain, s.icon as service_icon, s.icon_url as service_icon_url FROM cookies c JOIN services s ON c.service_id = s.id WHERE c.service_id = ? ORDER BY c.label, c.cookie_name').all(service_id);
   } else {
-    cookies = db.prepare('SELECT c.*, s.name as service_name, s.domain as service_domain FROM cookies c JOIN services s ON c.service_id = s.id ORDER BY s.name, c.label, c.cookie_name').all();
+    cookies = db.prepare('SELECT c.*, s.name as service_name, s.domain as service_domain, s.icon as service_icon, s.icon_url as service_icon_url FROM cookies c JOIN services s ON c.service_id = s.id ORDER BY s.name, c.label, c.cookie_name').all();
   }
   res.json(cookies);
 });

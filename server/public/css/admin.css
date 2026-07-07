@@ -343,6 +343,125 @@ td { color: var(--text-primary); }
 }
 .empty-state p { margin-top: 8px; font-size: 14px; }
 
+/* ── Cookie Service Card Grid (like extension) ────────────────────────────────────── */
+.cookie-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.cookie-service-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  text-align: center;
+  transition: transform 0.15s, border-color 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+.cookie-service-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+}
+.cookie-service-card .service-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  margin: 0 auto 12px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+}
+.cookie-service-card .service-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cookie-service-card .service-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cookie-service-card .service-domain {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cookie-service-card .account-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #fff;
+  color: #111;
+  font-size: 10px;
+  font-weight: 800;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(0,0,0,0.12);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+.cookie-service-card .service-status {
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+/* Account label chip inside card */
+.cookie-account-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 10px;
+}
+.cookie-account-chip {
+  background: rgba(108,92,231,0.15);
+  border: 1px solid rgba(108,92,231,0.3);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Toggle view button */
+.view-toggle-group {
+  display: flex;
+  gap: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.view-toggle-group button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.view-toggle-group button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 .actions-cell { display: flex; gap: 6px; }
 
 .toast {

@@ -103,7 +103,15 @@ async function loadDashboard() {
     html += '<div class="empty-state"><p>No cookies added yet. Go to Cookies page to add some.</p></div>';
   } else {
     const recent = cookies.slice(0, 5);
-    html += `<table><thead><tr><th>Service</th><th>Label</th><th>Cookie Name</th><th>Domain</th><th>Status</th></tr></thead><tbody>${recent.map(c => `<tr><td>${c.service_name}</td><td>${c.label}</td><td><code>${c.cookie_name}</code></td><td>${c.cookie_domain}</td><td><span class="badge ${c.enabled ? 'badge-success' : 'badge-danger'}">${c.enabled ? 'Active' : 'Disabled'}</span></td></tr>`).join('')}</tbody></table>`;
+    html += `<table><thead><tr><th style="width:40px"></th><th>Service</th><th>Label</th><th>Cookie Name</th><th>Domain</th><th>Status</th></tr></thead><tbody>${recent.map(c => {
+      let iconCell = '';
+      if (c.service_icon_url) {
+        iconCell = `<img src="${c.service_icon_url}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;display:block" onerror="this.outerHTML='<span style=font-size:20px>${c.service_icon || '🌐'}</span>'">`;
+      } else {
+        iconCell = `<span style="font-size:20px">${c.service_icon || '🌐'}</span>`;
+      }
+      return `<tr><td style="padding:8px;text-align:center">${iconCell}</td><td>${c.service_name}</td><td>${c.label}</td><td><code>${c.cookie_name}</code></td><td>${c.cookie_domain}</td><td><span class="badge ${c.enabled ? 'badge-success' : 'badge-danger'}">${c.enabled ? 'Active' : 'Disabled'}</span></td></tr>`;
+    }).join('')}</tbody></table>`;
   }
   document.getElementById('recentCookiesTable').innerHTML = html;
 }
@@ -177,57 +185,65 @@ function populateParentDropdown(excludeId = null) {
     topLevel.map(s => `<option value="${s.id}">${s.icon || '🌐'} ${s.name}</option>`).join('');
 }
 
-async function loadCookies() {
-  const services = await API.get('/api/services');
-  if (!services) return;
-  servicesCache = services;
-  const filterEl = document.getElementById('cookieServiceFilter');
-  const currentVal = filterEl.value;
-  filterEl.innerHTML = '<option value="">All Services</option>' + services.map(s => `<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
-  filterEl.value = currentVal;
+let cookieView = 'grid';
 
-  const serviceSelect = document.getElementById('cookieService');
-  serviceSelect.innerHTML = services.map(s => `<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
-
-  const sid = filterEl.value;
-  const url = sid ? `/api/cookies?service_id=${sid}` : '/api/cookies';
-  const cookies = await API.get(url);
-  if (!cookies) return;
-  if (cookies.length === 0) {
-    document.getElementById('cookiesTable').innerHTML = '<div class="empty-state"><p>No cookies found. Click "Add Cookie" to add one.</p></div>';
-    return;
+function buildAdminIconHtml(iconUrl, icon, size = 72) {
+  if (iconUrl) {
+    return `<div class="service-icon-wrap"><img src="${iconUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<span style=font-size:28px>${icon || '🌐'}</span>'"></div>`;
   }
+  if (icon && icon.length <= 4) {
+    return `<div class="service-icon-wrap">${icon}</div>`;
+  }
+  return `<div class="service-icon-wrap">🌐</div>`;
+}
 
-  // Group cookies by service_id, then by label
-  const groupedByService = {};
-  cookies.forEach(c => {
-    if (!groupedByService[c.service_id]) {
-      groupedByService[c.service_id] = { service_name: c.service_name, labels: {} };
-    }
-    if (!groupedByService[c.service_id].labels[c.label]) {
-      groupedByService[c.service_id].labels[c.label] = [];
-    }
-    groupedByService[c.service_id].labels[c.label].push(c);
-  });
+function renderCookieGrid(groupedByService) {
+  let html = '<div class="cookie-service-grid">';
+  for (const serviceId in groupedByService) {
+    const s = groupedByService[serviceId];
+    const labels = Object.keys(s.labels);
+    const totalCookies = labels.reduce((sum, l) => sum + s.labels[l].length, 0);
+    const labelChips = labels.slice(0, 3).map(l => `<span class="cookie-account-chip">${escapeHtml(l)} (${s.labels[l].length})</span>`).join('');
+    const moreLabel = labels.length > 3 ? `<span class="cookie-account-chip">+${labels.length - 3} more</span>` : '';
 
+    html += `<div class="cookie-service-card" onclick="filterToService(${serviceId})">
+      ${buildAdminIconHtml(s.service_icon_url, s.service_icon)}
+      <div class="service-name">${escapeHtml(s.service_name)}</div>
+      <div class="service-domain">${s.domain || ''}</div>
+      <div class="cookie-account-chips">${labelChips}${moreLabel}</div>
+      <span class="account-count">${totalCookies}</span>
+    </div>`;
+  }
+  html += '</div>';
+  document.getElementById('cookiesTable').innerHTML = html;
+}
+
+function renderCookieList(groupedByService) {
   let html = '';
   for (const serviceId in groupedByService) {
-    const serviceGroup = groupedByService[serviceId];
-    const labels = Object.keys(serviceGroup.labels).sort();
-    
-    // Service header
+    const s = groupedByService[serviceId];
+    const labels = Object.keys(s.labels).sort();
+
+    // Header with icon
+    let iconHeader = '';
+    if (s.service_icon_url) {
+      iconHeader = `<img src="${s.service_icon_url}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;vertical-align:middle;margin-right:10px" onerror="this.outerHTML='<span style=font-size:22px;vertical-align:middle;margin-right:10px>${s.service_icon || '🌐'}</span>'">`;
+    } else if (s.service_icon) {
+      iconHeader = `<span style="font-size:22px;vertical-align:middle;margin-right:10px">${s.service_icon}</span>`;
+    }
+
     html += `<div style="margin-bottom:20px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-      <div style="background:rgba(108,92,231,0.15);padding:12px 14px;border-bottom:1px solid var(--border);font-weight:600;color:var(--text-primary);font-size:14px">
-        ${serviceGroup.service_name}
+      <div style="background:rgba(108,92,231,0.15);padding:12px 14px;border-bottom:1px solid var(--border);font-weight:600;color:var(--text-primary);font-size:14px;display:flex;align-items:center">
+        ${iconHeader}${s.service_name}
         <span style="background:rgba(108,92,231,0.3);padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;font-weight:500">${labels.length} account${labels.length !== 1 ? 's' : ''}</span>
       </div>
       <div style="padding:0">`;
 
     labels.forEach((label, idx) => {
-      const cookiesInLabel = serviceGroup.labels[label];
+      const cookiesInLabel = s.labels[label];
       html += `<div style="border-bottom:${idx < labels.length - 1 ? '1px solid var(--border)' : 'none'};padding:12px 14px">
         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
-          📌 ${label} 
+          📌 ${label}
           <span style="background:rgba(100,100,100,0.3);padding:2px 6px;border-radius:3px;font-size:10px;font-weight:500;margin-left:6px">${cookiesInLabel.length} cookie${cookiesInLabel.length !== 1 ? 's' : ''}</span>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -258,9 +274,62 @@ async function loadCookies() {
 
     html += '</div></div>';
   }
-
   document.getElementById('cookiesTable').innerHTML = html;
 }
+
+async function loadCookies() {
+  const services = await API.get('/api/services');
+  if (!services) return;
+  servicesCache = services;
+  const filterEl = document.getElementById('cookieServiceFilter');
+  const currentVal = filterEl.value;
+  filterEl.innerHTML = '<option value="">All Services</option>' + services.map(s => `<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
+  filterEl.value = currentVal;
+
+  const serviceSelect = document.getElementById('cookieService');
+  serviceSelect.innerHTML = services.map(s => `<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
+
+  const sid = filterEl.value;
+  const url = sid ? `/api/cookies?service_id=${sid}` : '/api/cookies';
+  const cookies = await API.get(url);
+  if (!cookies) return;
+  if (cookies.length === 0) {
+    document.getElementById('cookiesTable').innerHTML = '<div class="empty-state"><p>No cookies found. Click "Add Cookie" to add one.</p></div>';
+    return;
+  }
+
+  // Group cookies by service_id
+  const groupedByService = {};
+  cookies.forEach(c => {
+    if (!groupedByService[c.service_id]) {
+      groupedByService[c.service_id] = {
+        service_name: c.service_name,
+        service_icon: c.service_icon,
+        service_icon_url: c.service_icon_url,
+        domain: c.service_domain,
+        labels: {}
+      };
+    }
+    if (!groupedByService[c.service_id].labels[c.label]) {
+      groupedByService[c.service_id].labels[c.label] = [];
+    }
+    groupedByService[c.service_id].labels[c.label].push(c);
+  });
+
+  if (cookieView === 'grid') {
+    renderCookieGrid(groupedByService);
+  } else {
+    renderCookieList(groupedByService);
+  }
+}
+
+window.filterToService = function(serviceId) {
+  document.getElementById('cookieServiceFilter').value = serviceId;
+  cookieView = 'list';
+  document.getElementById('viewListBtn').classList.add('active');
+  document.getElementById('viewGridBtn').classList.remove('active');
+  loadCookies();
+};
 
 function escapeAttr(str) {
   return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -541,6 +610,14 @@ window.deleteCookie = async function(id) {
 
 document.getElementById('cookieServiceFilter').addEventListener('change', loadCookies);
 
+document.getElementById('cookieViewToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  cookieView = btn.dataset.view;
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+  loadCookies();
+});
+
 document.getElementById('settingsForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   await API.put('/api/settings', {
@@ -677,10 +754,20 @@ async function loadProfiles() {
     return;
   }
 
-  let html = '<table><thead><tr><th>Profile</th><th>Service</th><th>Cookies</th><th>Last Updated</th><th>Actions</th></tr></thead><tbody>';
+  let html = '<table><thead><tr><th style="width:40px"></th><th>Profile</th><th>Service</th><th>Cookies</th><th>Last Updated</th><th>Actions</th></tr></thead><tbody>';
   for (const p of profiles) {
     const cookiesPreview = p.cookie_names.slice(0, 4).join(', ') + (p.cookie_names.length > 4 ? '...' : '');
+    const s = servicesCache.find(x => x.id === p.service_id);
+    let iconCell = '';
+    if (s && s.icon_url) {
+      iconCell = `<img src="${s.icon_url}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;display:block" onerror="this.outerHTML='<span style=font-size:20px>${s.icon || '🌐'}</span>'">`;
+    } else if (s) {
+      iconCell = `<span style="font-size:20px">${s.icon || '🌐'}</span>`;
+    } else {
+      iconCell = `<span style="font-size:20px">🌐</span>`;
+    }
     html += `<tr>
+      <td style="padding:8px;text-align:center">${iconCell}</td>
       <td><strong>${escapeHtml(p.name)}</strong></td>
       <td>${escapeHtml(p.service_name)}<br><span style="color:var(--text-secondary);font-size:12px">${escapeHtml(p.domain || '')}</span></td>
       <td>${p.cookie_count} <span style="color:var(--text-secondary);font-size:12px">(${escapeHtml(cookiesPreview)})</span></td>
