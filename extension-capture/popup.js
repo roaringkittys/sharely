@@ -1,5 +1,6 @@
 /* Sharely Capture — popup.js */
 
+const DEFAULT_SERVER_URL = 'https://sharely-production-bc58.up.railway.app';
 let serverUrl = '';
 let apiKey = '';
 let capturedCookies = [];
@@ -118,7 +119,7 @@ async function startCapture() {
 // Init
 (async () => {
   const stored = await loadSettings();
-  serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
+  serverUrl = (stored.serverUrl || DEFAULT_SERVER_URL).replace(/\/+$/, '');
   apiKey = stored.apiKey || '';
 
   document.getElementById('serverUrlInput').value = serverUrl;
