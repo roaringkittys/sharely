@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sharely — Mobile Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0f0f13;
+      color: #e4e4ef;
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+    header {
+      padding: 20px 16px 12px;
+      border-bottom: 1px solid #2d2d3f;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: #fff;
+    }
+    .logo-text { font-size: 18px; font-weight: 700; color: #fff; }
+    .tag { font-size: 11px; color: #a29bfe; background: rgba(162,155,254,0.12); padding: 3px 8px; border-radius: 6px; margin-left: auto; }
+    .container { padding: 16px; }
+    .intro {
+      background: rgba(108,92,231,0.08);
+      border: 1px solid rgba(108,92,231,0.2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #8888a0;
+    }
+    .intro strong { color: #e4e4ef; }
+    .intro a { color: #a29bfe; text-decoration: none; }
+    .service-block { margin-bottom: 24px; }
+    .service-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
+      font-size: 15px; font-weight: 600;
+    }
+    .service-header img {
+      width: 32px; height: 32px; border-radius: 8px; object-fit: cover;
+      background: rgba(255,255,255,0.07);
+    }
+    .service-header .emoji { font-size: 22px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+    .account-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    }
+    .account-card {
+      background: #1e1e2e;
+      border: 1px solid #2d2d3f;
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .account-card:active { transform: scale(0.97); }
+    .account-card .acc-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin: 0 auto 8px;
+      background: rgba(255,255,255,0.07);
+      overflow: hidden;
+    }
+    .account-card .acc-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .account-card .acc-label {
+      font-size: 13px; font-weight: 600; color: #e4e4ef;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .account-card .acc-domain {
+      font-size: 10px; color: #8888a0; margin-top: 2px;
+    }
+    .loading {
+      text-align: center; padding: 60px 20px; color: #8888a0; font-size: 14px;
+    }
+    .empty {
+      text-align: center; padding: 60px 20px; color: #8888a0; font-size: 14px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 1000;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #1e1e2e;
+      border-top: 1px solid #2d2d3f;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 15px));
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .modal-header h2 { font-size: 16px; font-weight: 700; }
+    .modal-close {
+      font-size: 22px; color: #8888a0; background: none; border: none; width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .steps {
+      font-size: 12px; color: #8888a0; line-height: 1.7; margin-bottom: 16px;
+    }
+    .steps strong { color: #e4e4ef; }
+    .bookmarklet-display {
+      background: #252535;
+      border: 1px solid #2d2d3f;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 11px;
+      color: #8888a0;
+      word-break: break-all;
+      margin-bottom: 10px;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+    .btn {
+      width: 100%; padding: 14px;
+      border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: #fff;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #2d2d3f;
+      color: #e4e4ef;
+      margin-top: 8px;
+    }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(120px);
+      background: #1e1e2e; border: 1px solid #2d2d3f; border-radius: 10px;
+      padding: 12px 20px; font-size: 13px; color: #e4e4ef;
+      z-index: 2000; transition: transform 0.3s;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* Instructions tab */
+    .help-btn {
+      position: fixed; bottom: 20px; right: 20px;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: #fff; font-size: 20px; border: none;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(108,92,231,0.4);
+      z-index: 100;
+    }
+    .help-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000;
+      overflow-y: auto;
+    }
+    .help-overlay.active { display: block; }
+    .help-box {
+      max-width: 400px; margin: 60px auto;
+      padding: 0 20px;
+      font-size: 13px; line-height: 1.7; color: #8888a0;
+    }
+    .help-box h2 { color: #fff; font-size: 20px; margin-bottom: 16px; }
+    .help-box strong { color: #e4e4ef; }
+    .help-box ol { padding-left: 20px; margin-bottom: 16px; }
+    .help-box li { margin-bottom: 10px; }
+    .help-close {
+      position: fixed; top: 16px; right: 16px;
+      font-size: 24px; color: #fff; background: none; border: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo-icon">S</div>
+    <div class="logo-text">Sharely</div>
+    <span class="tag">Mobile</span>
+  </header>
+
+  <div class="container">
+    <div class="intro" id="introBox" style="display:none">
+      <strong>One-tap login from your phone</strong><br>
+      Save each bookmarklet to your browser. Then on any site, tap the bookmark to inject cookies instantly.
+      <a href="#" onclick="showHelp();return false">How does this work?</a>
+    </div>
+    <div id="servicesList">
+      <div class="loading">Loading services...</div>
+    </div>
+  </div>
+
+  <!-- Bookmarklet Modal -->
+  <div class="modal-overlay" id="bmModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="bmTitle">Bookmarklet</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="steps">
+        <strong>Step 1:</strong> Long-press the button below and choose <strong>"Copy Link"</strong><br>
+        <strong>Step 2:</strong> Open your browser bookmarks, add a new one, paste this URL as the address<br>
+        <strong>Step 3:</strong> Go to <span id="bmDomain" style="color:#a29bfe"></span> and tap the bookmark → instant login
+      </div>
+      <div class="bookmarklet-display" id="bmUrl"></div>
+      <button class="btn btn-primary" id="copyBmBtn">Copy Link</button>
+      <button class="btn btn-outline" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <button class="help-btn" onclick="showHelp()">?</button>
+
+  <div class="help-overlay" id="helpOverlay">
+    <button class="help-close" onclick="hideHelp()">&times;</button>
+    <div class="help-box">
+      <h2>How Mobile Login Works</h2>
+      <p><strong>1. Bookmarklets are just saved bookmarks that run code.</strong></p>
+      <ol>
+        <li>Pick an account below (e.g., Netflix — Prime 1)</li>
+        <li>Copy the bookmarklet link, save it as a bookmark in Safari/Chrome</li>
+        <li>Next time you visit that site, tap the saved bookmark</li>
+        <li>It injects all session cookies instantly and refreshes the page</li>
+      </ol>
+      <p><strong>Why can't we just click it directly?</strong><br>
+      For security, browsers only allow bookmarklets to set cookies when run from a saved bookmark on the actual site. Copy + save once, use forever.</p>
+      <p><strong>On iPhone/Safari:</strong><br>
+      Share sheet → Add Bookmark → paste the URL → save. Rename it to "Netflix 1" for easy access.</p>
+      <p><strong>On Android/Chrome:</strong><br>
+      Tap and hold the link → Copy link → go to bookmarks → add → paste the URL.</p>
+      <button class="btn btn-primary" onclick="hideHelp()" style="margin-top:8px">Got it</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let allServices = [];
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    async function loadData() {
+      try {
+        const res = await fetch(`${API_BASE}/api/extension/config`, {
+          credentials: 'include'
+        });
+        if (res.status === 401) {
+          document.getElementById('servicesList').innerHTML = `
+            <div class="empty">
+              <p style="font-size:16px;margin-bottom:8px">🔒 Sign in required</p>
+              <p style="font-size:12px">Open the Sharely web app on this device first.</p>
+              <a href="/app" style="display:inline-block;margin-top:12px;padding:10px 20px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px">Open App</a>
+            </div>
+          `;
+          return;
+        }
+        if (!res.ok) throw new Error('Server error');
+        const data = await res.json();
+        allServices = (data.services || []).filter(s => s.accounts && s.accounts.length > 0);
+        renderServices(allServices);
+        if (allServices.length > 0) {
+          document.getElementById('introBox').style.display = 'block';
+        }
+      } catch (e) {
+        document.getElementById('servicesList').innerHTML = `
+          <div class="empty">
+            <p style="margin-bottom:6px">⚠️ Could not connect</p>
+            <p style="font-size:12px">Make sure you're connected to the internet.</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderServices(services) {
+      const box = document.getElementById('servicesList');
+      if (!services.length) {
+        box.innerHTML = '<div class="empty">No services with accounts available.</div>';
+        return;
+      }
+
+      let html = '';
+      services.forEach(s => {
+        let icon = '';
+        if (s.icon_url) {
+          icon = `<img src="${s.icon_url}" alt="" onerror="this.outerHTML='<span class=emoji>${s.icon||'🌐'}</span>'">`;
+        } else {
+          icon = `<span class="emoji">${s.icon || '🌐'}</span>`;
+        }
+
+        const accounts = s.accounts.map(acc => {
+          const encodedLabel = encodeURIComponent(acc.label);
+          return `
+            <div class="account-card" onclick="openBookmarklet(${s.id}, '${encodedLabel}', '${s.name}', '${acc.label}', '${s.domain}')">
+              <div class="acc-icon">${icon}</div>
+              <div class="acc-label">${acc.label}</div>
+              <div class="acc-domain">${s.domain}</div>
+            </div>
+          `;
+        }).join('');
+
+        html += `
+          <div class="service-block">
+            <div class="service-header">
+              ${icon}
+              <span>${s.name}</span>
+            </div>
+            <div class="account-grid">${accounts}</div>
+          </div>
+        `;
+      });
+      box.innerHTML = html;
+    }
+
+    let currentBmUrl = '';
+
+    async function openBookmarklet(serviceId, encodedLabel, serviceName, label, domain) {
+      try {
+        const res = await fetch(`${API_BASE}/api/bookmarklet/${serviceId}/${encodedLabel}`, {
+          credentials: 'include'
+        });
+        if (!res.ok) throw new Error('Failed to generate');
+        const data = await res.json();
+        currentBmUrl = data.url;
+
+        document.getElementById('bmTitle').textContent = `${serviceName} — ${label}`;
+        document.getElementById('bmDomain').textContent = domain;
+        document.getElementById('bmUrl').textContent = data.url.substring(0, 200) + '...';
+        document.getElementById('bmModal').classList.add('active');
+      } catch (e) {
+        showToast('Failed to generate bookmarklet');
+      }
+    }
+
+    document.getElementById('copyBmBtn').addEventListener('click', () => {
+      if (!currentBmUrl) return;
+      navigator.clipboard.writeText(currentBmUrl).then(() => {
+        showToast('Bookmarklet copied! Save it as a browser bookmark.');
+      }).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = currentBmUrl;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Bookmarklet copied! Save it as a browser bookmark.');
+      });
+    });
+
+    function closeModal() {
+      document.getElementById('bmModal').classList.remove('active');
+    }
+
+    // Tap outside modal to close
+    document.getElementById('bmModal').addEventListener('click', (e) => {
+      if (e.target.id === 'bmModal') closeModal();
+    });
+
+    function showHelp() {
+      document.getElementById('helpOverlay').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function hideHelp() {
+      document.getElementById('helpOverlay').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

@@ -196,6 +196,10 @@ app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.html'));
 });
 
+app.get('/mobile', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
+});
+
 app.get('/safari', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'safari.html'));
 });
@@ -394,6 +398,49 @@ app.post('/api/settings/regenerate-key', requireAuth, (req, res) => {
 });
 
 // Extension config — groups cookies by label into "accounts"
+// Mobile bookmarklet — returns a javascript: URL with embedded cookies
+app.get('/api/bookmarklet/:serviceId/:label', requireApiKey, (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'X-API-Key, X-User-Session, Content-Type');
+
+  const { serviceId, label } = req.params;
+  const decodedLabel = decodeURIComponent(label);
+
+  const service = db.prepare('SELECT * FROM services WHERE id = ?').get(serviceId);
+  if (!service) return res.status(404).json({ error: 'Service not found' });
+
+  const cookies = db.prepare(
+    'SELECT * FROM cookies WHERE service_id = ? AND label = ? AND enabled = 1 ORDER BY cookie_name'
+  ).all(serviceId, decodedLabel);
+
+  if (cookies.length === 0) {
+    return res.status(404).json({ error: 'No cookies found for this account' });
+  }
+
+  // Build compact cookie array for the bookmarklet
+  const cookieData = cookies.map(c => ({
+    n: c.cookie_name,
+    v: Buffer.from(c.cookie_value).toString('base64'),
+    d: c.cookie_domain,
+    p: c.cookie_path || '/',
+    s: c.secure ? 1 : 0,
+    h: c.http_only ? 1 : 0,
+    ss: c.same_site || 'lax'
+  }));
+
+  const cookieJson = JSON.stringify(cookieData);
+  const js = `(function(){var c=${cookieJson};for(var i=0;i<c.length;i++){var x=c[i],v=atob(x.v),t=x.n+'='+v+';domain='+x.d+';path='+x.p+';';if(x.s)t+='Secure;';if(x.h)t+='HttpOnly;';if(x.ss)t+='SameSite='+x.ss+';';document.cookie=t;}location.href='https://${service.domain}';})();`;
+  const url = 'javascript:' + encodeURIComponent(js);
+
+  res.json({
+    service_name: service.name,
+    account_label: decodedLabel,
+    domain: service.domain,
+    url: url,
+    cookies_count: cookies.length
+  });
+});
+
 app.get('/api/extension/config', requireApiKey, (req, res) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
