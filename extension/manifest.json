@@ -13,23 +13,12 @@
   "background": {
     "service_worker": "./background.js"
   },
-  "commands": {
-    "_execute_action": {
-      "suggested_key": {
-        "windows": "Alt+Shift+S",
-        "mac": "Alt+Shift+S",
-        "chromeos": "Alt+Shift+S",
-        "linux": "Alt+Shift+S"
-      }
-    }
-  },
   "host_permissions": [
     "*://*/*"
   ],
   "permissions": [
     "cookies",
     "storage",
-    "activeTab",
     "contextMenus",
     "tabs"
   ],

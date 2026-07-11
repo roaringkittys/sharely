@@ -710,7 +710,11 @@ $('#captureConfirmBtn').on('click', async () => {
 $('#adminButton').on('click', async () => {
   const stored = await loadStorage();
   if (stored.serverUrl) {
-    chrome.tabs.create({ url: stored.serverUrl });
+    try {
+      await chrome.tabs.create({ url: stored.serverUrl });
+    } catch (e) {
+      window.open(stored.serverUrl, '_blank');
+    }
   } else {
     showNotification('Not configured', 'Set your server URL in settings first.');
     setTimeout(closeNotification, 2000);
@@ -723,7 +727,12 @@ $('#authHelpLink').on('click', async (e) => {
   e.preventDefault();
   const stored = await loadStorage();
   const base = (stored.serverUrl || '').replace(/\/+$/, '');
-  chrome.tabs.create({ url: base ? `${base}/start` : 'https://sharely.app/start' });
+  const url = base ? `${base}/start` : 'https://sharely.app/start';
+  try {
+    await chrome.tabs.create({ url });
+  } catch (e) {
+    window.open(url, '_blank');
+  }
 });
 
 $('#authSubmitBtn').on('click', async () => {

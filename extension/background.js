@@ -5,7 +5,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'sharely-open',
     title: 'Open Sharely',
-    contexts: ['action']
+    contexts: ['all']
   });
 });
 
@@ -14,6 +14,35 @@ function fixSameSite(value) {
   if (v === 'none' || v === 'no_restriction') return 'no_restriction';
   if (v === 'strict') return 'strict';
   return 'lax';
+}
+
+// Orion/WebKit may reject 'no_restriction' + secure:true combo.
+// Try with no_restriction first, fall back to 'unspecified' (omit sameSite)
+// if the browser doesn't support the Chrome-only value.
+async function setCookieSafely(params, results) {
+  try {
+    const result = await chrome.cookies.set(params);
+    if (result) {
+      results.success.push(params.name);
+      return;
+    }
+  } catch (e) {
+    // fall through to retry
+  }
+
+  // Retry without sameSite for WebKit/Orion compatibility
+  const retryParams = { ...params };
+  delete retryParams.sameSite;
+  try {
+    const result2 = await chrome.cookies.set(retryParams);
+    if (result2) {
+      results.success.push(params.name);
+      return;
+    }
+  } catch (e2) {
+    const err = chrome.runtime.lastError ? chrome.runtime.lastError.message : (e2.message || 'null result');
+    results.failed.push({ name: params.name, reason: err });
+  }
 }
 
 function buildCookieUrl(domain, path) {
@@ -59,27 +88,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           params.expirationDate = cookie.expirationDate;
         }
 
-        try {
-          console.log('Setting cookie:', cookie.name, 'on', url, '| sameSite:', sameSite, '| httpOnly:', params.httpOnly);
-          const result = await chrome.cookies.set(params);
-          if (result) {
-            results.success.push(cookie.name);
-          } else {
-            const err = chrome.runtime.lastError ? chrome.runtime.lastError.message : 'null result';
-            results.failed.push({ name: cookie.name, reason: err });
-          }
-        } catch (e) {
-          results.failed.push({ name: cookie.name, reason: e.message });
-        }
+        console.log('Setting cookie:', cookie.name, 'on', url, '| sameSite:', sameSite, '| httpOnly:', params.httpOnly);
+        await setCookieSafely(params, results);
       }
 
       // Verify
       const verified = await chrome.cookies.getAll({ domain: urlObj.hostname });
       console.log('Verified cookies for', urlObj.hostname, ':', verified.map(c => c.name));
 
-      // Open tab
+      // Open tab (Orion-safe fallback to window.open if tabs API fails)
       if (results.success.length > 0) {
-        await chrome.tabs.create({ url: targetUrl });
+        try {
+          await chrome.tabs.create({ url: targetUrl });
+        } catch (tabErr) {
+          console.warn('tabs.create failed, trying window.open fallback:', tabErr);
+          try {
+            window.open(targetUrl, '_blank');
+          } catch (winErr) {
+            console.error('Both tab creation methods failed:', winErr);
+          }
+        }
       }
 
       return results;
