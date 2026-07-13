@@ -354,11 +354,18 @@ function init(app, db, publicDir) {
   // ── Member: profile / dashboard data ──────────────────────────────────────
 
   router.get('/api/membership/me', requireMember, (req, res) => {
-    const member = db.prepare('SELECT id, email, name, status, access_token, created_at FROM members WHERE id = ?').get(req.session.memberId);
+    let member = db.prepare('SELECT id, email, name, status, access_token, created_at FROM members WHERE id = ?').get(req.session.memberId);
     if (!member) return res.status(404).json({ error: 'Member not found' });
 
+    // Auto-generate access token on first login if missing
+    if (!member.access_token) {
+      const token = crypto.randomBytes(24).toString('hex');
+      db.prepare('UPDATE members SET access_token = ? WHERE id = ?').run(token, member.id);
+      member = { ...member, access_token: token };
+    }
+
     const subscription = db.prepare(`
-      SELECT s.*, p.name as plan_name, p.price_cents, p.billing_interval, p.features_json
+      SELECT s.*, p.name as plan_name, p.price_cents, p.billing_interval, p.duration_days, p.features_json
       FROM subscriptions s JOIN plans p ON s.plan_id = p.id
       WHERE s.member_id = ? AND s.status = 'active'
       ORDER BY s.created_at DESC LIMIT 1

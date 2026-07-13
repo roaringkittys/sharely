@@ -41,10 +41,11 @@ async function init() {
     return;
   }
 
+  const durationLabel = selectedPlan.duration_days ? `${selectedPlan.duration_days} hari` : (selectedPlan.billing_interval === 'year' ? 'Yearly' : 'Monthly');
   document.getElementById('summaryBox').innerHTML = `
     <div class="mp-summary-row"><span>${selectedPlan.name} Plan</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
-    <div class="mp-summary-row"><span>Billing cycle</span><span>${selectedPlan.billing_interval === 'year' ? 'Yearly' : 'Monthly'}</span></div>
-    <div class="mp-summary-row mp-summary-total"><span>Total due today</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
+    <div class="mp-summary-row"><span>Durasi akses</span><span>${durationLabel}</span></div>
+    <div class="mp-summary-row mp-summary-total"><span>Total bayar</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
   `;
 }
 
