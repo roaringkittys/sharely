@@ -5,11 +5,13 @@
  */
 
 function init(db) {
-  // Migration: add access_token if missing (table may exist from earlier version)
-  try {
-    db.exec('ALTER TABLE members ADD COLUMN access_token TEXT DEFAULT NULL');
-  } catch (e) {
-    // column already exists
+  // Migrations: add columns if missing (tables may exist from earlier versions)
+  const migrations = [
+    'ALTER TABLE members ADD COLUMN access_token TEXT DEFAULT NULL',
+    'ALTER TABLE plans ADD COLUMN duration_days INTEGER DEFAULT 30',
+  ];
+  for (const sql of migrations) {
+    try { db.exec(sql); } catch (e) { /* column already exists */ }
   }
 
   db.exec(`
@@ -29,7 +31,8 @@ function init(db) {
       id               INTEGER PRIMARY KEY AUTOINCREMENT,
       name             TEXT NOT NULL,
       price_cents      INTEGER NOT NULL DEFAULT 0,
-      billing_interval TEXT NOT NULL DEFAULT 'month',
+      billing_interval TEXT NOT NULL DEFAULT 'day',
+      duration_days    INTEGER NOT NULL DEFAULT 30,
       description      TEXT DEFAULT '',
       features_json    TEXT DEFAULT '[]',
       active           INTEGER DEFAULT 1,
@@ -82,26 +85,39 @@ function seed(db) {
   const planCount = db.prepare('SELECT COUNT(*) as c FROM plans').get().c;
   if (planCount === 0) {
     const insertPlan = db.prepare(
-      'INSERT INTO plans (name, price_cents, billing_interval, description, features_json, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO plans (name, price_cents, billing_interval, duration_days, description, features_json, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     insertPlan.run(
-      'Starter', 900, 'month',
-      'Essential tools bundle for individuals getting started.',
-      JSON.stringify(['5 tool integrations', 'Email support', 'Monthly usage reports']),
+      'Starter', 49000, 'day', 30,
+      'Akses 30 hari ke layanan premium pilihan untuk pengguna individu.',
+      JSON.stringify(['Akses 30 hari', 'Semua layanan tersedia', 'Email support', 'Browser extension']),
       1
     );
     insertPlan.run(
-      'Pro', 2900, 'month',
-      'The full toolkit for professionals and power users.',
-      JSON.stringify(['20 tool integrations', 'Priority support', 'Advanced analytics', 'Team seat (1 included)']),
+      'Pro', 99000, 'day', 30,
+      'Akses 30 hari penuh ke seluruh layanan premium — pilihan terpopuler.',
+      JSON.stringify(['Akses 30 hari', 'Semua layanan premium', 'Priority support', 'Browser extension', 'Multi-account access']),
       2
     );
     insertPlan.run(
-      'Team', 7900, 'month',
-      'Built for teams that need shared access and admin controls.',
-      JSON.stringify(['Unlimited tool integrations', 'Dedicated support', 'Team seats (5 included)', 'Centralized billing', 'Admin controls']),
+      'Team', 299000, 'day', 60,
+      'Akses 60 hari untuk tim — berbagi akses dengan kontrol terpusat.',
+      JSON.stringify(['Akses 60 hari', 'Semua layanan premium', 'Dedicated support', 'Browser extension', 'Multi-account access', 'Team management']),
       3
     );
+  } else {
+    // Patch existing plan rows to IDR pricing and duration_days
+    const plans = db.prepare('SELECT id, name FROM plans ORDER BY sort_order').all();
+    const updates = {
+      'Starter': { price: 49000, days: 30, desc: 'Akses 30 hari ke layanan premium pilihan untuk pengguna individu.', features: ['Akses 30 hari', 'Semua layanan tersedia', 'Email support', 'Browser extension'] },
+      'Pro':     { price: 99000, days: 30, desc: 'Akses 30 hari penuh ke seluruh layanan premium — pilihan terpopuler.', features: ['Akses 30 hari', 'Semua layanan premium', 'Priority support', 'Browser extension', 'Multi-account access'] },
+      'Team':    { price: 299000, days: 60, desc: 'Akses 60 hari untuk tim — berbagi akses dengan kontrol terpusat.', features: ['Akses 60 hari', 'Semua layanan premium', 'Dedicated support', 'Browser extension', 'Multi-account access', 'Team management'] },
+    };
+    const upd = db.prepare("UPDATE plans SET price_cents=?, billing_interval='day', duration_days=?, description=?, features_json=? WHERE id=?");
+    for (const plan of plans) {
+      const u = updates[plan.name];
+      if (u) upd.run(u.price, u.days, u.desc, JSON.stringify(u.features), plan.id);
+    }
   }
 
   const productCount = db.prepare('SELECT COUNT(*) as c FROM products').get().c;

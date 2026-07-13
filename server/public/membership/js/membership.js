@@ -1,9 +1,10 @@
 /* Shared membership frontend helpers */
 
 const MembershipUI = (() => {
-  function formatPrice(cents, interval) {
-    const dollars = (cents / 100).toFixed(cents % 100 === 0 ? 0 : 2);
-    return `$${dollars}<span>/${interval === 'year' ? 'yr' : 'mo'}</span>`;
+  function formatPrice(cents, interval, days) {
+    const formatted = 'Rp ' + cents.toLocaleString('id-ID');
+    const period = days ? `${days} hari` : (interval === 'year' ? 'yr' : 'mo');
+    return `${formatted}<span>/${period}</span>`;
   }
 
   async function fetchPlans() {
@@ -19,7 +20,7 @@ const MembershipUI = (() => {
         ${featured ? '<div class="mp-plan-badge">Most popular</div>' : ''}
         <div class="mp-plan-name">${plan.name}</div>
         <p class="mp-plan-desc">${plan.description || ''}</p>
-        <div class="mp-plan-price">${formatPrice(plan.price_cents, plan.billing_interval)}</div>
+        <div class="mp-plan-price">${formatPrice(plan.price_cents, plan.billing_interval, plan.duration_days)}</div>
         <a href="/membership/checkout?plan=${plan.id}" class="mp-btn ${featured ? 'mp-btn-primary' : 'mp-btn-ghost'} mp-btn-block mp-plan-cta">Choose ${plan.name}</a>
         <ul class="mp-plan-features">${features}</ul>
       </div>
@@ -44,7 +45,7 @@ const MembershipUI = (() => {
   }
 
   function formatMoney(cents) {
-    return '$' + (cents / 100).toFixed(2);
+    return 'Rp ' + cents.toLocaleString('id-ID');
   }
 
   function formatDate(iso) {

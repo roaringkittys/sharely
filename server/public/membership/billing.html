@@ -57,7 +57,7 @@
       if (data.subscription) {
         document.getElementById('planName').textContent = data.subscription.plan_name + ' Plan';
         document.getElementById('planMeta').textContent =
-          `${MembershipUI.formatMoney(data.subscription.price_cents)}/${data.subscription.billing_interval} — renews ${MembershipUI.formatDate(data.subscription.current_period_end)}`;
+          `${MembershipUI.formatMoney(data.subscription.price_cents)} — berlaku hingga ${MembershipUI.formatDate(data.subscription.current_period_end)}`;
       }
 
       const res = await fetch('/api/membership/billing-history');

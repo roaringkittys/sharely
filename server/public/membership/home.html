@@ -321,8 +321,7 @@
             <div class="mp-price-badge ${badges[i] || 'favorite'}">${badgeTexts[i] || 'Plan'}</div>
             <div class="plan-name">${p.name}</div>
             <div class="plan-label">STARTING FROM</div>
-            <div class="old-price">$${((p.price_cents * 1.5) / 100).toFixed(0)}</div>
-            <div class="new-price">${MembershipUI.formatPrice(p.price_cents, p.billing_interval)}</div>
+            <div class="new-price">${MembershipUI.formatPrice(p.price_cents, p.billing_interval, p.duration_days)}</div>
             <ul class="feature-list">${features}</ul>
             <a href="/membership/signup?plan=${p.id}" class="mp-btn ${isPopular ? 'mp-btn-primary' : 'mp-btn-ghost'} mp-btn-block">Choose ${p.name}</a>
           </div>

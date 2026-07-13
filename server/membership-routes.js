@@ -212,7 +212,8 @@ function init(app, db, publicDir) {
     // Activate subscription
     db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE member_id = ? AND status = 'active'").run(memberId);
     const periodEnd = new Date();
-    periodEnd.setMonth(periodEnd.getMonth() + (plan.billing_interval === 'year' ? 12 : 1));
+    const durationDays = plan.duration_days || 30;
+    periodEnd.setDate(periodEnd.getDate() + durationDays);
     const subResult = db.prepare(
       'INSERT INTO subscriptions (member_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)'
     ).run(memberId, plan.id, 'active', periodEnd.toISOString());
@@ -262,7 +263,8 @@ function init(app, db, publicDir) {
           if (plan) {
             db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE member_id = ? AND status = 'active'").run(localTx.member_id);
             const periodEnd = new Date();
-            periodEnd.setMonth(periodEnd.getMonth() + (plan.billing_interval === 'year' ? 12 : 1));
+            const durationDays = plan.duration_days || 30;
+            periodEnd.setDate(periodEnd.getDate() + durationDays);
             const subResult = db.prepare(
               'INSERT INTO subscriptions (member_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)'
             ).run(localTx.member_id, plan.id, 'active', periodEnd.toISOString());

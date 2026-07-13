@@ -50,7 +50,7 @@
             ${isCurrent ? '<div class="mp-plan-badge">Current plan</div>' : ''}
             <div class="mp-plan-name">${p.name}</div>
             <p class="mp-plan-desc">${p.description || ''}</p>
-            <div class="mp-plan-price">${MembershipUI.formatPrice(p.price_cents, p.billing_interval)}</div>
+            <div class="mp-plan-price">${MembershipUI.formatPrice(p.price_cents, p.billing_interval, p.duration_days)}</div>
             ${isCurrent
               ? '<button class="mp-btn mp-btn-ghost mp-btn-block mp-plan-cta" disabled>Current plan</button>'
               : `<a href="/membership/checkout?plan=${p.id}" class="mp-btn mp-btn-primary mp-btn-block mp-plan-cta">Choose ${p.name}</a>`}
