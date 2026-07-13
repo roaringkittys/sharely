@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Checkout — Toolbase</title>
+<title>Checkout — Sharely</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/membership/css/membership.css">
 </head>
 <body class="mp">
   <nav class="mp-nav">
     <div class="mp-nav-inner">
-      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">T</div>Toolbase</a>
+      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">S</div>Sharely</a>
       <div></div>
       <div class="mp-nav-actions">
-        <a href="/membership/upgrade" class="mp-btn mp-btn-ghost mp-btn-sm">← Back to plans</a>
+        <a href="/membership/pricing" class="mp-btn mp-btn-ghost mp-btn-sm">← Back to plans</a>
       </div>
     </div>
   </nav>
@@ -22,30 +22,26 @@
     <div class="mp-container">
       <div class="mp-checkout-grid">
         <div class="mp-card">
-          <h3 style="margin-bottom:20px;">Payment details</h3>
+          <h3 style="margin-bottom:20px;">Complete your purchase</h3>
           <div id="alertBox" class="mp-alert mp-alert-error"></div>
-          <form id="checkoutForm">
+
+          <div id="guestForm">
             <div class="mp-field">
-              <label>Card number</label>
-              <input type="text" id="cardNumber" placeholder="4242 4242 4242 4242" maxlength="19" required />
-            </div>
-            <div class="mp-grid-2">
-              <div class="mp-field">
-                <label>Expiry</label>
-                <input type="text" id="expiry" placeholder="MM/YY" required />
-              </div>
-              <div class="mp-field">
-                <label>CVC</label>
-                <input type="text" id="cvc" placeholder="123" required />
-              </div>
+              <label>Email address</label>
+              <input type="email" id="emailInput" placeholder="you@example.com" required autocomplete="email" />
             </div>
             <div class="mp-field">
-              <label>Name on card</label>
-              <input type="text" id="cardName" required />
+              <label>Full name</label>
+              <input type="text" id="nameInput" placeholder="Your name" required autocomplete="name" />
             </div>
-            <button type="submit" class="mp-btn mp-btn-primary mp-btn-block" id="payBtn">Pay & subscribe</button>
-            <p style="font-size:12.5px; color:var(--mp-text-faint); text-align:center; margin-top:14px;">This is a simulated checkout. No real payment is processed.</p>
-          </form>
+            <button type="button" class="mp-btn mp-btn-primary mp-btn-block" id="payBtn">Pay now</button>
+            <p style="font-size:12.5px; color:var(--mp-text-faint); text-align:center; margin-top:14px;">Secured by Midtrans. You will be redirected to a safe payment page.</p>
+          </div>
+
+          <div id="memberForm" style="display:none;">
+            <p class="mp-auth-sub">Logged in as <strong id="memberEmail"></strong>. <a href="/membership/login">Switch account</a></p>
+            <button type="button" class="mp-btn mp-btn-primary mp-btn-block" id="memberPayBtn">Pay now</button>
+          </div>
         </div>
 
         <div class="mp-card">
@@ -57,63 +53,6 @@
   </section>
 
   <script src="/membership/js/membership.js"></script>
-  <script>
-    const planId = new URLSearchParams(location.search).get('plan');
-    let selectedPlan = null;
-
-    (async function () {
-      const data = await MembershipUI.requireMemberSession();
-      if (!data) return;
-
-      if (!planId) {
-        window.location.href = '/membership/pricing';
-        return;
-      }
-
-      const plans = await MembershipUI.fetchPlans();
-      selectedPlan = plans.find(p => String(p.id) === String(planId));
-      if (!selectedPlan) {
-        window.location.href = '/membership/pricing';
-        return;
-      }
-
-      document.getElementById('summaryBox').innerHTML = `
-        <div class="mp-summary-row"><span>${selectedPlan.name} Plan</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
-        <div class="mp-summary-row"><span>Billing cycle</span><span>${selectedPlan.billing_interval === 'year' ? 'Yearly' : 'Monthly'}</span></div>
-        <div class="mp-summary-row mp-summary-total"><span>Total due today</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
-      `;
-    })();
-
-    document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('payBtn');
-      const alertBox = document.getElementById('alertBox');
-      alertBox.classList.remove('show');
-      btn.disabled = true;
-      btn.textContent = 'Processing…';
-
-      try {
-        const res = await fetch('/api/membership/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            plan_id: selectedPlan.id,
-            card_number: document.getElementById('cardNumber').value,
-          }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          window.location.href = '/membership/checkout/success';
-        } else {
-          window.location.href = '/membership/checkout/failed';
-        }
-      } catch (err) {
-        alertBox.textContent = 'Something went wrong. Please try again.';
-        alertBox.classList.add('show');
-        btn.disabled = false;
-        btn.textContent = 'Pay & subscribe';
-      }
-    });
-  </script>
+  <script src="/membership/js/checkout.js"></script>
 </body>
 </html>

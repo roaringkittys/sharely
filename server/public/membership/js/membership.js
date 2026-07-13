@@ -20,7 +20,7 @@ const MembershipUI = (() => {
         <div class="mp-plan-name">${plan.name}</div>
         <p class="mp-plan-desc">${plan.description || ''}</p>
         <div class="mp-plan-price">${formatPrice(plan.price_cents, plan.billing_interval)}</div>
-        <a href="/membership/signup?plan=${plan.id}" class="mp-btn ${featured ? 'mp-btn-primary' : 'mp-btn-ghost'} mp-btn-block mp-plan-cta">Choose ${plan.name}</a>
+        <a href="/membership/checkout?plan=${plan.id}" class="mp-btn ${featured ? 'mp-btn-primary' : 'mp-btn-ghost'} mp-btn-block mp-plan-cta">Choose ${plan.name}</a>
         <ul class="mp-plan-features">${features}</ul>
       </div>
     `;

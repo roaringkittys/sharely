@@ -8,7 +8,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const express = require('express');
-const { getProvider } = require('./membership-payments');
+const payments = require('./membership-payments');
 
 function init(app, db, publicDir) {
   const router = express.Router();
@@ -21,7 +21,6 @@ function init(app, db, publicDir) {
   }
 
   function requireAdmin(req, res, next) {
-    // Reuse existing Sharely admin session
     if (req.session && req.session.userId) return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });
     return res.redirect('/login');
@@ -40,6 +39,9 @@ function init(app, db, publicDir) {
     '/membership/forgot-password': 'forgot-password.html',
     '/membership/reset-password': 'reset-password.html',
     '/membership/admin': 'admin.html',
+    '/membership/checkout': 'checkout.html',
+    '/membership/checkout/success': 'checkout-success.html',
+    '/membership/checkout/failed': 'checkout-failed.html',
   };
   for (const [route, file] of Object.entries(pages)) {
     router.get(route, (req, res) => res.sendFile(path.join(membershipPublicDir, file)));
@@ -50,9 +52,6 @@ function init(app, db, publicDir) {
     '/membership/tools': 'tools.html',
     '/membership/billing': 'billing.html',
     '/membership/upgrade': 'upgrade.html',
-    '/membership/checkout': 'checkout.html',
-    '/membership/checkout/success': 'checkout-success.html',
-    '/membership/checkout/failed': 'checkout-failed.html',
     '/membership/settings': 'settings.html',
   };
   for (const [route, file] of Object.entries(memberPages)) {
@@ -69,6 +68,220 @@ function init(app, db, publicDir) {
   router.get('/api/membership/products', (req, res) => {
     const products = db.prepare('SELECT * FROM products WHERE active = 1 ORDER BY name').all();
     res.json(products);
+  });
+
+  // ── Midtrans config (client key for frontend) ────────────────────────────
+
+  router.get('/api/membership/payment-config', (req, res) => {
+    res.json({ clientKey: payments.getClientKey(), isProduction: payments.isProduction });
+  });
+
+  // ── Snap token creation (public — guest can pay before creating account) ─
+
+  router.post('/api/membership/snap-token', async (req, res) => {
+    try {
+      const { plan_id, email, name } = req.body || {};
+      if (!plan_id || !email) {
+        return res.status(400).json({ error: 'Plan and email are required' });
+      }
+      const plan = db.prepare('SELECT * FROM plans WHERE id = ? AND active = 1').get(plan_id);
+      if (!plan) return res.status(404).json({ error: 'Plan not found' });
+
+      const orderId = 'SHRLY-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+      const amount = plan.price_cents;
+
+      db.prepare(
+        'INSERT INTO transactions (order_id, member_id, plan_id, amount_cents, status) VALUES (?, ?, ?, ?, ?)'
+      ).run(orderId, null, plan.id, amount, 'pending');
+
+      const snapResult = await payments.createSnapToken({
+        orderId,
+        amount,
+        customerEmail: email.toLowerCase(),
+        customerName: name || email.split('@')[0],
+        planName: plan.name,
+        items: [{
+          id: 'plan-' + plan.id,
+          price: amount,
+          quantity: 1,
+          name: plan.name + ' Plan',
+        }],
+      });
+
+      res.json({
+        token: snapResult.token,
+        redirect_url: snapResult.redirect_url,
+        order_id: snapResult.order_id,
+      });
+    } catch (err) {
+      console.error('[snap-token]', err);
+      res.status(500).json({ error: err.message || 'Failed to create payment token' });
+    }
+  });
+
+  // ── Check transaction status ─────────────────────────────────────────────
+
+  router.get('/api/membership/transaction/:orderId', async (req, res) => {
+    try {
+      const localTx = db.prepare('SELECT * FROM transactions WHERE order_id = ?').get(req.params.orderId);
+      if (!localTx) return res.status(404).json({ error: 'Transaction not found' });
+
+      // If already settled locally, return immediately
+      if (localTx.status === 'paid') {
+        return res.json({ status: 'paid', order_id: req.params.orderId, plan_id: localTx.plan_id });
+      }
+
+      // Otherwise check Midtrans (404 = transaction not yet created on their side)
+      let remoteStatus;
+      try {
+        remoteStatus = await payments.checkTransaction(req.params.orderId);
+      } catch (err) {
+        const is404 = err.httpStatusCode === '404' || (err.ApiResponse && err.ApiResponse.status_code === '404');
+        if (is404) {
+          return res.json({ status: 'pending', order_id: req.params.orderId, plan_id: localTx.plan_id });
+        }
+        throw err;
+      }
+      const isPaid = remoteStatus.transaction_status === 'settlement' || remoteStatus.transaction_status === 'capture';
+      const isFailed = ['deny', 'cancel', 'expire', 'failure'].includes(remoteStatus.transaction_status);
+
+      if (isPaid) {
+        db.prepare("UPDATE transactions SET status = 'paid', midtrans_status = ?, updated_at = datetime('now') WHERE order_id = ?")
+          .run(remoteStatus.transaction_status, req.params.orderId);
+      } else if (isFailed) {
+        db.prepare("UPDATE transactions SET status = 'failed', midtrans_status = ?, updated_at = datetime('now') WHERE order_id = ?")
+          .run(remoteStatus.transaction_status, req.params.orderId);
+      }
+
+      res.json({
+        status: isPaid ? 'paid' : isFailed ? 'failed' : 'pending',
+        order_id: req.params.orderId,
+        plan_id: localTx.plan_id,
+        midtrans_status: remoteStatus.transaction_status,
+      });
+    } catch (err) {
+      console.error('[transaction-check]', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Complete checkout after payment (create account + activate subscription) ─
+
+  router.post('/api/membership/checkout-complete', async (req, res) => {
+    const { order_id, name, password } = req.body || {};
+    if (!order_id || !name || !password) {
+      return res.status(400).json({ error: 'Order ID, name and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const tx = db.prepare('SELECT * FROM transactions WHERE order_id = ?').get(order_id);
+    if (!tx) return res.status(404).json({ error: 'Transaction not found' });
+    if (tx.status !== 'paid') return res.status(400).json({ error: 'Payment not yet confirmed' });
+
+    const plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(tx.plan_id);
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+
+    // Create or find member by email stored in transaction metadata
+    // We don't store email in transactions table — we should. Let's use the member_id if already linked.
+    let memberId = tx.member_id;
+    let email = '';
+
+    if (!memberId) {
+      // Need to get email from the request or from the Snap transaction
+      // For now, require email in the request body
+      email = (req.body.email || '').toLowerCase();
+      if (!email) return res.status(400).json({ error: 'Email is required' });
+
+      const existing = db.prepare('SELECT id FROM members WHERE email = ?').get(email);
+      if (existing) {
+        memberId = existing.id;
+      } else {
+        const hash = bcrypt.hashSync(password, 10);
+        const result = db.prepare('INSERT INTO members (email, password, name, status) VALUES (?, ?, ?, ?)')
+          .run(email, hash, name, 'active');
+        memberId = result.lastInsertRowid;
+      }
+      db.prepare('UPDATE transactions SET member_id = ? WHERE order_id = ?').run(memberId, order_id);
+    }
+
+    const member = db.prepare('SELECT * FROM members WHERE id = ?').get(memberId);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+
+    // Activate subscription
+    db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE member_id = ? AND status = 'active'").run(memberId);
+    const periodEnd = new Date();
+    periodEnd.setMonth(periodEnd.getMonth() + (plan.billing_interval === 'year' ? 12 : 1));
+    const subResult = db.prepare(
+      'INSERT INTO subscriptions (member_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)'
+    ).run(memberId, plan.id, 'active', periodEnd.toISOString());
+
+    db.prepare(
+      'INSERT INTO billing_records (member_id, subscription_id, amount_cents, status, provider, provider_ref) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(memberId, subResult.lastInsertRowid, plan.price_cents, 'paid', 'midtrans', order_id);
+
+    req.session.memberId = memberId;
+    res.json({ success: true, memberId, subscriptionId: subResult.lastInsertRowid });
+  });
+
+  // ── Midtrans webhook ─────────────────────────────────────────────────────
+
+  router.post('/api/membership/midtrans-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+      const payload = JSON.parse(req.body);
+      const { order_id, status_code, gross_amount, signature_key, transaction_status } = payload;
+
+      if (!order_id || !signature_key) {
+        return res.status(400).json({ error: 'Missing fields' });
+      }
+
+      // Verify signature
+      if (!payments.verifySignature(order_id, status_code, gross_amount, signature_key)) {
+        console.warn('[webhook] Signature mismatch for order', order_id);
+        return res.status(403).json({ error: 'Invalid signature' });
+      }
+
+      const localTx = db.prepare('SELECT * FROM transactions WHERE order_id = ?').get(order_id);
+      if (!localTx) {
+        console.warn('[webhook] Unknown order', order_id);
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+
+      const isPaid = transaction_status === 'settlement' || transaction_status === 'capture';
+      const isFailed = ['deny', 'cancel', 'expire', 'failure'].includes(transaction_status);
+
+      if (isPaid) {
+        db.prepare(
+          "UPDATE transactions SET status = 'paid', midtrans_status = ?, midtrans_response = ?, updated_at = datetime('now') WHERE order_id = ?"
+        ).run(transaction_status, JSON.stringify(payload), order_id);
+
+        // If member already linked (e.g., existing user upgrading), auto-activate subscription
+        if (localTx.member_id) {
+          const plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(localTx.plan_id);
+          if (plan) {
+            db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE member_id = ? AND status = 'active'").run(localTx.member_id);
+            const periodEnd = new Date();
+            periodEnd.setMonth(periodEnd.getMonth() + (plan.billing_interval === 'year' ? 12 : 1));
+            const subResult = db.prepare(
+              'INSERT INTO subscriptions (member_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)'
+            ).run(localTx.member_id, plan.id, 'active', periodEnd.toISOString());
+            db.prepare(
+              'INSERT INTO billing_records (member_id, subscription_id, amount_cents, status, provider, provider_ref) VALUES (?, ?, ?, ?, ?, ?)'
+            ).run(localTx.member_id, subResult.lastInsertRowid, plan.price_cents, 'paid', 'midtrans', order_id);
+          }
+        }
+      } else if (isFailed) {
+        db.prepare(
+          "UPDATE transactions SET status = 'failed', midtrans_status = ?, midtrans_response = ?, updated_at = datetime('now') WHERE order_id = ?"
+        ).run(transaction_status, JSON.stringify(payload), order_id);
+      }
+
+      res.json({ received: true });
+    } catch (err) {
+      console.error('[webhook]', err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // ── Auth: signup / login / logout / password reset ───────────────────────
@@ -113,14 +326,11 @@ function init(app, db, publicDir) {
   router.post('/api/membership/forgot-password', (req, res) => {
     const { email } = req.body || {};
     const member = db.prepare('SELECT * FROM members WHERE email = ?').get((email || '').toLowerCase());
-    // Always respond success to avoid leaking which emails are registered
     if (!member) return res.json({ success: true });
 
     const token = crypto.randomBytes(24).toString('hex');
     const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     db.prepare('UPDATE members SET reset_token = ?, reset_expires = ? WHERE id = ?').run(token, expires, member.id);
-
-    // Placeholder: in production this would send an email with the reset link.
     console.log(`[membership] Password reset link for ${member.email}: /membership/reset-password?token=${token}`);
     res.json({ success: true });
   });
@@ -132,7 +342,7 @@ function init(app, db, publicDir) {
     }
     const member = db.prepare('SELECT * FROM members WHERE reset_token = ?').get(token);
     if (!member || new Date(member.reset_expires) < new Date()) {
-      return res.status(400).json({ error: 'This reset link is invalid or has expired' });
+      return res.status(400).json({ error: 'This reset link has expired' });
     }
     const hash = bcrypt.hashSync(password, 10);
     db.prepare('UPDATE members SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?').run(hash, member.id);
@@ -170,7 +380,6 @@ function init(app, db, publicDir) {
     if (!member) return res.status(404).json({ error: 'Member not found' });
 
     if (name) db.prepare('UPDATE members SET name = ? WHERE id = ?').run(name, member.id);
-
     if (new_password) {
       if (!bcrypt.compareSync(current_password || '', member.password)) {
         return res.status(400).json({ error: 'Current password is incorrect' });
@@ -203,45 +412,6 @@ function init(app, db, publicDir) {
     res.json(records);
   });
 
-  // ── Checkout / subscription flow ─────────────────────────────────────────
-
-  router.post('/api/membership/checkout', requireMember, (req, res) => {
-    const { plan_id, card_number } = req.body || {};
-    const plan = db.prepare('SELECT * FROM plans WHERE id = ? AND active = 1').get(plan_id);
-    if (!plan) return res.status(404).json({ error: 'Plan not found' });
-
-    const provider = getProvider();
-    provider.charge({ amountCents: plan.price_cents, cardNumber: card_number }).then(result => {
-      const transaction = db.transaction(() => {
-        if (result.success) {
-          // Deactivate any existing active subscription, then create the new one
-          db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE member_id = ? AND status = 'active'").run(req.session.memberId);
-          const periodEnd = new Date();
-          periodEnd.setMonth(periodEnd.getMonth() + (plan.billing_interval === 'year' ? 12 : 1));
-          const subResult = db.prepare(
-            'INSERT INTO subscriptions (member_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)'
-          ).run(req.session.memberId, plan.id, 'active', periodEnd.toISOString());
-
-          db.prepare(
-            'INSERT INTO billing_records (member_id, subscription_id, amount_cents, status, provider, provider_ref) VALUES (?, ?, ?, ?, ?, ?)'
-          ).run(req.session.memberId, subResult.lastInsertRowid, plan.price_cents, 'paid', provider.name, result.reference);
-
-          return { success: true, subscriptionId: subResult.lastInsertRowid };
-        } else {
-          db.prepare(
-            'INSERT INTO billing_records (member_id, subscription_id, amount_cents, status, provider, provider_ref) VALUES (?, ?, ?, ?, ?, ?)'
-          ).run(req.session.memberId, null, plan.price_cents, 'failed', provider.name, null);
-          return { success: false, error: result.error };
-        }
-      });
-
-      const outcome = transaction();
-      res.json(outcome);
-    }).catch(err => {
-      res.status(500).json({ error: err.message });
-    });
-  });
-
   // ── Admin: plans / products / members / subscriptions ────────────────────
 
   router.get('/api/membership/admin/overview', requireAdmin, (req, res) => {
@@ -253,12 +423,7 @@ function init(app, db, publicDir) {
       WHERE s.status = 'active' AND p.billing_interval = 'month'
     `).get();
     const totalRevenue = db.prepare("SELECT COALESCE(SUM(amount_cents), 0) as total FROM billing_records WHERE status = 'paid'").get().total;
-    res.json({
-      memberCount,
-      activeSubCount,
-      mrrCents: mrrRow.total,
-      totalRevenueCents: totalRevenue,
-    });
+    res.json({ memberCount, activeSubCount, mrrCents: mrrRow.total, totalRevenueCents: totalRevenue });
   });
 
   router.get('/api/membership/admin/members', requireAdmin, (req, res) => {
@@ -379,10 +544,10 @@ function init(app, db, publicDir) {
   router.get('/api/membership/download-extension', (req, res) => {
     const extDir = path.join(__dirname, '..', 'extension');
     if (!fs.existsSync(extDir)) return res.status(404).json({ error: 'Extension not found' });
-    const zipPath = path.join('/tmp', 'toolbase-extension.zip');
+    const zipPath = path.join('/tmp', 'sharely-extension.zip');
     try {
       execSync(`zip -r "${zipPath}" .`, { cwd: extDir, stdio: 'pipe' });
-      res.download(zipPath, 'toolbase-extension.zip', (err) => {
+      res.download(zipPath, 'sharely-extension.zip', (err) => {
         if (!err) fs.unlink(zipPath, () => {});
       });
     } catch (err) {

@@ -29,3 +29,351 @@
     "128": "./icons/icon-128.png"
   }
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sharely — Unlock Premium Tools Together</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/membership/css/membership.css">
+<style>
+  /* ── Hero v2 (Groupy-inspired centered layout) ─────────────────────────────────────────────────────────────── */
+  .mp-hero-v2 { text-align: center; padding: 80px 0 48px; position: relative; overflow: hidden; }
+  .mp-hero-v2 .mp-logo-text { font-size: clamp(48px, 10vw, 100px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin: 0 0 24px; color: var(--mp-text); }
+  .mp-hero-v2 .mp-logo-text .mp-grad-text { background: var(--mp-accent-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .mp-hero-v2 .mp-hero-subtitle { font-size: clamp(22px, 4vw, 36px); font-weight: 700; margin: 0 0 20px; letter-spacing: -0.02em; }
+  .mp-hero-v2 p { font-size: 17px; color: var(--mp-text-dim); max-width: 540px; margin: 0 auto 36px; line-height: 1.6; }
+  .mp-hero-v2 .mp-hero-actions { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+  .mp-hero-v2 .mp-btn-white { background: var(--mp-text); color: var(--mp-bg); font-weight: 600; }
+  .mp-hero-v2 .mp-btn-white:hover { opacity: 0.9; }
+  .mp-hero-v2 .mp-btn-link { background: transparent; color: var(--mp-text); border: 1px solid var(--mp-border); gap: 8px; }
+  .mp-hero-v2 .mp-btn-link:hover { background: var(--mp-surface); }
+  .mp-hero-v2 .mp-hero-img { margin-top: 56px; max-width: 860px; margin-left: auto; margin-right: auto; border-radius: 14px; border: 1px solid var(--mp-border); box-shadow: 0 40px 80px rgba(0,0,0,0.5); overflow: hidden; }
+  .mp-hero-v2 .mp-hero-img img { width: 100%; display: block; }
+
+  /* ── Services section (white/light style adapted to dark) ───────────────────────────────────────── */
+  .mp-services-section { padding: 80px 0; }
+  .mp-services-section .mp-section-head h2 { font-size: clamp(26px, 4vw, 38px); }
+  .mp-services-section .mp-section-head p { font-size: 16px; max-width: 580px; margin: 0 auto; color: var(--mp-text-dim); line-height: 1.6; }
+
+  .mp-filter-tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 40px; }
+  .mp-filter-tab { padding: 8px 18px; border-radius: 999px; border: 1px solid var(--mp-border); background: transparent; color: var(--mp-text-dim); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .mp-filter-tab:hover { border-color: var(--mp-accent); color: var(--mp-text); }
+  .mp-filter-tab.active { background: var(--mp-accent); border-color: var(--mp-accent); color: #fff; }
+
+  .mp-apps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 24px; }
+  .mp-app-item { text-align: center; cursor: pointer; transition: transform 0.15s; }
+  .mp-app-item:hover { transform: translateY(-4px); }
+  .mp-app-icon-wrap { width: 72px; height: 72px; border-radius: 18px; background: var(--mp-surface); border: 1px solid var(--mp-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 36px; overflow: hidden; }
+  .mp-app-icon-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .mp-app-name { font-size: 13px; font-weight: 600; color: var(--mp-text); }
+  .mp-app-category { font-size: 11.5px; color: var(--mp-text-faint); margin-top: 2px; }
+
+  /* ── Pricing v2 (Groupy badge style) ──────────────────────────────────────────────────────────────── */
+  .mp-pricing-v2 { padding: 80px 0; }
+  .mp-pricing-v2 .mp-section-head h2 { font-size: clamp(26px, 4vw, 38px); }
+  .mp-pricing-v2 .mp-section-head p { font-size: 16px; max-width: 600px; margin: 0 auto; color: var(--mp-text-dim); line-height: 1.6; }
+
+  .mp-price-card-v2 {
+    background: var(--mp-surface);
+    border: 1px solid var(--mp-border);
+    border-radius: var(--mp-radius);
+    padding: 32px 24px;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .mp-price-card-v2.popular { background: linear-gradient(180deg, rgba(124,92,255,0.06), var(--mp-surface) 30%); border-color: var(--mp-accent); }
+  .mp-price-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 16px;
+  }
+  .mp-price-badge.favorite { background: var(--mp-text); color: var(--mp-bg); }
+  .mp-price-badge.popular { background: var(--mp-accent); color: #fff; }
+  .mp-price-badge.allaccess { background: var(--mp-accent-2); color: var(--mp-bg); }
+  .mp-price-card-v2 .plan-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .mp-price-card-v2 .plan-label { font-size: 12.5px; color: var(--mp-text-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .mp-price-card-v2 .old-price { font-size: 15px; color: var(--mp-text-faint); text-decoration: line-through; margin-bottom: 4px; }
+  .mp-price-card-v2 .new-price { font-size: 32px; font-weight: 800; margin-bottom: 24px; }
+  .mp-price-card-v2 .new-price span { font-size: 14px; font-weight: 500; color: var(--mp-text-faint); }
+  .mp-price-card-v2 .feature-list { list-style: none; padding: 0; margin: 0 0 24px; flex: 1; }
+  .mp-price-card-v2 .feature-list li { font-size: 14px; color: var(--mp-text-dim); padding: 6px 0; }
+  .mp-price-card-v2 .feature-list li strong { color: var(--mp-text); font-weight: 600; }
+
+  /* ── About section ──────────────────────────────────────────────────────────────────────────────────────── */
+  .mp-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .mp-about-text h2 { font-size: clamp(24px, 3.5vw, 32px); font-weight: 800; margin: 0 0 18px; line-height: 1.2; }
+  .mp-about-text p { color: var(--mp-text-dim); font-size: 15.5px; margin: 0 0 14px; line-height: 1.6; }
+  .mp-about-img { border-radius: var(--mp-radius); overflow: hidden; border: 1px solid var(--mp-border); }
+  .mp-about-img img { width: 100%; display: block; }
+
+  @media (max-width: 860px) {
+    .mp-apps-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    .mp-about-grid { grid-template-columns: 1fr; }
+    .mp-hero-v2 .mp-hero-img { margin-top: 36px; }
+  }
+
+  /* ── Sharely light theme override ── */
+  :root,
+  body.mp {
+    --mp-bg: #ffffff;
+    --mp-bg-soft: #f7f7f8;
+    --mp-surface: #ffffff;
+    --mp-surface-2: #f3f4f6;
+    --mp-text: #111111;
+    --mp-text-dim: #4b5563;
+    --mp-text-faint: #6b7280;
+    --mp-border: #e5e7eb;
+  }
+
+  body.mp {
+    background: #ffffff;
+    color: #111111;
+  }
+
+  .mp-section-alt {
+    background: #f7f7f8;
+  }
+
+  .mp-hero-v2 .mp-hero-img {
+    box-shadow: 0 24px 60px rgba(0,0,0,0.12);
+  }
+
+</style>
+</head>
+<body class="mp">
+
+  <nav class="mp-nav">
+    <div class="mp-nav-inner">
+      <a href="/membership/home" class="mp-logo">
+        <div class="mp-logo-mark">S</div>
+        Sharely
+      </a>
+      <div class="mp-nav-links">
+        <a href="/membership/home#services">Services</a>
+        <a href="/membership/home#pricing">Pricing</a>
+        <a href="/membership/home#about">About</a>
+        <a href="/membership/home#extension">Extension</a>
+      </div>
+      <div class="mp-nav-actions">
+        <a href="/membership/login" class="mp-btn mp-btn-ghost mp-btn-sm">Log in</a>
+        <a href="/membership/signup" class="mp-btn mp-btn-primary mp-btn-sm">Get started</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Hero ─────────────────────────────────────────────────────────────────────────────────────────── -->
+  <section class="mp-hero-v2" id="home">
+    <div class="mp-container">
+      <div class="mp-logo-text">Tool<span class="mp-grad-text">base</span></div>
+      <h2 class="mp-hero-subtitle">Unlock Premium Tools Together</h2>
+      <p>Access premium software tools with our one-click extension. Join us and start enjoying professional-grade productivity, design, analytics, and development tools without the premium price tag.</p>
+      <div class="mp-hero-actions">
+        <a href="/membership/signup" class="mp-btn mp-btn-white">Get started →</a>
+        <a href="/membership/home#extension" class="mp-btn mp-btn-link">▶ Download Extension</a>
+      </div>
+      <div class="mp-hero-img">
+        <img src="/membership/img/dashboard-preview.png" alt="Sharely Dashboard Preview" id="heroImg" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Services ─────────────────────────────────────────────────────────────────────────────── -->
+  <section class="mp-services-section mp-section-alt" id="services">
+    <div class="mp-container">
+      <div class="mp-section-head" style="margin-bottom: 36px;">
+        <div class="mp-eyebrow">Services</div>
+        <h2>Discover Premium Software Services</h2>
+        <p>From productivity suites to design tools, access a world of premium software at a fraction of the cost. Real-time updates — services and features can increase or decrease at any time.</p>
+      </div>
+      <div class="mp-filter-tabs" id="filterTabs"></div>
+      <div class="mp-apps-grid" id="appsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ── About ─────────────────────────────────────────────────────────────────────────────────────────── -->
+  <section class="mp-section" id="about">
+    <div class="mp-container">
+      <div class="mp-about-grid">
+        <div class="mp-about-text">
+          <h2>A smart and affordable way to access premium software tools.</h2>
+          <p>Sharely's user-friendly extension seamlessly connects you to curated professional tools — productivity, design, analytics, code, automation, and media — all from one dashboard.</p>
+          <p>No more worrying about multiple subscriptions or hidden fees. With Sharely, professional-grade software becomes affordable and accessible for teams of all sizes.</p>
+          <a href="/membership/signup" class="mp-btn mp-btn-primary" style="margin-top:8px;">Get started →</a>
+        </div>
+        <div class="mp-about-img">
+          <div style="background: var(--mp-surface-2); aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; color: var(--mp-text-faint); font-size: 80px;">💻</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Pricing ─────────────────────────────────────────────────────────────────────────────── -->
+  <section class="mp-pricing-v2 mp-section-alt" id="pricing">
+    <div class="mp-container">
+      <div class="mp-section-head" style="margin-bottom: 48px;">
+        <div class="mp-eyebrow">Pricing</div>
+        <h2>Explore Our Pricing Plans</h2>
+        <p>Find the perfect fit for your needs. Discover transparent and budget-friendly options designed to cater to your team. Get started on your premium tool journey today!</p>
+      </div>
+      <div class="mp-pricing-grid" id="pricingGridV2"></div>
+    </div>
+  </section>
+
+  <!-- ── Extension ─────────────────────────────────────────────────────────────────────────────── -->
+  <section class="mp-section" id="extension">
+    <div class="mp-container">
+      <div class="mp-section-head" style="margin-bottom: 36px;">
+        <div class="mp-eyebrow">Chrome Extension</div>
+        <h2>One-click access to your tools</h2>
+        <p>Install the Sharely browser extension to launch any bundled tool instantly — no extra logins, no friction.</p>
+      </div>
+      <div class="mp-card mp-download-card" style="max-width: 520px; margin: 0 auto; text-align: center;">
+        <div class="mp-download-icon">🧰</div>
+        <h3>Sharely for Chrome</h3>
+        <p style="color: var(--mp-text-dim); font-size: 14.5px; margin-bottom: 20px;">Download the extension, load it unpacked in Chrome, and connect with your access token to unlock your full tool suite.</p>
+        <a href="/api/membership/download-extension" class="mp-btn mp-btn-primary">Download extension (.zip)</a>
+        <div style="margin-top: 16px; font-size: 12.5px; color: var(--mp-text-faint);">
+          Unzip the file, then go to <code style="background: var(--mp-bg-soft); padding: 2px 6px; border-radius: 4px;">chrome://extensions</code> → enable Developer mode → Load unpacked.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ─────────────────────────────────────────────────────────────────────────────────────────── -->
+  <section class="mp-section mp-section-alt">
+    <div class="mp-container">
+      <div class="mp-cta-banner">
+        <h2>Ready to unlock your premium tool suite?</h2>
+        <p>Join thousands of teams who consolidated their software with Sharely.</p>
+        <a href="/membership/signup" class="mp-btn mp-btn-primary">Start your free trial</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ─────────────────────────────────────────────────────────────────────────────────────────── -->
+  <footer class="mp-footer">
+    <div class="mp-container">
+      <div class="mp-footer-top">
+        <div class="mp-footer-col mp-footer-brand">
+          <div class="mp-logo"><div class="mp-logo-mark">S</div>Sharely</div>
+          <p>The all-in-one membership for the software tools your team relies on.</p>
+        </div>
+        <div class="mp-footer-col">
+          <h4>Product</h4>
+          <a href="/membership/home#services">Services</a>
+          <a href="/membership/home#pricing">Pricing</a>
+          <a href="/membership/home#extension">Extension</a>
+        </div>
+        <div class="mp-footer-col">
+          <h4>Account</h4>
+          <a href="/membership/login">Log in</a>
+          <a href="/membership/signup">Sign up</a>
+        </div>
+        <div class="mp-footer-col">
+          <h4>Company</h4>
+          <a href="#">FAQ</a>
+          <a href="#">Support</a>
+        </div>
+      </div>
+      <div class="mp-footer-bottom">
+        <span>© 2026 Sharely. All rights reserved.</span>
+        <span>Made for modern teams.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/membership/js/membership.js"></script>
+  <script>
+    let allProducts = [];
+    let currentFilter = 'all';
+
+    async function loadProducts() {
+      const res = await fetch('/api/membership/products');
+      allProducts = await res.json();
+
+      // Build filter tabs based on categories
+      const categories = ['all', ...new Set(allProducts.map(p => p.category))];
+      const tabLabels = { all: 'All', productivity: 'Productivity', design: 'Design', analytics: 'Analytics', development: 'Development', automation: 'Automation', media: 'Media' };
+
+      const tabsEl = document.getElementById('filterTabs');
+      tabsEl.innerHTML = categories.map(cat => `
+        <button class="mp-filter-tab ${cat === 'all' ? 'active' : ''}" data-filter="${cat}">
+          ${tabLabels[cat] || cat}
+        </button>
+      `).join('');
+
+      tabsEl.querySelectorAll('.mp-filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabsEl.querySelectorAll('.mp-filter-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          renderApps(tab.dataset.filter);
+        });
+      });
+
+      renderApps('all');
+    }
+
+    function renderApps(filter) {
+      const grid = document.getElementById('appsGrid');
+      const filtered = filter === 'all' ? allProducts : allProducts.filter(p => p.category === filter);
+      grid.innerHTML = filtered.map(p => `
+        <div class="mp-app-item">
+          <div class="mp-app-icon-wrap">${p.icon}</div>
+          <div class="mp-app-name">${p.name}</div>
+          <div class="mp-app-category">${p.category}</div>
+        </div>
+      `).join('');
+    }
+
+    async function loadPricing() {
+      const plans = await MembershipUI.fetchPlans();
+      const grid = document.getElementById('pricingGridV2');
+
+      const badges = ['favorite', 'popular', 'allaccess'];
+      const badgeLabels = ['Starter', 'Pro', 'Team'];
+      const badgeTexts = ['❮ Starter ❯', '★ Popular ★', '⚡ All Access ⚡'];
+
+      grid.innerHTML = plans.map((p, i) => {
+        const isPopular = i === 1;
+        const features = (p.features || []).map(f => `<li>${f}</li>`).join('');
+        return `
+          <div class="mp-price-card-v2 ${isPopular ? 'popular' : ''}">
+            <div class="mp-price-badge ${badges[i] || 'favorite'}">${badgeTexts[i] || 'Plan'}</div>
+            <div class="plan-name">${p.name}</div>
+            <div class="plan-label">STARTING FROM</div>
+            <div class="old-price">$${((p.price_cents * 1.5) / 100).toFixed(0)}</div>
+            <div class="new-price">${MembershipUI.formatPrice(p.price_cents, p.billing_interval)}</div>
+            <ul class="feature-list">${features}</ul>
+            <a href="/membership/signup?plan=${p.id}" class="mp-btn ${isPopular ? 'mp-btn-primary' : 'mp-btn-ghost'} mp-btn-block">Choose ${p.name}</a>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Fallback hero image
+    document.getElementById('heroImg').addEventListener('error', function() {
+      this.style.display = 'none';
+      this.parentElement.style.background = 'var(--mp-surface-2)';
+      this.parentElement.style.display = 'flex';
+      this.parentElement.style.alignItems = 'center';
+      this.parentElement.style.justifyContent = 'center';
+      this.parentElement.style.minHeight = '300px';
+      this.parentElement.innerHTML = '<div style="font-size:80px;">💻</div><div style="color:var(--mp-text-faint); margin-top:12px; font-size:14px;">Your dashboard awaits</div>';
+    });
+
+    loadProducts();
+    loadPricing();
+  </script>
+</body>
+</html>

@@ -3,18 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Payment successful — Toolbase</title>
+<title>Payment successful — Sharely</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/membership/css/membership.css">
 </head>
 <body class="mp">
   <div class="mp-auth-wrap">
-    <div class="mp-auth-card mp-text-center">
+    <div class="mp-auth-card mp-text-center" id="successCard">
+      <div style="font-size:48px; margin-bottom:16px;">✅</div>
+      <h1>Payment received!</h1>
+      <p class="mp-auth-sub">Your subscription is being activated. Create your account to get started.</p>
+      <form id="createAccountForm" style="text-align:left; margin-top:20px;">
+        <div id="alertBox" class="mp-alert mp-alert-error"></div>
+        <div class="mp-field">
+          <label>Email</label>
+          <input type="email" id="emailInput" readonly />
+        </div>
+        <div class="mp-field">
+          <label>Full name</label>
+          <input type="text" id="nameInput" required autocomplete="name" />
+        </div>
+        <div class="mp-field">
+          <label>Password</label>
+          <input type="password" id="passwordInput" required minlength="6" autocomplete="new-password" />
+        </div>
+        <button type="submit" class="mp-btn mp-btn-primary mp-btn-block" id="submitBtn">Create account & continue</button>
+      </form>
+      <div id="loadingAccount" style="display:none;">
+        <div class="mp-spinner" style="margin:20px auto;"></div>
+        <p>Creating your account…</p>
+      </div>
+    </div>
+
+    <div class="mp-auth-card mp-text-center" id="existingMemberCard" style="display:none;">
       <div style="font-size:48px; margin-bottom:16px;">✅</div>
       <h1>You're all set!</h1>
-      <p class="mp-auth-sub">Your subscription is active and your tools are ready to use.</p>
+      <p class="mp-auth-sub">Your subscription is active.</p>
       <a href="/membership/dashboard" class="mp-btn mp-btn-primary mp-btn-block">Go to dashboard</a>
     </div>
   </div>
+
+  <script src="/membership/js/membership.js"></script>
+  <script src="/membership/js/checkout-success.js"></script>
 </body>
 </html>
