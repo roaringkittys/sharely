@@ -147,9 +147,6 @@ function init(app, db, publicDir) {
     next();
   }
 
-  // Apply CSRF check to all state-changing routes handled by this router
-  router.use(memberCsrf);
-
   // ── Snap token creation (public — guest can pay before creating account) ─
 
   router.post('/api/membership/snap-token', async (req, res) => {
@@ -164,9 +161,13 @@ function init(app, db, publicDir) {
       const orderId = 'SHRLY-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
       const amount = plan.price_cents;
 
+      // If the member is already logged in, link the transaction to their account
+      // so the subscription auto-activates when the webhook fires.
+      const memberId = (req.session && req.session.memberId) || null;
+
       db.prepare(
         'INSERT INTO transactions (order_id, member_id, plan_id, amount_cents, status) VALUES (?, ?, ?, ?, ?)'
-      ).run(orderId, null, plan.id, amount, 'pending');
+      ).run(orderId, memberId, plan.id, amount, 'pending');
 
       const snapResult = await payments.createSnapToken({
         orderId,
@@ -424,6 +425,12 @@ function init(app, db, publicDir) {
     db.prepare('UPDATE members SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?').run(hash, member.id);
     res.json({ success: true });
   });
+
+  // ── CSRF protection for member-only state-changing routes ────────────────
+  // Public routes (snap-token, transaction check, checkout-complete,
+  // webhook, auth) are placed BEFORE this line. All routes after this
+  // that are state-changing will have their Origin header validated.
+  router.use(memberCsrf);
 
   // ── Member: profile / dashboard data ──────────────────────────────────────
 
