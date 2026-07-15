@@ -1,0 +1,341 @@
+# Task — Simplify Membership Dashboard and Extension Login Flow
+
+## Goal
+
+Simplify the entire membership system.
+
+The website dashboard is the main control center for the user.
+
+Users manage:
+- Login/logout
+- Subscription
+- Plan duration
+- Purchase
+- Upgrade
+- Extension download
+- Installation tutorial
+
+ONLY from the website dashboard.
+
+The browser extension should NOT have its own login form, access token input, purchase page, or subscription management.
+
+The extension should automatically detect the user's active dashboard login session.
+
+---
+
+## Target User Flow
+
+1. User signs up or logs in to the website.
+
+2. User purchases a membership plan.
+
+3. After successful payment, redirect the user to:
+
+/membership/dashboard
+
+4. Show a dashboard similar to the provided reference image.
+
+Dashboard sections:
+
+### Current Plan
+
+Show:
+
+Your plan
+
+[PLAN NAME]
+
+Your [PLAN NAME] is valid until [EXPIRATION DATE].
+
+Also show:
+
+- Active status
+- Days remaining
+
+Use "Expires on" or "Valid until".
+
+DO NOT use "Renews on" because subscriptions are not auto-renewing.
+
+---
+
+### Account
+
+Menu items:
+
+- Edit profile
+- Activity logs
+- Logout
+
+All authentication management happens on the website.
+
+---
+
+### Membership
+
+Menu items:
+
+- Purchase membership
+- Order history
+- Upgrade plan
+
+Show the user's current subscription and expiration date.
+
+---
+
+### Extension
+
+Menu items:
+
+- Download Sharely Extension
+- Watch installation tutorial
+
+The download button should provide the current extension ZIP/CRX file.
+
+The tutorial button should open the extension installation video.
+
+DO NOT show access tokens to the user.
+
+DO NOT ask the user to copy or paste tokens.
+
+---
+
+## Extension Authentication
+
+The extension must automatically connect to the logged-in website account.
+
+The website dashboard session is the source of truth.
+
+Expected behavior:
+
+1. User logs into the Sharely website.
+
+2. User opens:
+
+/membership/dashboard
+
+3. The extension detects the active website session.
+
+4. The extension calls the Sharely backend to verify the current user.
+
+Example endpoint:
+
+GET /api/membership/extension-session
+
+The request must use the existing authenticated website session.
+
+Backend response example:
+
+{
+  "authenticated": true,
+  "user": {
+    "id": 123,
+    "email": "user@example.com"
+  },
+  "subscription": {
+    "active": true,
+    "plan": "Pro",
+    "expires_at": "2026-08-15T00:00:00Z"
+  }
+}
+
+5. If the membership is active, the extension automatically becomes logged in.
+
+6. If the user logs out from the website, the extension should detect the invalid session and become logged out.
+
+7. If the user logs into another Sharely account from the website dashboard, the extension should automatically use the new account after session verification.
+
+The extension should periodically verify the session with the backend.
+
+Also verify the session when:
+
+- Extension starts
+- Browser starts
+- Extension popup opens
+
+DO NOT store raw passwords.
+
+DO NOT expose internal access tokens in the dashboard.
+
+Use the existing secure website authentication/session system.
+
+---
+
+## Membership Plans
+
+Update plans to:
+
+Starter
+Price: 49,000 IDR
+Duration: 30 days
+
+Pro
+Price: 99,000 IDR
+Duration: 30 days
+Popular: true
+
+Team
+Price: 299,000 IDR
+Duration: 60 days
+
+Add:
+
+duration_days INTEGER
+
+to the plans table.
+
+Existing plan rows must be migrated.
+
+Set:
+
+Starter duration_days = 30
+Pro duration_days = 30
+Team duration_days = 60
+
+Keep billing_interval if existing code requires it.
+
+Set billing_interval to:
+
+day
+
+---
+
+## IDR Pricing
+
+Display prices everywhere using Indonesian Rupiah formatting.
+
+Examples:
+
+Rp 49.000
+Rp 99.000
+Rp 299.000
+
+Update:
+
+- Landing page
+- Pricing page
+- Checkout
+- Order summary
+- Billing page
+- Upgrade page
+- Dashboard
+
+Midtrans gross_amount must receive the full IDR integer.
+
+Correct:
+
+49000
+99000
+299000
+
+DO NOT divide the price by 100.
+
+---
+
+## Subscription Expiration
+
+When payment is successfully completed:
+
+1. Fetch the purchased plan.
+
+2. Read plan.duration_days.
+
+3. Calculate:
+
+current_period_end = current time + duration_days
+
+Examples:
+
+Starter = +30 days
+Pro = +30 days
+Team = +60 days
+
+Remove any hardcoded +30 day subscription logic.
+
+The dashboard must use current_period_end to display the expiration date.
+
+---
+
+## Dashboard Design
+
+Use the provided screenshot as the visual reference.
+
+Design direction:
+
+- White page background
+- Centered dashboard container
+- Large rounded black cards
+- White text
+- Simple menu rows
+- Large plan name
+- Clear expiration date
+- Right arrow on clickable rows
+- Clean modern typography
+- Large spacing
+- Responsive mobile layout
+
+Do not copy Groupy branding, logo, or name.
+
+Use Sharely branding.
+
+Suggested dashboard order:
+
+1. Current Plan card
+2. Account card
+3. Membership card
+4. Extension card
+
+Keep the dashboard simple.
+
+Do not add charts or unnecessary statistics.
+
+---
+
+## Remove Old Token Onboarding
+
+Remove the previous onboarding design that asks users to:
+
+- View access token
+- Copy access token
+- Paste access token into extension settings
+
+Remove the dashboard access-token onboarding card.
+
+The extension authentication should be automatic based on the logged-in Sharely website session.
+
+---
+
+## Important
+
+Before changing code:
+
+1. Inspect the existing membership authentication system.
+2. Inspect the existing extension authentication logic.
+3. Inspect the Midtrans checkout flow.
+4. Inspect the plans database schema.
+5. Reuse the existing authentication/session system where possible.
+
+Do not rewrite the entire project.
+
+Make the smallest safe changes required.
+
+After implementation, test this complete flow:
+
+Sign up
+→ Login
+→ Purchase plan
+→ Midtrans payment success
+→ Dashboard
+→ Download extension
+→ Install extension
+→ Open Sharely dashboard
+→ Extension detects logged-in account
+→ Membership verified
+→ Extension becomes active
+
+Also test:
+
+Website logout
+→ Extension becomes logged out
+
+Website login with another account
+→ Extension switches to the new authenticated account
