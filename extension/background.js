@@ -50,6 +50,31 @@ function buildCookieUrl(domain, path) {
   return `https://${cleanDomain}${path || '/'}`;
 }
 
+// ── Session guard ─────────────────────────────────────────────────────────
+// Reads the cached member session from chrome.storage.session (written by
+// the popup's checkSession()) to verify access before injecting cookies.
+// Falls back gracefully: if no session cache exists, allows injection
+// (popup already verified auth). Only blocks when cache explicitly shows
+// the session is not authenticated and no admin API key is configured.
+async function isMemberSessionValid() {
+  try {
+    const stored = await chrome.storage.local.get(['apiKey']);
+    const adminKey = (stored.apiKey || '').trim();
+
+    if (!chrome.storage.session) return true; // session API unavailable — allow
+    const cached = await new Promise(r => chrome.storage.session.get('memberSession', r));
+    if (!cached.memberSession) return true; // no cache yet — allow (popup will enforce)
+
+    const { authenticated, subscription } = cached.memberSession;
+    const hasActiveSub = authenticated && subscription && subscription.active;
+
+    // Only block if we know session is invalid AND there is no admin key fallback
+    return hasActiveSub || !!adminKey;
+  } catch (e) {
+    return true; // On any error allow injection — do not silently break cookie inject
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'INJECT_AND_OPEN') {
@@ -57,6 +82,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const results = { success: [], failed: [] };
 
     const run = async () => {
+      // Verify session before injecting
+      const allowed = await isMemberSessionValid();
+      if (!allowed) {
+        throw new Error('Session expired. Please log in at the Sharely dashboard.');
+      }
+
       const urlObj = new URL(targetUrl);
 
       // Clear existing cookies for this domain

@@ -12,6 +12,8 @@ let serverUrl = '';
 let apiKey = '';
 let currentMemberEmail = '';
 let currentMemberExpiry = '';
+let currentMemberName = '';
+let currentMemberPlan = '';
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -47,6 +49,36 @@ function updateMemberFooter(email, expiresAt) {
   else if (days <= 7) badge = `<span class="expiry-badge expiry-soon">${days}d left</span>`;
   else badge = `<span class="expiry-badge expiry-ok">${days}d left</span>`;
   $('#footer').html(`${short}&nbsp;${badge}`);
+}
+
+function updateMemberStrip(name, plan, expiresAt) {
+  if (!name && !plan) { $('#memberStrip').addClass('d-none'); return; }
+  const days = Math.max(0, Math.ceil((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24)));
+  const displayName = name || '';
+  const displayPlan = plan || '';
+  const dayStr = days > 0 ? `${days}d left` : 'Expired';
+  $('#memberStripText').text(`${displayName}${displayPlan ? ' · ' + displayPlan : ''} · ${dayStr}`);
+  $('#memberStrip').removeClass('d-none');
+}
+
+// ── Session check with chrome.storage.session caching ─────────────────────
+
+async function checkSession() {
+  if (!serverUrl) return null;
+  try {
+    const res = await fetch(`${serverUrl}/api/membership/extension-session`, {
+      credentials: 'include',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Cache result in chrome.storage.session (auto-cleared when browser closes)
+    if (chrome.storage.session) {
+      await new Promise(r => chrome.storage.session.set({ memberSession: data }, r));
+    }
+    return data;
+  } catch (e) {
+    return null;
+  }
 }
 
 function showLoading() {
@@ -356,17 +388,16 @@ async function fetchConfig() {
 
   try {
     // Try membership session first (auto-detected from browser cookies)
-    const sessionRes = await fetch(`${serverUrl}/api/membership/extension-session`, {
-      credentials: 'include',
-    });
+    const sessionData = await checkSession();
 
-    if (sessionRes.ok) {
-      const sessionData = await sessionRes.json();
-
-      if (sessionData.authenticated && sessionData.subscription && sessionData.subscription.is_active) {
-        currentMemberEmail = sessionData.member.email;
+    if (sessionData) {
+      if (sessionData.authenticated && sessionData.subscription && sessionData.subscription.active) {
+        currentMemberEmail = sessionData.user.email;
+        currentMemberName = sessionData.user.name || '';
         currentMemberExpiry = sessionData.subscription.expires_at;
+        currentMemberPlan = sessionData.subscription.plan || '';
         updateMemberFooter(currentMemberEmail, currentMemberExpiry);
+        updateMemberStrip(currentMemberName, currentMemberPlan, currentMemberExpiry);
 
         // Fetch services using session cookie
         const configRes = await fetch(`${serverUrl}/api/extension/config`, {
@@ -383,7 +414,7 @@ async function fetchConfig() {
           if (data.theme) applyTheme(data.theme);
           return;
         }
-      } else if (sessionData.authenticated && sessionData.subscription && !sessionData.subscription.is_active) {
+      } else if (sessionData.authenticated && sessionData.subscription && !sessionData.subscription.active) {
         // Logged in but subscription expired — fall back to API key or show message
         if (!apiKey) {
           showLoggedOut('Your Sharely subscription has expired. Visit your dashboard to renew.');
@@ -742,6 +773,9 @@ $(async () => {
     disableFilters();
     return;
   }
+
+  // Poll every 5 minutes — if session expires the extension transitions to logged-out state
+  setInterval(() => { fetchConfig(); }, 5 * 60 * 1000);
 
   fetchConfig();
 });

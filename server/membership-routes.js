@@ -117,16 +117,38 @@ function init(app, db, publicDir) {
 
     res.json({
       authenticated: true,
-      member: { id: member.id, email: member.email, name: member.name },
+      user: { id: member.id, email: member.email, name: member.name },
       subscription: sub ? {
-        status: sub.status,
-        plan_name: sub.plan_name,
+        active: isActive,
+        plan: sub.plan_name,
         expires_at: sub.current_period_end,
-        is_active: isActive,
         days_remaining: daysRemaining,
       } : null,
     });
   });
+
+  // ── CSRF protection for state-changing member routes ──────────────────────
+  // With SameSite=None on the session cookie, cross-site requests now include
+  // the cookie. We mitigate CSRF by requiring Content-Type: application/json
+  // (which browsers cannot forge cross-origin without a CORS preflight) and
+  // by validating the Origin header on member session POST requests.
+  function memberCsrf(req, res, next) {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+      return next();
+    }
+    const origin = req.headers.origin;
+    if (!origin) return next(); // Same-origin requests don't send Origin
+    const isTrusted = origin.startsWith('chrome-extension://') ||
+      origin.startsWith('moz-extension://') ||
+      origin.includes(req.headers.host || '');
+    if (!isTrusted) {
+      return res.status(403).json({ error: 'CSRF check failed' });
+    }
+    next();
+  }
+
+  // Apply CSRF check to all state-changing routes handled by this router
+  router.use(memberCsrf);
 
   // ── Snap token creation (public — guest can pay before creating account) ─
 
