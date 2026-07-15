@@ -5,106 +5,140 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Sharely</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/membership/css/membership.css">
 <style>
-  .mp-token-card { background: var(--mp-surface-2); border: 1px dashed var(--mp-border); border-radius: var(--mp-radius-sm); padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
-  .mp-token-card code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; color: var(--mp-accent-2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .mp-token-card button { padding: 6px 12px; font-size: 12.5px; }
-  .mp-token-note { font-size: 12.5px; color: var(--mp-text-faint); margin-top: 8px; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #f0f0f0; min-height: 100vh; color: #111; }
+  a { text-decoration: none; }
+
+  .dash-wrap { max-width: 480px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+  .dash-greeting { font-size: 22px; font-weight: 800; color: #111; letter-spacing: -0.3px; }
+  .dash-logout { font-size: 13px; font-weight: 500; color: #888; cursor: pointer; background: none; border: none; font-family: inherit; }
+  .dash-logout:hover { color: #e74c3c; }
+
+  .dash-card {
+    background: #111;
+    border-radius: 20px;
+    padding: 22px 22px 18px;
+    margin-bottom: 14px;
+    color: #fff;
+  }
+  .dash-card-label {
+    font-size: 10.5px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  .plan-name { font-size: 26px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
+  .plan-expiry { font-size: 13px; color: #888; margin-bottom: 18px; line-height: 1.55; }
+  .plan-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 13px; border-radius: 9px; font-size: 12px; font-weight: 600;
+  }
+  .plan-badge-active { background: rgba(46,213,115,0.13); color: #2ed573; }
+  .plan-badge-inactive { background: rgba(255,180,0,0.13); color: #f9ca24; }
+  .plan-badge-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .plan-badge-active .plan-badge-dot { background: #2ed573; }
+  .plan-badge-inactive .plan-badge-dot { background: #f9ca24; }
+
+  .dash-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    cursor: pointer; color: #fff;
+  }
+  .dash-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .dash-row:first-of-type { padding-top: 0; }
+  .dash-row-label { font-size: 14.5px; font-weight: 500; }
+  .dash-row-arrow { color: #444; font-size: 17px; }
+  .dash-row.danger .dash-row-label { color: #e74c3c; }
+  .dash-row.danger .dash-row-arrow { color: #e74c3c; }
+
+  .dash-ext-sub { font-size: 13px; color: #888; line-height: 1.55; margin-bottom: 14px; }
+  .dash-ext-btn {
+    display: block; width: 100%;
+    background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 12px; padding: 13px 16px;
+    color: #fff; font-size: 14px; font-weight: 600; text-align: center;
+  }
+  .dash-ext-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+  .dash-no-plan { font-size: 14px; color: #888; margin-bottom: 16px; line-height: 1.55; }
+  .dash-cta-btn {
+    display: inline-block; background: #fff; color: #111;
+    border-radius: 10px; padding: 11px 20px; font-size: 13.5px; font-weight: 700;
+  }
+  .dash-cta-btn:hover { background: #eee; color: #111; }
 </style>
 </head>
-<body class="mp">
-  <div class="mp-app">
-    <aside class="mp-app-sidebar">
-      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">S</div>Sharely</a>
-      <nav class="mp-app-nav">
-        <a href="/membership/dashboard" class="active">🏠 Dashboard</a>
-        <a href="/membership/tools">🧰 My tools</a>
-        <a href="/membership/billing">💳 Billing</a>
-        <a href="/membership/upgrade">⬆️ Upgrade plan</a>
-        <a href="/membership/settings">⚙️ Settings</a>
-      </nav>
-      <a href="#" id="logoutBtn" style="padding:10px 12px; color:var(--mp-text-dim); font-size:14px;">↩ Log out</a>
-    </aside>
+<body>
+  <div class="dash-wrap">
+    <div class="dash-header">
+      <div class="dash-greeting">Hi, <span id="memberFirst">—</span> 👋</div>
+      <button class="dash-logout" id="logoutBtn">Log out →</button>
+    </div>
 
-    <main class="mp-app-main">
-      <div class="mp-app-header">
-        <div>
-          <h1>Welcome back<span id="memberName"></span></h1>
-          <p>Here's what's happening with your membership.</p>
+    <!-- Current Plan -->
+    <div class="dash-card">
+      <div class="dash-card-label">Current Plan</div>
+      <div id="planSection">
+        <div class="plan-name" id="planName">—</div>
+        <div class="plan-expiry" id="planExpiry">—</div>
+        <div class="plan-badge plan-badge-active" id="planBadge">
+          <span class="plan-badge-dot"></span>
+          <span id="planBadgeText">Active</span>
         </div>
       </div>
-
-      <div id="onboardingCard" class="mp-card mp-hidden" style="margin-bottom:28px; border-left: 3px solid var(--mp-accent); position:relative;">
-        <button id="dismissOnboarding" style="position:absolute; top:12px; right:14px; background:none; border:none; color:var(--mp-text-faint); font-size:18px; cursor:pointer; line-height:1;" title="Dismiss">×</button>
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-          <span style="font-size:28px;">🎉</span>
-          <div>
-            <h3 style="margin:0 0 2px;">Selamat bergabung di Sharely!</h3>
-            <p style="margin:0; font-size:14px; color:var(--mp-text-dim);">Akun kamu sudah aktif. Ikuti langkah berikut untuk mulai menggunakan layanan.</p>
-          </div>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <div style="font-weight:600; font-size:13px; margin-bottom:6px; color:var(--mp-text-dim); text-transform:uppercase; letter-spacing:0.03em;">🔑 Step 1 — Salin access token-mu</div>
-          <div style="display:flex; align-items:center; gap:10px; background:var(--mp-surface-2); border-radius:var(--mp-radius-sm); padding:10px 12px;">
-            <code id="onboardingToken" style="font-family:'SF Mono','Fira Code',monospace; font-size:12.5px; color:var(--mp-accent-2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</code>
-            <button id="copyOnboardingToken" class="mp-btn mp-btn-primary mp-btn-sm">Copy</button>
-          </div>
-          <div style="font-size:12px; color:var(--mp-text-faint); margin-top:5px;">Paste token ini di halaman Settings extension Sharely.</div>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <div style="font-weight:600; font-size:13px; margin-bottom:6px; color:var(--mp-text-dim); text-transform:uppercase; letter-spacing:0.03em;">🧩 Step 2 — Pasang extension Chrome</div>
-          <div style="font-size:13px; color:var(--mp-text-dim); margin-bottom:10px;">Download, unzip, lalu buka <code style="font-size:11px; background:var(--mp-surface-2); padding:1px 5px; border-radius:3px;">chrome://extensions</code> → aktifkan Developer mode → Load unpacked.</div>
-          <a href="/api/membership/download-extension" class="mp-btn mp-btn-primary mp-btn-sm">⬇ Download Extension (.zip)</a>
-        </div>
+      <div id="noPlanSection" style="display:none;">
+        <p class="dash-no-plan">You don't have an active plan yet.<br>Choose a plan to unlock your services.</p>
+        <a href="/membership/pricing" class="dash-cta-btn">View plans →</a>
       </div>
+    </div>
 
-      <div class="mp-stat-grid">
-        <div class="mp-stat-card">
-          <span>Current plan</span>
-          <strong id="statPlan">—</strong>
-        </div>
-        <div class="mp-stat-card">
-          <span>Status</span>
-          <strong id="statStatus">—</strong>
-        </div>
-        <div class="mp-stat-card">
-          <span>Berlaku hingga</span>
-          <strong id="statRenews">—</strong>
-        </div>
-        <div class="mp-stat-card">
-          <span>Included tools</span>
-          <strong id="statToolCount">—</strong>
-        </div>
-      </div>
+    <!-- Account -->
+    <div class="dash-card">
+      <div class="dash-card-label">Account</div>
+      <a href="/membership/settings" class="dash-row">
+        <span class="dash-row-label">Edit profile</span>
+        <span class="dash-row-arrow">›</span>
+      </a>
+      <a href="/membership/billing" class="dash-row">
+        <span class="dash-row-label">Activity &amp; billing</span>
+        <span class="dash-row-arrow">›</span>
+      </a>
+      <a href="#" class="dash-row danger" id="logoutRow">
+        <span class="dash-row-label">Log out</span>
+        <span class="dash-row-arrow">›</span>
+      </a>
+    </div>
 
-      <div id="noPlanBanner" class="mp-card mp-hidden" style="margin-bottom:28px;">
-        <h3>You don't have an active plan yet</h3>
-        <p style="margin-bottom:16px;">Choose a plan to unlock your tool bundle.</p>
-        <a href="/membership/pricing" class="mp-btn mp-btn-primary">View plans</a>
-      </div>
+    <!-- Membership -->
+    <div class="dash-card">
+      <div class="dash-card-label">Membership</div>
+      <a href="/membership/pricing" class="dash-row">
+        <span class="dash-row-label">View plans</span>
+        <span class="dash-row-arrow">›</span>
+      </a>
+      <a href="/membership/upgrade" class="dash-row">
+        <span class="dash-row-label">Upgrade plan</span>
+        <span class="dash-row-arrow">›</span>
+      </a>
+      <a href="/membership/billing" class="dash-row">
+        <span class="dash-row-label">Order history</span>
+        <span class="dash-row-arrow">›</span>
+      </a>
+    </div>
 
-      <div class="mp-card" style="margin-bottom:28px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-          <h3 style="margin:0;">Your access token</h3>
-          <button class="mp-btn mp-btn-ghost mp-btn-sm" id="refreshTokenBtn">Regenerate</button>
-        </div>
-        <p style="margin:0 0 14px; font-size:14.5px; color:var(--mp-text-dim);">Use this token to authenticate the browser extension and access your plan.</p>
-        <div class="mp-token-card" id="tokenBox">
-          <code id="tokenValue">No token yet — generate one below.</code>
-          <button class="mp-btn mp-btn-primary mp-btn-sm" id="copyTokenBtn">Copy</button>
-        </div>
-        <div class="mp-token-note" id="tokenNote">Click Regenerate to create a new token.</div>
-      </div>
-
-      <div class="mp-app-header" style="margin-bottom:16px;">
-        <div><h1 style="font-size:19px;">Your tools</h1></div>
-        <a href="/membership/tools" class="mp-btn mp-btn-ghost mp-btn-sm">View all</a>
-      </div>
-      <div class="mp-tool-grid" id="toolsPreview"></div>
-    </main>
+    <!-- Extension -->
+    <div class="dash-card">
+      <div class="dash-card-label">Extension</div>
+      <p class="dash-ext-sub">Install the Sharely Chrome extension to inject cookies and access your services with one click. Just log in here and the extension connects automatically.</p>
+      <a href="/api/membership/download-extension" class="dash-ext-btn">⬇ Download Extension (.zip)</a>
+    </div>
   </div>
 
   <script src="/membership/js/membership.js"></script>
@@ -113,91 +147,36 @@
       const data = await MembershipUI.requireMemberSession();
       if (!data) return;
 
-      document.getElementById('memberName').textContent = `, ${data.member.name.split(' ')[0]}`;
+      const firstName = (data.member.name || data.member.email).split(' ')[0];
+      document.getElementById('memberFirst').textContent = firstName;
 
-      // Show onboarding card once per member only when subscription is active (dismissed via localStorage)
-      const onboardingKey = 'sharely_onboarding_dismissed_' + data.member.id;
-      if (data.subscription && data.subscription.status === 'active' && !localStorage.getItem(onboardingKey)) {
-        document.getElementById('onboardingCard').classList.remove('mp-hidden');
-        // Populate token in the onboarding card
-        if (data.member.access_token) {
-          document.getElementById('onboardingToken').textContent = data.member.access_token;
-        }
-      }
-      document.getElementById('dismissOnboarding').addEventListener('click', () => {
-        localStorage.setItem(onboardingKey, '1');
-        document.getElementById('onboardingCard').classList.add('mp-hidden');
-      });
-      document.getElementById('copyOnboardingToken').addEventListener('click', () => {
-        const token = document.getElementById('onboardingToken').textContent;
-        if (token && token !== '—') {
-          navigator.clipboard.writeText(token).then(() => {
-            const btn = document.getElementById('copyOnboardingToken');
-            const old = btn.textContent;
-            btn.textContent = 'Copied!';
-            setTimeout(() => btn.textContent = old, 1500);
-          });
-        }
-      });
-
-      if (data.subscription) {
-        document.getElementById('statPlan').textContent = data.subscription.plan_name;
-        document.getElementById('statStatus').textContent = data.subscription.status;
-        document.getElementById('statRenews').textContent = MembershipUI.formatDate(data.subscription.current_period_end);
-        document.getElementById('statToolCount').textContent = data.subscription.features.length + '+';
+      if (data.subscription && data.subscription.status === 'active') {
+        const expiry = new Date(data.subscription.current_period_end);
+        const days = Math.max(0, Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24)));
+        document.getElementById('planName').textContent = data.subscription.plan_name;
+        document.getElementById('planExpiry').textContent =
+          'Valid until ' + MembershipUI.formatDate(data.subscription.current_period_end) +
+          ' \u00b7 ' + days + ' day' + (days !== 1 ? 's' : '') + ' remaining';
+      } else if (data.subscription) {
+        const badge = document.getElementById('planBadge');
+        badge.className = 'plan-badge plan-badge-inactive';
+        document.getElementById('planBadgeText').textContent =
+          data.subscription.status.charAt(0).toUpperCase() + data.subscription.status.slice(1);
+        document.getElementById('planName').textContent = data.subscription.plan_name;
+        document.getElementById('planExpiry').textContent = 'Expired \u2014 renew to continue using Sharely.';
       } else {
-        document.getElementById('noPlanBanner').classList.remove('mp-hidden');
-        document.getElementById('statPlan').textContent = 'None';
-        document.getElementById('statStatus').textContent = 'Inactive';
+        document.getElementById('planSection').style.display = 'none';
+        document.getElementById('noPlanSection').style.display = '';
       }
 
-      if (data.member.access_token) {
-        document.getElementById('tokenValue').textContent = data.member.access_token;
-        document.getElementById('tokenNote').textContent = 'This token authenticates your browser extension.';
+      async function doLogout(e) {
+        if (e) e.preventDefault();
+        await fetch('/api/membership/logout', { method: 'POST' });
+        window.location.href = '/membership/login';
       }
-
-      const toolsRes = await fetch('/api/membership/my-tools');
-      const { tools } = await toolsRes.json();
-      const grid = document.getElementById('toolsPreview');
-      if (tools.length === 0) {
-        grid.innerHTML = '<div class="mp-empty">No tools available yet — choose a plan to get started.</div>';
-      } else {
-        grid.innerHTML = tools.slice(0, 3).map(t => `
-          <div class="mp-tool-card">
-            <div class="mp-feature-icon">${t.icon}</div>
-            <h3>${t.name}</h3>
-            <p>${t.description}</p>
-          </div>
-        `).join('');
-      }
+      document.getElementById('logoutBtn').addEventListener('click', doLogout);
+      document.getElementById('logoutRow').addEventListener('click', doLogout);
     })();
-
-    document.getElementById('refreshTokenBtn').addEventListener('click', async () => {
-      const res = await fetch('/api/membership/token', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById('tokenValue').textContent = data.token;
-        document.getElementById('tokenNote').textContent = 'Token regenerated successfully.';
-      }
-    });
-
-    document.getElementById('copyTokenBtn').addEventListener('click', () => {
-      const token = document.getElementById('tokenValue').textContent;
-      if (token && !token.startsWith('No token')) {
-        navigator.clipboard.writeText(token).then(() => {
-          const btn = document.getElementById('copyTokenBtn');
-          const old = btn.textContent;
-          btn.textContent = 'Copied!';
-          setTimeout(() => btn.textContent = old, 1500);
-        });
-      }
-    });
-
-    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-      e.preventDefault();
-      await fetch('/api/membership/logout', { method: 'POST' });
-      window.location.href = '/membership/login';
-    });
   </script>
 </body>
 </html>

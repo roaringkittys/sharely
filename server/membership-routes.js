@@ -14,6 +14,19 @@ function init(app, db, publicDir) {
   const router = express.Router();
   const membershipPublicDir = path.join(publicDir, 'membership');
 
+  // CORS helper for extension requests (credentialed fetch from chrome-extension://)
+  function extCors(req, res, next) {
+    const origin = req.headers.origin || '';
+    if (origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://')) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  }
+
   function requireMember(req, res, next) {
     if (req.session && req.session.memberId) return next();
     if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Please log in' });
@@ -74,6 +87,45 @@ function init(app, db, publicDir) {
 
   router.get('/api/membership/payment-config', (req, res) => {
     res.json({ clientKey: payments.getClientKey(), isProduction: payments.isProduction });
+  });
+
+  // ── Extension session check (called by Chrome extension with credentials:include) ─
+
+  router.options('/api/membership/extension-session', extCors, (req, res) => res.sendStatus(204));
+  router.get('/api/membership/extension-session', extCors, (req, res) => {
+    if (!req.session || !req.session.memberId) {
+      return res.json({ authenticated: false });
+    }
+
+    const member = db.prepare('SELECT id, email, name FROM members WHERE id = ? AND status != ?')
+      .get(req.session.memberId, 'banned');
+    if (!member) return res.json({ authenticated: false });
+
+    const sub = db.prepare(
+      `SELECT s.*, p.name as plan_name FROM subscriptions s
+       JOIN plans p ON s.plan_id = p.id
+       WHERE s.member_id = ? ORDER BY s.created_at DESC LIMIT 1`
+    ).get(req.session.memberId);
+
+    const isActive = sub && sub.status === 'active' && new Date(sub.current_period_end) >= new Date();
+    let daysRemaining = 0;
+    if (isActive) {
+      daysRemaining = Math.max(0, Math.ceil(
+        (new Date(sub.current_period_end) - new Date()) / (1000 * 60 * 60 * 24)
+      ));
+    }
+
+    res.json({
+      authenticated: true,
+      member: { id: member.id, email: member.email, name: member.name },
+      subscription: sub ? {
+        status: sub.status,
+        plan_name: sub.plan_name,
+        expires_at: sub.current_period_end,
+        is_active: isActive,
+        days_remaining: daysRemaining,
+      } : null,
+    });
   });
 
   // ── Snap token creation (public — guest can pay before creating account) ─

@@ -1,4 +1,4 @@
-/* sharely-extension.js for Sharely Extension 1.1 */
+/* sharely-extension.js for Sharely Extension 1.2 */
 
 // ── DEFAULT SERVER URL ─────────────────────────────────────────────────────
 // Set this to your deployed server URL before distributing the extension.
@@ -10,9 +10,8 @@ let allServices = [];
 let currentCategory = 'all';
 let serverUrl = '';
 let apiKey = '';
-let currentUserSession = '';
-let currentUserEmail = '';
-let currentUserExpiry = '';
+let currentMemberEmail = '';
+let currentMemberExpiry = '';
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,7 +19,7 @@ function escapeHtml(str) {
 
 async function loadStorage() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['serverUrl', 'apiKey', 'theme', 'userSession', 'userEmail', 'userExpiry'], resolve);
+    chrome.storage.local.get(['serverUrl', 'apiKey', 'theme'], resolve);
   });
 }
 
@@ -28,72 +27,26 @@ async function saveStorage(data) {
   return new Promise(resolve => chrome.storage.local.set(data, resolve));
 }
 
-// ── Device fingerprint ────────────────────────────────────────────────────
+// ── Logged-out state ──────────────────────────────────────────────────────
 
-function getDeviceFingerprint() {
-  const raw = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + 'x' + screen.height,
-    new Date().getTimezoneOffset(),
-    navigator.hardwareConcurrency || 0,
-    navigator.platform || '',
-  ].join('|');
-  let hash = 0;
-  for (let i = 0; i < raw.length; i++) {
-    hash = ((hash << 5) - hash) + raw.charCodeAt(i);
-    hash |= 0;
-  }
-  return 'ext_' + Math.abs(hash).toString(16).padStart(8, '0');
+function showLoggedOut(message) {
+  $('#loading').addClass('d-none');
+  $('#loaded').addClass('d-none');
+  $('#errored').addClass('d-none');
+  $('#loggedOutState').removeClass('d-none');
+  if (message) $('#loggedOutMsg').text(message);
+  disableFilters();
 }
 
-// ── Auth overlay ──────────────────────────────────────────────────────────
-
-function showAuthScreen(error) {
-  $('#authSuccess').hide();
-  $('#authForm').show();
-  $('#authSubmitBtn').prop('disabled', false).text('Continue');
-  if (error) {
-    $('#authError').text(error).show();
-  } else {
-    $('#authError').hide();
-  }
-  $('#authOverlay').css('display', 'flex').hide().fadeIn(200);
-}
-
-function hideAuthScreen() {
-  $('#authOverlay').fadeOut(250);
-}
-
-function updateUserFooter(email, expiresAt) {
+function updateMemberFooter(email, expiresAt) {
   if (!email) { $('#footer').text('Sharely \u00a9 2024\u20132025'); return; }
   const days = Math.max(0, Math.ceil((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24)));
-  const short = email.length > 20 ? email.substring(0, 17) + '\u2026' : email;
+  const short = email.length > 22 ? email.substring(0, 19) + '\u2026' : email;
   let badge;
   if (days <= 0) badge = '<span class="expiry-badge expiry-expired">Expired</span>';
   else if (days <= 7) badge = `<span class="expiry-badge expiry-soon">${days}d left</span>`;
   else badge = `<span class="expiry-badge expiry-ok">${days}d left</span>`;
   $('#footer').html(`${short}&nbsp;${badge}`);
-}
-
-async function doExtensionLogin(email, token) {
-  const fingerprint = getDeviceFingerprint();
-  const body = { email: email.trim().toLowerCase(), deviceFingerprint: fingerprint };
-  if (token && token.trim()) body.token = token.trim();
-  const res = await fetch(`${serverUrl}/auth/extension-login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return { ok: res.ok, data: await res.json() };
-}
-
-async function verifyStoredSession(session) {
-  const res = await fetch(`${serverUrl}/auth/extension-verify`, {
-    headers: { 'X-User-Session': session },
-  });
-  if (!res.ok) return null;
-  return await res.json();
 }
 
 function showLoading() {
@@ -392,7 +345,6 @@ async function fetchConfig() {
   const stored = await loadStorage();
   serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
   apiKey = stored.apiKey || '';
-  currentUserSession = stored.userSession || '';
 
   if (!serverUrl) {
     showError('Configure your server URL in settings first.');
@@ -400,46 +352,97 @@ async function fetchConfig() {
     return;
   }
 
-  if (!currentUserSession && !apiKey) {
-    showAuthScreen();
-    return;
-  }
-
   showLoading();
 
   try {
-    const headers = { 'Accept': 'application/json' };
-    if (currentUserSession) {
-      headers['X-User-Session'] = currentUserSession;
-    } else {
-      headers['X-API-Key'] = apiKey;
-    }
-
-    const res = await fetch(`${serverUrl}/api/extension/config`, {
-      method: 'GET',
-      headers,
+    // Try membership session first (auto-detected from browser cookies)
+    const sessionRes = await fetch(`${serverUrl}/api/membership/extension-session`, {
+      credentials: 'include',
     });
 
-    if (res.status === 401) {
-      await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
-      currentUserSession = '';
-      showAuthScreen('Your session expired. Please log in again.');
-      disableFilters();
+    if (sessionRes.ok) {
+      const sessionData = await sessionRes.json();
+
+      if (sessionData.authenticated && sessionData.subscription && sessionData.subscription.is_active) {
+        currentMemberEmail = sessionData.member.email;
+        currentMemberExpiry = sessionData.subscription.expires_at;
+        updateMemberFooter(currentMemberEmail, currentMemberExpiry);
+
+        // Fetch services using session cookie
+        const configRes = await fetch(`${serverUrl}/api/extension/config`, {
+          credentials: 'include',
+        });
+
+        if (configRes.ok) {
+          const data = await configRes.json();
+          allServices = data.services || [];
+          currentCategory = 'all';
+          $('.category-filter').removeClass('active');
+          $('#all-category').addClass('active');
+          filterAndRender();
+          if (data.theme) applyTheme(data.theme);
+          return;
+        }
+      } else if (sessionData.authenticated && sessionData.subscription && !sessionData.subscription.is_active) {
+        // Logged in but subscription expired — fall back to API key or show message
+        if (!apiKey) {
+          showLoggedOut('Your Sharely subscription has expired. Visit your dashboard to renew.');
+          return;
+        }
+      } else if (!sessionData.authenticated) {
+        // Not logged in — fall back to API key or show logged-out state
+        if (!apiKey) {
+          showLoggedOut();
+          return;
+        }
+      }
+    }
+
+    // Fall back to admin API key if available
+    if (apiKey) {
+      const res = await fetch(`${serverUrl}/api/extension/config`, {
+        headers: { 'X-API-Key': apiKey },
+      });
+
+      if (res.status === 401) {
+        showError('API key invalid. Check your settings.');
+        disableFilters();
+        return;
+      }
+
+      if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
+
+      const data = await res.json();
+      allServices = data.services || [];
+      currentCategory = 'all';
+      $('.category-filter').removeClass('active');
+      $('#all-category').addClass('active');
+      filterAndRender();
+      if (data.theme) applyTheme(data.theme);
       return;
     }
 
-    if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
-
-    const data = await res.json();
-    allServices = data.services || [];
-    currentCategory = 'all';
-    $('.category-filter').removeClass('active');
-    $('#all-category').addClass('active');
-    filterAndRender();
-
-    if (data.theme) applyTheme(data.theme);
+    showLoggedOut();
 
   } catch (err) {
+    if (apiKey) {
+      // Retry with just the API key on network errors
+      try {
+        const res = await fetch(`${serverUrl}/api/extension/config`, {
+          headers: { 'X-API-Key': apiKey },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          allServices = data.services || [];
+          currentCategory = 'all';
+          $('.category-filter').removeClass('active');
+          $('#all-category').addClass('active');
+          filterAndRender();
+          if (data.theme) applyTheme(data.theme);
+          return;
+        }
+      } catch (_) {}
+    }
     showError('Cannot connect to Sharely server. Check your settings.');
     disableFilters();
     console.error('Sharely fetch error:', err);
@@ -507,13 +510,13 @@ $('#settingsButton, #openSettingsFromError').on('click', async () => {
   $('#devSection').hide();
   $('#devChevron').css('transform', '');
 
-  // Show account info if logged in
-  if (currentUserEmail && currentUserExpiry) {
-    const days = Math.max(0, Math.ceil((new Date(currentUserExpiry) - new Date()) / 86400000));
-    $('#settingsEmail').text(currentUserEmail);
-    $('#settingsExpiry').text(days > 0 ? `Access valid for ${days} more day${days !== 1 ? 's' : ''}` : 'Access expired');
+  // Show account info if logged in via membership session
+  if (currentMemberEmail && currentMemberExpiry) {
+    const days = Math.max(0, Math.ceil((new Date(currentMemberExpiry) - new Date()) / 86400000));
+    $('#settingsEmail').text(currentMemberEmail);
+    $('#settingsExpiry').text(days > 0 ? `Subscription valid for ${days} more day${days !== 1 ? 's' : ''}` : 'Subscription expired');
     $('#settingsAccountInfo').show();
-    $('#signOutBtn').show();
+    $('#signOutBtn').hide();
     $('#settingsNotLoggedIn').hide();
   } else {
     $('#settingsAccountInfo').hide();
@@ -534,23 +537,12 @@ $('#devToggle').on('click', () => {
   $('#devChevron').css('transform', open ? '' : 'rotate(180deg)');
 });
 
-// Sign out from Settings
-$('#signOutBtn').on('click', async () => {
-  if (!confirm('Sign out of your Sharely account?')) return;
-  await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
-  currentUserSession = '';
-  currentUserEmail = '';
-  currentUserExpiry = '';
-  $('#footer').text('Sharely \u00a9 2024\u20132025');
-  $('#settingsOverlay').hide();
-  showAuthScreen();
-});
-
-// Login link from Settings (for non-logged-in users)
-$('#settingsLoginLink').on('click', (e) => {
+// Login link from Settings (for non-logged-in users — opens dashboard)
+$('#settingsLoginLink').on('click', async (e) => {
   e.preventDefault();
   $('#settingsOverlay').hide();
-  showAuthScreen();
+  const url = serverUrl ? `${serverUrl}/membership/login` : 'https://sharely.app/membership/login';
+  try { await chrome.tabs.create({ url }); } catch (_) { window.open(url, '_blank'); }
 });
 
 $('#saveSettingsBtn').on('click', async () => {
@@ -567,9 +559,8 @@ $('#saveSettingsBtn').on('click', async () => {
   try {
     const headers = {};
     if (key) headers['X-API-Key'] = key;
-    else if (currentUserSession) headers['X-User-Session'] = currentUserSession;
 
-    const res = await fetch(`${url}/api/extension/config`, { headers });
+    const res = await fetch(`${url}/api/extension/config`, { headers, credentials: 'include' });
 
     if (!res.ok) throw new Error('Could not connect — check URL and key');
 
@@ -721,103 +712,15 @@ $('#adminButton').on('click', async () => {
   }
 });
 
-// ── Auth event handlers ───────────────────────────────────────────────────
+// ── Open dashboard button (logged-out state) ──────────────────────────────
 
-$('#authHelpLink').on('click', async (e) => {
-  e.preventDefault();
-  const stored = await loadStorage();
-  const base = (stored.serverUrl || '').replace(/\/+$/, '');
-  const url = base ? `${base}/start` : 'https://sharely.app/start';
+$('#openDashboardBtn').on('click', async () => {
+  const url = serverUrl ? `${serverUrl}/membership/login` : 'https://sharely.app/membership/login';
   try {
     await chrome.tabs.create({ url });
   } catch (e) {
     window.open(url, '_blank');
   }
-});
-
-$('#authSubmitBtn').on('click', async () => {
-  const email = $('#authEmail').val().trim();
-  const token = $('#authToken').val().trim();
-
-  if (!email) {
-    $('#authError').text('Please enter your email address.').show();
-    return;
-  }
-  if (!serverUrl) {
-    const stored = await loadStorage();
-    serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
-  }
-  if (!serverUrl) {
-    $('#authError').text('Server URL not set. Open Settings and paste your server URL.').show();
-    return;
-  }
-
-  $('#authError').hide();
-  $('#authSubmitBtn').prop('disabled', true).text('Connecting...');
-
-  try {
-    // Smart: pass token only if provided; backend handles both register and login
-    const { ok, data } = await doExtensionLogin(email, token || null);
-
-    if (!ok || !data.success) {
-      const errMsg = data.error || 'Login failed. Please try again.';
-      // If no account found and no token was entered, guide them to enter token
-      if (!token && (errMsg.toLowerCase().includes('no account') || errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('invalid token'))) {
-        $('#authError').text('No account found for this email. Paste your access token below to register.').show();
-        $('#authToken').focus();
-      } else {
-        $('#authError').text(errMsg).show();
-      }
-      $('#authSubmitBtn').prop('disabled', false).text('Continue');
-      return;
-    }
-
-    // Save session
-    await saveStorage({
-      userSession: data.session_token,
-      userEmail: data.email,
-      userExpiry: data.access_expires_at,
-    });
-    currentUserSession = data.session_token;
-    currentUserEmail = data.email;
-    currentUserExpiry = data.access_expires_at;
-
-    // Show success state
-    const days = data.days_remaining;
-    $('#authForm').hide();
-    $('#authSuccessTitle').text(data.is_new_user ? `Welcome, ${data.email.split('@')[0]}!` : 'Welcome back!');
-    $('#authSuccessMsg').text(`Access valid for ${days} more day${days !== 1 ? 's' : ''}. Loading your services...`);
-    $('#authSuccess').fadeIn(300);
-
-    updateUserFooter(data.email, data.access_expires_at);
-
-    setTimeout(() => {
-      hideAuthScreen();
-      fetchConfig();
-    }, 1800);
-
-  } catch (err) {
-    $('#authSubmitBtn').prop('disabled', false).text('Continue');
-    $('#authError').text('Connection failed. Check your server URL in Settings.').show();
-  }
-});
-
-// Allow Enter key to submit auth form
-$('#authEmail, #authToken').on('keydown', (e) => {
-  if (e.key === 'Enter') $('#authSubmitBtn').click();
-});
-
-// ── User account sign-out ─────────────────────────────────────────────────
-// (clicking the footer email/badge signs out of the user account)
-$('#footer').on('click', '.expiry-badge, .user-email-text', async () => {
-  if (!currentUserSession) return;
-  if (!confirm('Sign out of your Sharely account?')) return;
-  await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
-  currentUserSession = '';
-  currentUserEmail = '';
-  currentUserExpiry = '';
-  $('#footer').text('Sharely \u00a9 2024\u20132025');
-  showAuthScreen();
 });
 
 // Initialise
@@ -834,42 +737,10 @@ $(async () => {
 
   if (stored.theme) applyTheme(stored.theme);
 
-  // If we have a stored session, restore footer display immediately
-  if (stored.userEmail && stored.userExpiry) {
-    updateUserFooter(stored.userEmail, stored.userExpiry);
-  }
-
-  const userSession = stored.userSession || '';
-
-  // If no credentials at all, show auth
-  if (!userSession && !stored.apiKey) {
-    showAuthScreen();
-    return;
-  }
-
-  // Should not happen with DEFAULT_SERVER_URL, but guard anyway
   if (!serverUrl) {
     showError('Server not configured. Contact support.');
     disableFilters();
     return;
-  }
-
-  // If we have a user session, verify it's still valid
-  if (userSession) {
-    try {
-      const result = await verifyStoredSession(userSession);
-      if (!result || !result.valid) {
-        await saveStorage({ userSession: '', userEmail: '', userExpiry: '' });
-        showAuthScreen(result ? result.error : 'Session expired. Please log in again.');
-        return;
-      }
-      currentUserSession = userSession;
-      currentUserEmail = result.user.email;
-      currentUserExpiry = result.user.access_expires_at;
-      updateUserFooter(currentUserEmail, currentUserExpiry);
-    } catch (_) {
-      // Network error — try loading anyway, fetchConfig will handle 401
-    }
   }
 
   fetchConfig();

@@ -148,9 +148,23 @@ app.use(session({
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
     httpOnly: true,
-    sameSite: 'lax'
+    sameSite: 'none',
+    secure: true,
   }
 }));
+
+// CORS helper for Chrome extension credentialed requests
+function corsForExtension(req, res, next) {
+  const origin = req.headers.origin || '';
+  if (origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://')) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, X-API-Key, X-User-Session');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+}
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── User Access System ────────────────────────────────────────────────────
@@ -187,6 +201,17 @@ function requireApiKey(req, res, next) {
   if (cookieSession && verifyUserSession(cookieSession)) {
     req.isUserSession = true;
     return next();
+  }
+
+  // Accept member session with active subscription (extension via credentials:include)
+  if (req.session && req.session.memberId) {
+    const activeSub = db.prepare(
+      "SELECT id FROM subscriptions WHERE member_id = ? AND status = 'active' AND current_period_end >= date('now')"
+    ).get(req.session.memberId);
+    if (activeSub) {
+      req.isMemberSession = true;
+      return next();
+    }
   }
 
   res.status(401).json({ error: 'Authentication required. Please log in.' });
@@ -441,8 +466,9 @@ app.get('/api/bookmarklet/:serviceId/:label', requireApiKey, (req, res) => {
   });
 });
 
-app.get('/api/extension/config', requireApiKey, (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*');
+app.options('/api/extension/config', corsForExtension, (req, res) => res.sendStatus(204));
+app.get('/api/extension/config', corsForExtension, requireApiKey, (req, res) => {
+  res.header('Access-Control-Allow-Origin', res.getHeader('Access-Control-Allow-Origin') || '*');
   res.header('Access-Control-Allow-Headers', 'X-API-Key, Content-Type');
 
   const settings = {};

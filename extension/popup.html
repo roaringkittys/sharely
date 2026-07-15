@@ -63,6 +63,14 @@
         <button class="ud-main-btn mt-3" id="openSettingsFromError">Open Settings</button>
       </div>
     </div>
+    <div id="loggedOutState" class="full-page-container fadeIn d-none">
+      <div class="error-box">
+        <div style="font-size:38px;margin-bottom:12px">🔒</div>
+        <h3 class="error-title">Not Logged In</h3>
+        <p class="error-msg" id="loggedOutMsg">Log in to your Sharely dashboard to use this extension.</p>
+        <button class="ud-main-btn mt-3" id="openDashboardBtn">Open Dashboard</button>
+      </div>
+    </div>
   </main>
 
   <footer class="py-2 card-footer justify-content-between">
@@ -123,49 +131,6 @@
       </div>
       <p style="font-size:11px;color:#aaa;margin-bottom:12px">Select an account to log in:</p>
       <div id="accountPickerList" class="account-picker-grid"></div>
-    </div>
-  </div>
-
-  <!-- Auth Overlay -->
-  <div class="auth-overlay" id="authOverlay" style="display:none">
-    <div class="auth-box">
-
-      <!-- Form state -->
-      <div id="authForm">
-        <div class="auth-logo">
-          <span class="logo-icon">S</span>
-          <span class="logo-text">Sharely</span>
-        </div>
-        <h2 class="auth-title">Access Sharely</h2>
-        <p class="auth-subtitle">Enter your email. New user? Also paste your access token.</p>
-
-        <div id="authError" class="auth-error" style="display:none"></div>
-
-        <div class="auth-fields" id="authFields">
-          <div class="auth-field">
-            <label>Email address</label>
-            <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
-          </div>
-          <div class="auth-field">
-            <label>Access token <span class="auth-optional">— new users only</span></label>
-            <input type="text" id="authToken" placeholder="Leave empty if you already have access" autocomplete="off">
-          </div>
-        </div>
-
-        <button class="auth-btn" id="authSubmitBtn">Continue</button>
-
-        <div class="auth-help">
-          <a href="#" id="authHelpLink">Setup guide &amp; help</a>
-        </div>
-      </div>
-
-      <!-- Success state -->
-      <div id="authSuccess" style="display:none">
-        <div class="auth-success-icon">✓</div>
-        <h3 id="authSuccessTitle">You're in!</h3>
-        <p id="authSuccessMsg">Loading your services...</p>
-      </div>
-
     </div>
   </div>
 
