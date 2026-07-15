@@ -141,6 +141,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.set('trust proxy', 1); // Trust Replit reverse proxy so secure cookies work
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
