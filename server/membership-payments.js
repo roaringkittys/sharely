@@ -50,6 +50,19 @@ async function createSnapToken({ orderId, amount, customerEmail, customerName, p
     credit_card: {
       secure: true,
     },
+    enabled_payments: [
+      'credit_card',
+      'gopay',
+      'shopeepay',
+      'bca_va',
+      'bni_va',
+      'bri_va',
+      'permata_va',
+      'other_va',
+      'echannel',
+      'danamon_online',
+      'qris',
+    ],
     customer_details: {
       first_name: customerName || customerEmail.split('@')[0],
       email: customerEmail,
