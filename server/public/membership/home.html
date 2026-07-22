@@ -323,7 +323,7 @@
             <div class="plan-label">STARTING FROM</div>
             <div class="new-price">${MembershipUI.formatPrice(p.price_cents, p.billing_interval, p.duration_days)}</div>
             <ul class="feature-list">${features}</ul>
-            <a href="/membership/signup?plan=${p.id}" class="mp-btn ${isPopular ? 'mp-btn-primary' : 'mp-btn-ghost'} mp-btn-block">Choose ${p.name}</a>
+            <a href="/membership/checkout?plan=${p.id}" class="mp-btn ${isPopular ? 'mp-btn-primary' : 'mp-btn-ghost'} mp-btn-block">Choose ${p.name}</a>
           </div>
         `;
       }).join('');

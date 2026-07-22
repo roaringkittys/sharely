@@ -65,44 +65,9 @@
                 <label for="planSelect">Plan</label>
               </div>
 
-              <div class="groupy-form-group">
-                <select id="paymentSelect">
-                  <optgroup label="QR Payments">
-                    <option value="qris_shopee" selected>QRIS by ShopeePay (Rp 750 + 0.7% fee)</option>
-                    <option value="qris">QRIS (Rp 750 + 0.7% fee)</option>
-                  </optgroup>
-                  <optgroup label="Bank Transfers">
-                    <option value="bca_va">BCA Virtual Account (Rp 5.500 fee)</option>
-                    <option value="bni_va">BNI Virtual Account (Rp 4.250 fee)</option>
-                    <option value="bri_va">BRI Virtual Account (Rp 4.250 fee)</option>
-                    <option value="mandiri_va">Mandiri Virtual Account (Rp 4.250 fee)</option>
-                  </optgroup>
-                  <optgroup label="Retail Outlets">
-                    <option value="alfamart">Alfamart (Rp 3.500 fee)</option>
-                  </optgroup>
-                </select>
-                <label for="paymentSelect">Payment method</label>
-              </div>
-
-              <div class="groupy-form-group">
-                <div class="promo-row">
-                  <div style="flex-grow:1; position:relative;">
-                    <input type="text" id="promotionCode" placeholder=" " style="margin-bottom:0;" />
-                    <label for="promotionCode">Promotion code</label>
-                  </div>
-                </div>
-                <small id="promoStatus"></small>
-              </div>
-
               <div class="transaction-details">
                 <h5>Order summary</h5>
                 <div class="summary-row"><span id="summaryPlanLabel">Plan</span><span>Rp <span id="summaryPrice">0</span></span></div>
-                <div class="summary-row discount" id="summaryDiscountRow">
-                  <span>Promotion</span><span>- Rp <span id="summaryDiscount">0</span></span>
-                </div>
-                <div class="summary-row fee">
-                  <span>Transaction fee</span><span>+ Rp <span id="summaryFee">1.100</span></span>
-                </div>
                 <hr class="summary-divider">
                 <div class="summary-row total">
                   <span>Total</span><span>Rp <span id="summaryTotal">0</span></span>
@@ -122,12 +87,12 @@
                   <input type="text" id="nameInput" placeholder=" " required autocomplete="name" />
                   <label for="nameInput">Full name</label>
                 </div>
-                <button type="button" class="ud-main-btn ud-white-btn w-100" id="payBtn">Purchase</button>
+                <button type="button" class="ud-main-btn ud-white-btn w-100" id="payBtn">Pay now</button>
               </div>
 
               <div id="memberForm" style="display:none;">
                 <p class="signup-option">Logged in as <strong id="memberEmail"></strong>. <a href="/membership/login">Switch account</a></p>
-                <button type="button" class="ud-main-btn ud-white-btn w-100" id="memberPayBtn">Purchase</button>
+                <button type="button" class="ud-main-btn ud-white-btn w-100" id="memberPayBtn">Pay now</button>
               </div>
 
             </form>

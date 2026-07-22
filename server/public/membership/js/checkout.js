@@ -3,17 +3,6 @@ let selectedPlan = null;
 let memberData = null;
 let paymentConfig = null;
 
-const paymentFees = {
-  qris_shopee: 750,
-  qris: 750,
-  bca_va: 5500,
-  bni_va: 4250,
-  bri_va: 4250,
-  mandiri_va: 4250,
-  alfamart: 3500,
-};
-const paymentPercent = 0.007;
-
 async function loadConfig() {
   const res = await fetch('/api/membership/payment-config');
   if (!res.ok) return;
@@ -68,58 +57,15 @@ async function init() {
     selectedPlan = plans.find(p => String(p.id) === String(planSelect.value));
     updateSummary();
   });
-  document.getElementById('paymentSelect').addEventListener('change', updateSummary);
-  document.getElementById('promotionCode').addEventListener('input', debounce(updateSummary, 600));
 
   updateSummary();
 }
 
-function debounce(fn, ms) {
-  let t;
-  return () => { clearTimeout(t); t = setTimeout(fn, ms); };
-}
-
 function updateSummary() {
   if (!selectedPlan) return;
-
-  const price = selectedPlan.price_cents;
-  const method = document.getElementById('paymentSelect').value;
-  const fee = (paymentFees[method] || 0) + Math.round(price * paymentPercent);
-  const promo = document.getElementById('promotionCode').value.trim();
-  const promoStatus = document.getElementById('promoStatus');
-
-  let discount = 0;
-  let promoMsg = '';
-
-  if (promo) {
-    // Simple hardcoded promo for demo; in real app, validate server-side
-    const promoUpper = promo.toUpperCase();
-    if (promoUpper === 'SHARELY50') {
-      discount = Math.round(price * 0.50);
-      promoMsg = '50% discount applied';
-      promoStatus.style.color = '#16a34a';
-    } else if (promoUpper === 'SHARELY25') {
-      discount = Math.round(price * 0.25);
-      promoMsg = '25% discount applied';
-      promoStatus.style.color = '#16a34a';
-    } else {
-      promoMsg = 'Invalid promotion code';
-      promoStatus.style.color = '#dc2626';
-    }
-  }
-
-  promoStatus.textContent = promoMsg;
-
-  const total = price + fee - discount;
-
   document.getElementById('summaryPlanLabel').textContent = selectedPlan.name;
-  document.getElementById('summaryPrice').textContent = price.toLocaleString('id-ID');
-  document.getElementById('summaryFee').textContent = fee.toLocaleString('id-ID');
-  document.getElementById('summaryDiscount').textContent = discount.toLocaleString('id-ID');
-  document.getElementById('summaryTotal').textContent = total.toLocaleString('id-ID');
-
-  const discountRow = document.getElementById('summaryDiscountRow');
-  discountRow.style.display = discount > 0 ? 'flex' : 'none';
+  document.getElementById('summaryPrice').textContent = selectedPlan.price_cents.toLocaleString('id-ID');
+  document.getElementById('summaryTotal').textContent = selectedPlan.price_cents.toLocaleString('id-ID');
 }
 
 async function startPayment(email, name) {
@@ -154,7 +100,7 @@ async function startPayment(email, name) {
       onClose: function() {
         btn.disabled = false;
         btn.style.opacity = '1';
-        btn.textContent = 'Purchase';
+        btn.textContent = 'Pay now';
       }
     });
   } catch (err) {
@@ -162,7 +108,7 @@ async function startPayment(email, name) {
     alertBox.classList.add('show');
     btn.disabled = false;
     btn.style.opacity = '1';
-    btn.textContent = 'Purchase';
+    btn.textContent = 'Pay now';
   }
 }
 
