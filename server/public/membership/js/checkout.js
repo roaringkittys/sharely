@@ -1,7 +1,18 @@
-const planId = new URLSearchParams(location.search).get('plan');
+let plans = [];
 let selectedPlan = null;
 let memberData = null;
 let paymentConfig = null;
+
+const paymentFees = {
+  qris_shopee: 750,
+  qris: 750,
+  bca_va: 5500,
+  bni_va: 4250,
+  bri_va: 4250,
+  mandiri_va: 4250,
+  alfamart: 3500,
+};
+const paymentPercent = 0.007;
 
 async function loadConfig() {
   const res = await fetch('/api/membership/payment-config');
@@ -29,24 +40,86 @@ async function init() {
     document.getElementById('memberEmail').textContent = memberData.member.email;
   }
 
-  if (!planId) {
-    window.location.href = '/membership/pricing';
+  plans = await MembershipUI.fetchPlans();
+  const planSelect = document.getElementById('planSelect');
+  planSelect.innerHTML = plans.map(p =>
+    `<option value="${p.id}">${p.name} (${MembershipUI.formatMoney(p.price_cents)})</option>`
+  ).join('');
+
+  if (!plans.length) {
+    document.getElementById('alertBox').textContent = 'No plans available. Please try again later.';
+    document.getElementById('alertBox').classList.add('show');
+    document.getElementById('payBtn').disabled = true;
+    document.getElementById('memberPayBtn').disabled = true;
     return;
   }
 
-  const plans = await MembershipUI.fetchPlans();
-  selectedPlan = plans.find(p => String(p.id) === String(planId));
-  if (!selectedPlan) {
-    window.location.href = '/membership/pricing';
-    return;
+  // Auto-select plan from URL if provided
+  const urlPlanId = new URLSearchParams(location.search).get('plan');
+  if (urlPlanId) {
+    const match = plans.find(p => String(p.id) === String(urlPlanId));
+    if (match) planSelect.value = String(match.id);
   }
 
-  const durationLabel = selectedPlan.duration_days ? `${selectedPlan.duration_days} hari` : (selectedPlan.billing_interval === 'year' ? 'Yearly' : 'Monthly');
-  document.getElementById('summaryBox').innerHTML = `
-    <div class="mp-summary-row"><span>${selectedPlan.name} Plan</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
-    <div class="mp-summary-row"><span>Durasi akses</span><span>${durationLabel}</span></div>
-    <div class="mp-summary-row mp-summary-total"><span>Total bayar</span><span>${MembershipUI.formatMoney(selectedPlan.price_cents)}</span></div>
-  `;
+  selectedPlan = plans.find(p => String(p.id) === String(planSelect.value));
+  if (!selectedPlan) selectedPlan = plans[0];
+
+  planSelect.addEventListener('change', () => {
+    selectedPlan = plans.find(p => String(p.id) === String(planSelect.value));
+    updateSummary();
+  });
+  document.getElementById('paymentSelect').addEventListener('change', updateSummary);
+  document.getElementById('promotionCode').addEventListener('input', debounce(updateSummary, 600));
+
+  updateSummary();
+}
+
+function debounce(fn, ms) {
+  let t;
+  return () => { clearTimeout(t); t = setTimeout(fn, ms); };
+}
+
+function updateSummary() {
+  if (!selectedPlan) return;
+
+  const price = selectedPlan.price_cents;
+  const method = document.getElementById('paymentSelect').value;
+  const fee = (paymentFees[method] || 0) + Math.round(price * paymentPercent);
+  const promo = document.getElementById('promotionCode').value.trim();
+  const promoStatus = document.getElementById('promoStatus');
+
+  let discount = 0;
+  let promoMsg = '';
+
+  if (promo) {
+    // Simple hardcoded promo for demo; in real app, validate server-side
+    const promoUpper = promo.toUpperCase();
+    if (promoUpper === 'SHARELY50') {
+      discount = Math.round(price * 0.50);
+      promoMsg = '50% discount applied';
+      promoStatus.style.color = '#16a34a';
+    } else if (promoUpper === 'SHARELY25') {
+      discount = Math.round(price * 0.25);
+      promoMsg = '25% discount applied';
+      promoStatus.style.color = '#16a34a';
+    } else {
+      promoMsg = 'Invalid promotion code';
+      promoStatus.style.color = '#dc2626';
+    }
+  }
+
+  promoStatus.textContent = promoMsg;
+
+  const total = price + fee - discount;
+
+  document.getElementById('summaryPlanLabel').textContent = selectedPlan.name;
+  document.getElementById('summaryPrice').textContent = price.toLocaleString('id-ID');
+  document.getElementById('summaryFee').textContent = fee.toLocaleString('id-ID');
+  document.getElementById('summaryDiscount').textContent = discount.toLocaleString('id-ID');
+  document.getElementById('summaryTotal').textContent = total.toLocaleString('id-ID');
+
+  const discountRow = document.getElementById('summaryDiscountRow');
+  discountRow.style.display = discount > 0 ? 'flex' : 'none';
 }
 
 async function startPayment(email, name) {
@@ -54,6 +127,7 @@ async function startPayment(email, name) {
   const alertBox = document.getElementById('alertBox');
   alertBox.classList.remove('show');
   btn.disabled = true;
+  btn.style.opacity = '0.6';
   btn.textContent = 'Opening payment…';
 
   try {
@@ -79,14 +153,16 @@ async function startPayment(email, name) {
       },
       onClose: function() {
         btn.disabled = false;
-        btn.textContent = 'Pay now';
+        btn.style.opacity = '1';
+        btn.textContent = 'Purchase';
       }
     });
   } catch (err) {
     alertBox.textContent = err.message;
     alertBox.classList.add('show');
     btn.disabled = false;
-    btn.textContent = 'Pay now';
+    btn.style.opacity = '1';
+    btn.textContent = 'Purchase';
   }
 }
 
@@ -102,6 +178,7 @@ document.getElementById('payBtn').addEventListener('click', () => {
 });
 
 document.getElementById('memberPayBtn')?.addEventListener('click', () => {
+  if (!memberData) return;
   startPayment(memberData.member.email, memberData.member.name);
 });
 

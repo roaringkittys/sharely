@@ -3,144 +3,171 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — Sharely</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: #f0f0f0; min-height: 100vh; color: #111; }
-  a { text-decoration: none; }
-
-  .dash-wrap { max-width: 480px; margin: 0 auto; padding: 32px 20px 80px; }
-
-  .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-  .dash-greeting { font-size: 22px; font-weight: 800; color: #111; letter-spacing: -0.3px; }
-  .dash-logout { font-size: 13px; font-weight: 500; color: #888; cursor: pointer; background: none; border: none; font-family: inherit; }
-  .dash-logout:hover { color: #e74c3c; }
-
-  .dash-card {
-    background: #111;
-    border-radius: 20px;
-    padding: 22px 22px 18px;
-    margin-bottom: 14px;
-    color: #fff;
-  }
-  .dash-card-label {
-    font-size: 10.5px;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    font-weight: 700;
-    margin-bottom: 18px;
-  }
-
-  .plan-name { font-size: 26px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
-  .plan-expiry { font-size: 13px; color: #888; margin-bottom: 18px; line-height: 1.55; }
-  .plan-badge {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 6px 13px; border-radius: 9px; font-size: 12px; font-weight: 600;
-  }
-  .plan-badge-active { background: rgba(46,213,115,0.13); color: #2ed573; }
-  .plan-badge-inactive { background: rgba(255,180,0,0.13); color: #f9ca24; }
-  .plan-badge-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-  .plan-badge-active .plan-badge-dot { background: #2ed573; }
-  .plan-badge-inactive .plan-badge-dot { background: #f9ca24; }
-
-  .dash-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 14px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-    cursor: pointer; color: #fff;
-  }
-  .dash-row:last-child { border-bottom: none; padding-bottom: 0; }
-  .dash-row:first-of-type { padding-top: 0; }
-  .dash-row-label { font-size: 14.5px; font-weight: 500; }
-  .dash-row-arrow { color: #444; font-size: 17px; }
-  .dash-row.danger .dash-row-label { color: #e74c3c; }
-  .dash-row.danger .dash-row-arrow { color: #e74c3c; }
-
-  .dash-ext-sub { font-size: 13px; color: #888; line-height: 1.55; margin-bottom: 14px; }
-  .dash-ext-btn {
-    display: block; width: 100%;
-    background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.13);
-    border-radius: 12px; padding: 13px 16px;
-    color: #fff; font-size: 14px; font-weight: 600; text-align: center;
-  }
-  .dash-ext-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
-
-  .dash-no-plan { font-size: 14px; color: #888; margin-bottom: 16px; line-height: 1.55; }
-  .dash-cta-btn {
-    display: inline-block; background: #fff; color: #111;
-    border-radius: 10px; padding: 11px 20px; font-size: 13.5px; font-weight: 700;
-  }
-  .dash-cta-btn:hover { background: #eee; color: #111; }
-</style>
+<title>Dashboard | Sharely</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="/membership/css/groupy-theme.css">
 </head>
 <body>
-  <div class="dash-wrap">
-    <div class="dash-header">
-      <div class="dash-greeting">Hi, <span id="memberFirst">—</span> 👋</div>
-      <button class="dash-logout" id="logoutBtn">Log out →</button>
-    </div>
 
-    <!-- Current Plan -->
-    <div class="dash-card">
-      <div class="dash-card-label">Current Plan</div>
-      <div id="planSection">
-        <div class="plan-name" id="planName">—</div>
-        <div class="plan-expiry" id="planExpiry">—</div>
-        <div class="plan-badge plan-badge-active" id="planBadge">
-          <span class="plan-badge-dot"></span>
-          <span id="planBadgeText">Active</span>
+  <div class="announcement-bar">
+    The only official Sharely website is <strong><a href="/">https://sharely.app</a></strong>.
+    Please be aware of fake websites.
+  </div>
+
+  <header class="ud-header">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <nav class="navbar navbar-expand-lg">
+            <a class="navbar-brand" href="/membership">
+              <span style="font-weight:800; font-size:22px; color:#7c3aed;">Sharely</span>
+            </a>
+            <div class="navbar-collapse">
+              <ul class="navbar-nav mx-auto">
+                <li class="nav-item"><a href="/membership">Home</a></li>
+                <li class="nav-item"><a href="/membership/pricing">Pricing</a></li>
+                <li class="nav-item"><a href="/membership/dashboard">Dashboard</a></li>
+              </ul>
+            </div>
+            <div class="navbar-btn">
+              <a href="/membership/dashboard" class="ud-main-btn ud-login-btn"><i class="fa-solid fa-user"></i></a>
+              <a href="#" class="ud-main-btn ud-white-btn" id="logoutBtn"><i class="fa fa-sign-out"></i></a>
+            </div>
+          </nav>
         </div>
       </div>
-      <div id="noPlanSection" style="display:none;">
-        <p class="dash-no-plan">You don't have an active plan yet.<br>Choose a plan to unlock your services.</p>
-        <a href="/membership/pricing" class="dash-cta-btn">View plans →</a>
+    </div>
+  </header>
+
+  <section class="ud-page-banner">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="ud-banner-content">
+            <h1>Dashboard</h1>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <!-- Account -->
-    <div class="dash-card">
-      <div class="dash-card-label">Account</div>
-      <a href="/membership/settings" class="dash-row">
-        <span class="dash-row-label">Edit profile</span>
-        <span class="dash-row-arrow">›</span>
-      </a>
-      <a href="/membership/activity" class="dash-row">
-        <span class="dash-row-label">Activity logs</span>
-        <span class="dash-row-arrow">›</span>
-      </a>
-      <a href="#" class="dash-row danger" id="logoutRow">
-        <span class="dash-row-label">Log out</span>
-        <span class="dash-row-arrow">›</span>
-      </a>
-    </div>
+  <section class="dashboard">
+    <div class="container">
 
-    <!-- Membership -->
-    <div class="dash-card">
-      <div class="dash-card-label">Membership</div>
-      <a href="/membership/pricing" class="dash-row">
-        <span class="dash-row-label">Purchase membership</span>
-        <span class="dash-row-arrow">›</span>
-      </a>
-      <a href="/membership/billing" class="dash-row">
-        <span class="dash-row-label">Order history</span>
-        <span class="dash-row-arrow">›</span>
-      </a>
-      <a href="/membership/upgrade" class="dash-row">
-        <span class="dash-row-label">Upgrade plan</span>
-        <span class="dash-row-arrow">›</span>
-      </a>
-    </div>
+      <div class="menu-section" id="planSection">
+        <div class="menu-section-mini-header">Your plan</div>
+        <img src="" alt="Logo" class="top-right-image" style="display:none;" id="topRightLogo">
+        <div class="menu-section-plan-premium" id="planName">Free</div>
+        <div class="menu-section-plan-description" id="planExpiry">
+          You don't have an active plan yet. Choose a plan to unlock your services.
+        </div>
+      </div>
 
-    <!-- Extension -->
-    <div class="dash-card">
-      <div class="dash-card-label">Extension</div>
-      <p class="dash-ext-sub">Install the Sharely Chrome extension to inject cookies and access your services with one click. Just log in here and the extension connects automatically.</p>
-      <a href="/api/membership/download-extension" class="dash-ext-btn" style="margin-bottom:10px">⬇ Download Extension (.zip)</a>
-      <a href="#" class="dash-ext-btn" onclick="return false;" style="opacity:.7">▶ Watch installation tutorial</a>
+      <div class="ext-connect-card" id="extConnectCard">
+        <h4><i class="fa fa-plug" style="margin-right:6px;"></i> Connect Your Extension</h4>
+        <p>Paste this token into your Sharely Extension settings to connect automatically.</p>
+        <div class="ext-connect-token">
+          <input type="text" id="accessTokenInput" readonly value="Loading..." />
+          <button id="copyTokenBtn">Copy</button>
+        </div>
+        <div class="ext-connect-copied" id="copiedMsg">Copied to clipboard!</div>
+      </div>
+
+      <div class="menu-section">
+        <div class="menu-section-header">Account</div>
+        <a href="/membership/settings" class="menu-item">
+          <span class="icon"><i class="fa fa-pen-to-square"></i></span> Edit profile
+          <span class="chevron">&#8250;</span>
+        </a>
+        <a href="/membership/billing" class="menu-item">
+          <span class="icon"><i class="fa fa-paperclip"></i></span> Order history
+          <span class="chevron">&#8250;</span>
+        </a>
+        <a href="#" class="menu-item" id="logoutRow">
+          <span class="icon"><i class="fa fa-sign-out" style="color:#e74c3c;"></i></span> Log out
+          <span class="chevron" style="color:#e74c3c;">&#8250;</span>
+        </a>
+      </div>
+
+      <div class="menu-section">
+        <div class="menu-section-header">Premium</div>
+        <a href="/membership/pricing" class="menu-item">
+          <span class="icon"><i class="fa fa-shopping-cart"></i></span> Purchase premium
+          <span class="chevron">&#8250;</span>
+        </a>
+        <a href="/membership/billing" class="menu-item">
+          <span class="icon"><i class="fa fa-paperclip"></i></span> Order history
+          <span class="chevron">&#8250;</span>
+        </a>
+        <a href="/membership/upgrade" class="menu-item">
+          <span class="icon"><i class="fa fa-right-left"></i></span> Upgrade plan
+          <span class="chevron">&#8250;</span>
+        </a>
+      </div>
+
+      <div class="menu-section">
+        <div class="menu-section-header">Extension</div>
+        <a href="/api/membership/download-extension" class="menu-item">
+          <span class="icon"><i class="fa fa-download"></i></span> Download Extension (.zip)
+          <span class="chevron">&#8250;</span>
+        </a>
+        <a href="#" class="menu-item" onclick="return false;" style="opacity:.7">
+          <span class="icon"><i class="fa fa-play"></i></span> Watch installation tutorial
+          <span class="chevron">&#8250;</span>
+        </a>
+      </div>
+
     </div>
-  </div>
+  </section>
+
+  <footer class="ud-footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-xl-3 col-lg-4 col-md-6">
+          <div class="ud-widget">
+            <a href="/membership" class="ud-footer-logo"><span style="font-weight:800; font-size:20px; color:#fff;">Sharely</span></a>
+            <p class="ud-widget-desc">One-click access to premium services.</p>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+          <div class="ud-widget">
+            <h5 class="ud-widget-title">Dashboard</h5>
+            <ul class="ud-widget-links">
+              <li><a href="/membership/dashboard">View dashboard</a></li>
+              <li><a href="/membership/pricing">Purchase premium</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+          <div class="ud-widget">
+            <h5 class="ud-widget-title">Extension</h5>
+            <ul class="ud-widget-links">
+              <li><a href="/api/membership/download-extension">Download extension</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ud-footer-bottom">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-8">
+            <ul class="ud-footer-bottom-left">
+              <li><a href="/membership">Home</a></li>
+              <li><a href="/membership/pricing">Pricing</a></li>
+              <li><a href="/membership">Contact Us</a></li>
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <p class="ud-footer-bottom-right">Sharely &copy; 2025</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="groupy-wave"><div style="margin-top:0px;height:20px"></div></div>
+  </footer>
+
+  <a href="javascript:void(0)" class="back-to-top" id="backToTop"><i class="fa-solid fa-arrow-up"></i></a>
 
   <script src="/membership/js/membership.js"></script>
   <script>
@@ -149,27 +176,41 @@
       if (!data) return;
 
       const firstName = (data.member.name || data.member.email).split(' ')[0];
-      document.getElementById('memberFirst').textContent = firstName;
 
+      // Plan section
       if (data.subscription && data.subscription.status === 'active') {
         const expiry = new Date(data.subscription.current_period_end);
         const days = Math.max(0, Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24)));
         document.getElementById('planName').textContent = data.subscription.plan_name;
-        document.getElementById('planExpiry').textContent =
-          'Valid until ' + MembershipUI.formatDate(data.subscription.current_period_end) +
-          ' \u00b7 ' + days + ' day' + (days !== 1 ? 's' : '') + ' remaining';
+        document.getElementById('planExpiry').innerHTML =
+          'Your <b>' + data.subscription.plan_name + '</b> is valid until ' + MembershipUI.formatDate(data.subscription.current_period_end) +
+          ' (UTC). <b>' + days + ' day' + (days !== 1 ? 's' : '') + ' remaining.</b>';
       } else if (data.subscription) {
-        const badge = document.getElementById('planBadge');
-        badge.className = 'plan-badge plan-badge-inactive';
-        document.getElementById('planBadgeText').textContent =
-          data.subscription.status.charAt(0).toUpperCase() + data.subscription.status.slice(1);
         document.getElementById('planName').textContent = data.subscription.plan_name;
-        document.getElementById('planExpiry').textContent = 'Expired \u2014 renew to continue using Sharely.';
+        document.getElementById('planExpiry').textContent = 'Expired — renew to continue using Sharely.';
       } else {
-        document.getElementById('planSection').style.display = 'none';
-        document.getElementById('noPlanSection').style.display = '';
+        document.getElementById('planName').textContent = 'Free';
+        document.getElementById('planExpiry').textContent = "You don't have an active plan yet. Choose a plan to unlock your services.";
       }
 
+      // Extension connect token
+      if (data.member.access_token) {
+        const tokenInput = document.getElementById('accessTokenInput');
+        tokenInput.value = data.member.access_token;
+        document.getElementById('copyTokenBtn').addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(tokenInput.value);
+            const msg = document.getElementById('copiedMsg');
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 2000);
+          } catch (e) {
+            tokenInput.select();
+            document.execCommand('copy');
+          }
+        });
+      }
+
+      // Logout
       async function doLogout(e) {
         if (e) e.preventDefault();
         await fetch('/api/membership/logout', { method: 'POST' });
@@ -177,6 +218,13 @@
       }
       document.getElementById('logoutBtn').addEventListener('click', doLogout);
       document.getElementById('logoutRow').addEventListener('click', doLogout);
+
+      // Back to top
+      const backToTop = document.getElementById('backToTop');
+      window.addEventListener('scroll', () => {
+        backToTop.classList.toggle('show', window.scrollY > 300);
+      });
+      backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     })();
   </script>
 </body>

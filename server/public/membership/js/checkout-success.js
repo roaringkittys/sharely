@@ -14,10 +14,11 @@ async function checkTransaction() {
     if (data.status === 'paid') {
       const meRes = await fetch('/api/membership/me');
       if (meRes.ok) {
-        document.getElementById('successCard').style.display = 'none';
-        document.getElementById('existingMemberCard').style.display = 'block';
+        // Logged-in member: auto-complete and redirect
+        await autoCompleteForMember();
         return;
       }
+      // Guest: show create-account form
     } else if (data.status === 'pending' && isPending) {
       document.querySelector('.mp-auth-sub').textContent = 'Your payment is being processed. We will activate your subscription once it is confirmed.';
       document.getElementById('createAccountForm').style.display = 'none';
@@ -26,6 +27,33 @@ async function checkTransaction() {
     }
   } catch (err) {
     console.error(err);
+  }
+}
+
+async function autoCompleteForMember() {
+  const btn = document.getElementById('submitBtn');
+  const alertBox = document.getElementById('alertBox');
+  alertBox.classList.remove('show');
+  if (btn) btn.disabled = true;
+  document.getElementById('createAccountForm').style.display = 'none';
+  document.getElementById('loadingAccount').style.display = 'block';
+  document.querySelector('.mp-auth-sub').textContent = 'Activating your subscription…';
+
+  try {
+    const res = await fetch('/api/membership/checkout-complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: orderId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Activation failed');
+    window.location.href = '/membership/dashboard';
+  } catch (err) {
+    document.getElementById('loadingAccount').style.display = 'none';
+    document.getElementById('createAccountForm').style.display = 'block';
+    if (btn) btn.disabled = false;
+    alertBox.textContent = err.message;
+    alertBox.classList.add('show');
   }
 }
 

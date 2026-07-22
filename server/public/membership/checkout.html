@@ -3,54 +3,195 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Checkout — Sharely</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/membership/css/membership.css">
+<title>Purchase premium | Sharely</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="/membership/css/groupy-theme.css">
 </head>
-<body class="mp">
-  <nav class="mp-nav">
-    <div class="mp-nav-inner">
-      <a href="/membership" class="mp-logo"><div class="mp-logo-mark">S</div>Sharely</a>
-      <div></div>
-      <div class="mp-nav-actions">
-        <a href="/membership/pricing" class="mp-btn mp-btn-ghost mp-btn-sm">← Back to plans</a>
+<body>
+
+  <div class="announcement-bar">
+    The only official Sharely website is <strong><a href="/">https://sharely.app</a></strong>.
+    Please be aware of fake websites.
+  </div>
+
+  <header class="ud-header sticky">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <nav class="navbar navbar-expand-lg">
+            <a class="navbar-brand" href="/membership">
+              <span style="font-weight:800; font-size:22px; color:#7c3aed;">Sharely</span>
+            </a>
+            <div class="navbar-collapse">
+              <ul class="navbar-nav mx-auto">
+                <li class="nav-item"><a href="/membership">Home</a></li>
+                <li class="nav-item"><a href="/membership/pricing">Pricing</a></li>
+                <li class="nav-item"><a href="/membership/dashboard">Dashboard</a></li>
+              </ul>
+            </div>
+            <div class="navbar-btn">
+              <a href="/membership/dashboard" class="ud-main-btn ud-login-btn"><i class="fa-solid fa-user"></i></a>
+              <a href="/membership/login" class="ud-main-btn ud-white-btn"><i class="fa fa-sign-in"></i></a>
+            </div>
+          </nav>
+        </div>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <section class="mp-section">
-    <div class="mp-container">
-      <div class="mp-checkout-grid">
-        <div class="mp-card">
-          <h3 style="margin-bottom:20px;">Complete your purchase</h3>
-          <div id="alertBox" class="mp-alert mp-alert-error"></div>
-
-          <div id="guestForm">
-            <div class="mp-field">
-              <label>Email address</label>
-              <input type="email" id="emailInput" placeholder="you@example.com" required autocomplete="email" />
-            </div>
-            <div class="mp-field">
-              <label>Full name</label>
-              <input type="text" id="nameInput" placeholder="Your name" required autocomplete="name" />
-            </div>
-            <button type="button" class="mp-btn mp-btn-primary mp-btn-block" id="payBtn">Pay now</button>
-            <p style="font-size:12.5px; color:var(--mp-text-faint); text-align:center; margin-top:14px;">Secured by Midtrans. You will be redirected to a safe payment page.</p>
+  <section class="ud-page-banner">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="ud-banner-content">
+            <h1>Purchase premium</h1>
           </div>
-
-          <div id="memberForm" style="display:none;">
-            <p class="mp-auth-sub">Logged in as <strong id="memberEmail"></strong>. <a href="/membership/login">Switch account</a></p>
-            <button type="button" class="mp-btn mp-btn-primary mp-btn-block" id="memberPayBtn">Pay now</button>
-          </div>
-        </div>
-
-        <div class="mp-card">
-          <h3 style="margin-bottom:20px;">Order summary</h3>
-          <div id="summaryBox">Loading…</div>
         </div>
       </div>
     </div>
   </section>
+
+  <section class="ud-login">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="ud-login-wrapper">
+            <form id="purchaseForm" onsubmit="return false;">
+
+              <div id="alertBox" class="ud-alert ud-alert-error"></div>
+
+              <div class="groupy-form-group">
+                <select id="planSelect"></select>
+                <label for="planSelect">Plan</label>
+              </div>
+
+              <div class="groupy-form-group">
+                <select id="paymentSelect">
+                  <optgroup label="QR Payments">
+                    <option value="qris_shopee" selected>QRIS by ShopeePay (Rp 750 + 0.7% fee)</option>
+                    <option value="qris">QRIS (Rp 750 + 0.7% fee)</option>
+                  </optgroup>
+                  <optgroup label="Bank Transfers">
+                    <option value="bca_va">BCA Virtual Account (Rp 5.500 fee)</option>
+                    <option value="bni_va">BNI Virtual Account (Rp 4.250 fee)</option>
+                    <option value="bri_va">BRI Virtual Account (Rp 4.250 fee)</option>
+                    <option value="mandiri_va">Mandiri Virtual Account (Rp 4.250 fee)</option>
+                  </optgroup>
+                  <optgroup label="Retail Outlets">
+                    <option value="alfamart">Alfamart (Rp 3.500 fee)</option>
+                  </optgroup>
+                </select>
+                <label for="paymentSelect">Payment method</label>
+              </div>
+
+              <div class="groupy-form-group">
+                <div class="promo-row">
+                  <div style="flex-grow:1; position:relative;">
+                    <input type="text" id="promotionCode" placeholder=" " style="margin-bottom:0;" />
+                    <label for="promotionCode">Promotion code</label>
+                  </div>
+                </div>
+                <small id="promoStatus"></small>
+              </div>
+
+              <div class="transaction-details">
+                <h5>Order summary</h5>
+                <div class="summary-row"><span id="summaryPlanLabel">Plan</span><span>Rp <span id="summaryPrice">0</span></span></div>
+                <div class="summary-row discount" id="summaryDiscountRow">
+                  <span>Promotion</span><span>- Rp <span id="summaryDiscount">0</span></span>
+                </div>
+                <div class="summary-row fee">
+                  <span>Transaction fee</span><span>+ Rp <span id="summaryFee">1.100</span></span>
+                </div>
+                <hr class="summary-divider">
+                <div class="summary-row total">
+                  <span>Total</span><span>Rp <span id="summaryTotal">0</span></span>
+                </div>
+              </div>
+
+              <p class="signup-option" style="font-size:12px;">
+                By completing your purchase, you agree with our <a href="/membership" target="_blank">Terms of Service</a>.
+              </p>
+
+              <div id="guestForm">
+                <div class="groupy-form-group">
+                  <input type="email" id="emailInput" placeholder=" " required autocomplete="email" />
+                  <label for="emailInput">Email address</label>
+                </div>
+                <div class="groupy-form-group">
+                  <input type="text" id="nameInput" placeholder=" " required autocomplete="name" />
+                  <label for="nameInput">Full name</label>
+                </div>
+                <button type="button" class="ud-main-btn ud-white-btn w-100" id="payBtn">Purchase</button>
+              </div>
+
+              <div id="memberForm" style="display:none;">
+                <p class="signup-option">Logged in as <strong id="memberEmail"></strong>. <a href="/membership/login">Switch account</a></p>
+                <button type="button" class="ud-main-btn ud-white-btn w-100" id="memberPayBtn">Purchase</button>
+              </div>
+
+            </form>
+
+            <p class="signup-option">
+              Looking for your order history? <a href="/membership/billing">Order history</a>
+            </p>
+            <ul class="back-to-the-dashboard">
+              <li><a href="/membership/dashboard">Back to the dashboard</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="ud-footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-xl-3 col-lg-4 col-md-6">
+          <div class="ud-widget">
+            <a href="/membership" class="ud-footer-logo"><span style="font-weight:800; font-size:20px; color:#fff;">Sharely</span></a>
+            <p class="ud-widget-desc">One-click access to premium services.</p>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+          <div class="ud-widget">
+            <h5 class="ud-widget-title">Dashboard</h5>
+            <ul class="ud-widget-links">
+              <li><a href="/membership/dashboard">View dashboard</a></li>
+              <li><a href="/membership/pricing">Purchase premium</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+          <div class="ud-widget">
+            <h5 class="ud-widget-title">Extension</h5>
+            <ul class="ud-widget-links">
+              <li><a href="/api/membership/download-extension">Download extension</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ud-footer-bottom">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-8">
+            <ul class="ud-footer-bottom-left">
+              <li><a href="/membership">Home</a></li>
+              <li><a href="/membership/pricing">Pricing</a></li>
+              <li><a href="/membership">Contact Us</a></li>
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <p class="ud-footer-bottom-right">Sharely &copy; 2025</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="groupy-wave"><div style="margin-top:0px;height:20px"></div></div>
+  </footer>
+
+  <a href="javascript:void(0)" class="back-to-top" id="backToTop"><i class="fa-solid fa-arrow-up"></i></a>
 
   <script src="/membership/js/membership.js"></script>
   <script src="/membership/js/checkout.js"></script>

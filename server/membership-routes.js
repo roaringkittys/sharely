@@ -244,11 +244,8 @@ function init(app, db, publicDir) {
 
   router.post('/api/membership/checkout-complete', async (req, res) => {
     const { order_id, name, password } = req.body || {};
-    if (!order_id || !name || !password) {
-      return res.status(400).json({ error: 'Order ID, name and password are required' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (!order_id) {
+      return res.status(400).json({ error: 'Order ID is required' });
     }
 
     const tx = db.prepare('SELECT * FROM transactions WHERE order_id = ?').get(order_id);
@@ -258,28 +255,60 @@ function init(app, db, publicDir) {
     const plan = db.prepare('SELECT * FROM plans WHERE id = ?').get(tx.plan_id);
     if (!plan) return res.status(404).json({ error: 'Plan not found' });
 
-    // Create or find member by email stored in transaction metadata
-    // We don't store email in transactions table — we should. Let's use the member_id if already linked.
-    let memberId = tx.member_id;
+    // Already logged in → just activate subscription, skip account creation
+    const sessionMemberId = req.session && req.session.memberId;
+    if (sessionMemberId) {
+      db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE member_id = ? AND status = 'active'").run(sessionMemberId);
+      const periodEnd = new Date();
+      periodEnd.setDate(periodEnd.getDate() + (plan.duration_days || 30));
+      const subResult = db.prepare(
+        'INSERT INTO subscriptions (member_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)'
+      ).run(sessionMemberId, plan.id, 'active', periodEnd.toISOString());
+      db.prepare(
+        'INSERT INTO billing_records (member_id, subscription_id, amount_cents, status, provider, provider_ref) VALUES (?, ?, ?, ?, ?, ?)'
+      ).run(sessionMemberId, subResult.lastInsertRowid, plan.price_cents, 'paid', 'midtrans', order_id);
+      return res.json({ success: true, memberId: sessionMemberId, subscriptionId: subResult.lastInsertRowid });
+    }
+
+    // Transaction already linked to a member (e.g. by webhook) → activate for that member
+    if (tx.member_id) {
+      db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE member_id = ? AND status = 'active'").run(tx.member_id);
+      const periodEnd = new Date();
+      periodEnd.setDate(periodEnd.getDate() + (plan.duration_days || 30));
+      const subResult = db.prepare(
+        'INSERT INTO subscriptions (member_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)'
+      ).run(tx.member_id, plan.id, 'active', periodEnd.toISOString());
+      db.prepare(
+        'INSERT INTO billing_records (member_id, subscription_id, amount_cents, status, provider, provider_ref) VALUES (?, ?, ?, ?, ?, ?)'
+      ).run(tx.member_id, subResult.lastInsertRowid, plan.price_cents, 'paid', 'midtrans', order_id);
+      req.session.memberId = tx.member_id;
+      return res.json({ success: true, memberId: tx.member_id, subscriptionId: subResult.lastInsertRowid });
+    }
+
+    // Guest flow: require name and password to create account
+    if (!name || !password) {
+      return res.status(400).json({ error: 'Name and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    let memberId = null;
     let email = '';
 
-    if (!memberId) {
-      // Need to get email from the request or from the Snap transaction
-      // For now, require email in the request body
-      email = (req.body.email || '').toLowerCase();
-      if (!email) return res.status(400).json({ error: 'Email is required' });
+    email = (req.body.email || '').toLowerCase();
+    if (!email) return res.status(400).json({ error: 'Email is required' });
 
-      const existing = db.prepare('SELECT id FROM members WHERE email = ?').get(email);
-      if (existing) {
-        memberId = existing.id;
-      } else {
-        const hash = bcrypt.hashSync(password, 10);
-        const result = db.prepare('INSERT INTO members (email, password, name, status) VALUES (?, ?, ?, ?)')
-          .run(email, hash, name, 'active');
-        memberId = result.lastInsertRowid;
-      }
-      db.prepare('UPDATE transactions SET member_id = ? WHERE order_id = ?').run(memberId, order_id);
+    const existing = db.prepare('SELECT id FROM members WHERE email = ?').get(email);
+    if (existing) {
+      memberId = existing.id;
+    } else {
+      const hash = bcrypt.hashSync(password, 10);
+      const result = db.prepare('INSERT INTO members (email, password, name, status) VALUES (?, ?, ?, ?)')
+        .run(email, hash, name, 'active');
+      memberId = result.lastInsertRowid;
     }
+    db.prepare('UPDATE transactions SET member_id = ? WHERE order_id = ?').run(memberId, order_id);
 
     const member = db.prepare('SELECT * FROM members WHERE id = ?').get(memberId);
     if (!member) return res.status(404).json({ error: 'Member not found' });
@@ -287,8 +316,7 @@ function init(app, db, publicDir) {
     // Activate subscription
     db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE member_id = ? AND status = 'active'").run(memberId);
     const periodEnd = new Date();
-    const durationDays = plan.duration_days || 30;
-    periodEnd.setDate(periodEnd.getDate() + durationDays);
+    periodEnd.setDate(periodEnd.getDate() + (plan.duration_days || 30));
     const subResult = db.prepare(
       'INSERT INTO subscriptions (member_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)'
     ).run(memberId, plan.id, 'active', periodEnd.toISOString());

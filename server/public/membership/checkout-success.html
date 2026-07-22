@@ -4,44 +4,150 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Payment successful — Sharely</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/membership/css/membership.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="/membership/css/groupy-theme.css">
 </head>
-<body class="mp">
-  <div class="mp-auth-wrap">
-    <div class="mp-auth-card mp-text-center" id="successCard">
-      <div style="font-size:48px; margin-bottom:16px;">✅</div>
-      <h1>Payment received!</h1>
-      <p class="mp-auth-sub">Your subscription is being activated. Create your account to get started.</p>
-      <form id="createAccountForm" style="text-align:left; margin-top:20px;">
-        <div id="alertBox" class="mp-alert mp-alert-error"></div>
-        <div class="mp-field">
-          <label>Email</label>
-          <input type="email" id="emailInput" readonly />
+<body>
+
+  <div class="announcement-bar">
+    The only official Sharely website is <strong><a href="/">https://sharely.app</a></strong>.
+    Please be aware of fake websites.
+  </div>
+
+  <header class="ud-header sticky">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <nav class="navbar navbar-expand-lg">
+            <a class="navbar-brand" href="/membership">
+              <span style="font-weight:800; font-size:22px; color:#7c3aed;">Sharely</span>
+            </a>
+            <div class="navbar-collapse">
+              <ul class="navbar-nav mx-auto">
+                <li class="nav-item"><a href="/membership">Home</a></li>
+                <li class="nav-item"><a href="/membership/pricing">Pricing</a></li>
+                <li class="nav-item"><a href="/membership/dashboard">Dashboard</a></li>
+              </ul>
+            </div>
+            <div class="navbar-btn">
+              <a href="/membership/dashboard" class="ud-main-btn ud-login-btn"><i class="fa-solid fa-user"></i></a>
+              <a href="/membership/login" class="ud-main-btn ud-white-btn"><i class="fa fa-sign-in"></i></a>
+            </div>
+          </nav>
         </div>
-        <div class="mp-field">
-          <label>Full name</label>
-          <input type="text" id="nameInput" required autocomplete="name" />
-        </div>
-        <div class="mp-field">
-          <label>Password</label>
-          <input type="password" id="passwordInput" required minlength="6" autocomplete="new-password" />
-        </div>
-        <button type="submit" class="mp-btn mp-btn-primary mp-btn-block" id="submitBtn">Create account & continue</button>
-      </form>
-      <div id="loadingAccount" style="display:none;">
-        <div class="mp-spinner" style="margin:20px auto;"></div>
-        <p>Creating your account…</p>
       </div>
     </div>
+  </header>
 
-    <div class="mp-auth-card mp-text-center" id="existingMemberCard" style="display:none;">
-      <div style="font-size:48px; margin-bottom:16px;">✅</div>
-      <h1>You're all set!</h1>
-      <p class="mp-auth-sub">Your subscription is active.</p>
-      <a href="/membership/dashboard" class="mp-btn mp-btn-primary mp-btn-block">Go to dashboard</a>
+  <section class="ud-page-banner">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="ud-banner-content">
+            <h1>Payment successful</h1>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <section class="ud-login">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="ud-login-wrapper" style="text-align:center;">
+
+            <div id="successCard">
+              <div style="font-size:48px; margin-bottom:16px;">✅</div>
+              <h2 style="font-size:22px; font-weight:700; margin-bottom:10px;">Payment received!</h2>
+              <p style="font-size:14px; color:#666; margin-bottom:20px;" class="mp-auth-sub" id="statusMsg">
+                Your subscription is being activated. Create your account to get started.
+              </p>
+
+              <form id="createAccountForm" style="text-align:left; margin-top:20px;">
+                <div id="alertBox" class="ud-alert ud-alert-error"></div>
+                <div class="groupy-form-group">
+                  <input type="email" id="emailInput" readonly placeholder=" " />
+                  <label>Email</label>
+                </div>
+                <div class="groupy-form-group">
+                  <input type="text" id="nameInput" required autocomplete="name" placeholder=" " />
+                  <label>Full name</label>
+                </div>
+                <div class="groupy-form-group">
+                  <input type="password" id="passwordInput" required minlength="6" autocomplete="new-password" placeholder=" " />
+                  <label>Password</label>
+                </div>
+                <button type="submit" class="ud-main-btn ud-white-btn w-100" id="submitBtn">Create account &amp; continue</button>
+              </form>
+
+              <div id="loadingAccount" style="display:none;">
+                <div class="ud-spinner" style="margin:20px auto;"></div>
+                <p style="font-size:14px; color:#888;">Activating your subscription…</p>
+              </div>
+            </div>
+
+            <div id="existingMemberCard" style="display:none;">
+              <div style="font-size:48px; margin-bottom:16px;">✅</div>
+              <h2 style="font-size:22px; font-weight:700; margin-bottom:10px;">You're all set!</h2>
+              <p style="font-size:14px; color:#666; margin-bottom:20px;">Your subscription is active.</p>
+              <a href="/membership/dashboard" class="ud-main-btn ud-white-btn" style="display:inline-block; padding:10px 24px;">Go to dashboard</a>
+            </div>
+
+            <ul class="back-to-the-dashboard" style="margin-top:20px;">
+              <li><a href="/membership/dashboard">Back to the dashboard</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="ud-footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-xl-3 col-lg-4 col-md-6">
+          <div class="ud-widget">
+            <a href="/membership" class="ud-footer-logo"><span style="font-weight:800; font-size:20px; color:#fff;">Sharely</span></a>
+            <p class="ud-widget-desc">One-click access to premium services.</p>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+          <div class="ud-widget">
+            <h5 class="ud-widget-title">Dashboard</h5>
+            <ul class="ud-widget-links">
+              <li><a href="/membership/dashboard">View dashboard</a></li>
+              <li><a href="/membership/pricing">Purchase premium</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+          <div class="ud-widget">
+            <h5 class="ud-widget-title">Extension</h5>
+            <ul class="ud-widget-links">
+              <li><a href="/api/membership/download-extension">Download extension</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ud-footer-bottom">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-8">
+            <ul class="ud-footer-bottom-left">
+              <li><a href="/membership">Home</a></li>
+              <li><a href="/membership/pricing">Pricing</a></li>
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <p class="ud-footer-bottom-right">Sharely &copy; 2025</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="groupy-wave"><div style="margin-top:0px;height:20px"></div></div>
+  </footer>
 
   <script src="/membership/js/membership.js"></script>
   <script src="/membership/js/checkout-success.js"></script>
