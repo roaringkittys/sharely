@@ -1,9 +1,8 @@
-/* Membership admin dashboard logic — lazy-initialised by calling window.initAdmin() */
+/* Membership admin dashboard logic */
 
-window.initAdmin = function () {
-  // Tab switching — scoped to #adminSection so member dashboard tabs are unaffected
-  const tabs = document.querySelectorAll('#adminSection .mp-tab');
-  const panels = document.querySelectorAll('#adminSection .mp-tab-panel');
+(function () {
+  const tabs = document.querySelectorAll('.mp-tab');
+  const panels = document.querySelectorAll('.mp-tab-panel');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
@@ -33,7 +32,7 @@ window.initAdmin = function () {
       <tr>
         <td>${p.name}</td>
         <td>${MembershipUI.formatMoney(p.price_cents)}</td>
-        <td>${p.billing_interval} / ${p.duration_days || 30}d</td>
+        <td>${p.billing_interval}</td>
         <td><span class="mp-badge ${p.active ? 'mp-badge-active' : 'mp-badge-suspended'}">${p.active ? 'Active' : 'Inactive'}</span></td>
         <td><button class="mp-btn mp-btn-ghost mp-btn-sm" onclick="AdminUI.editPlanProducts(${p.id})">Manage tools</button></td>
         <td>
@@ -122,32 +121,30 @@ window.initAdmin = function () {
     loadBilling();
   }
 
-  // ── Plan modal — all IDs prefixed with "adm" to avoid collisions ──────
+  // ── Plan modal ────────────────────────────────────────────────────────
   const planModal = document.getElementById('planModal');
-  document.getElementById('admNewPlanBtn').addEventListener('click', () => openPlanModal());
-  document.getElementById('admCancelPlanBtn').addEventListener('click', () => planModal.classList.add('mp-hidden'));
+  document.getElementById('newPlanBtn').addEventListener('click', () => openPlanModal());
+  document.getElementById('cancelPlanBtn').addEventListener('click', () => planModal.classList.add('mp-hidden'));
 
   function openPlanModal(plan) {
-    document.getElementById('admPlanModalTitle').textContent = plan ? 'Edit plan' : 'New plan';
-    document.getElementById('admPlanId').value = plan ? plan.id : '';
-    document.getElementById('admPlanName').value = plan ? plan.name : '';
-    document.getElementById('admPlanDesc').value = plan ? plan.description : '';
-    document.getElementById('admPlanPrice').value = plan ? plan.price_cents : '';
-    document.getElementById('admPlanInterval').value = plan ? plan.billing_interval : 'day';
-    document.getElementById('admPlanDuration').value = plan ? (plan.duration_days || 30) : 30;
-    document.getElementById('admPlanFeatures').value = plan ? (plan.features || []).join('\n') : '';
+    document.getElementById('planModalTitle').textContent = plan ? 'Edit plan' : 'New plan';
+    document.getElementById('planId').value = plan ? plan.id : '';
+    document.getElementById('planName').value = plan ? plan.name : '';
+    document.getElementById('planDescription').value = plan ? plan.description : '';
+    document.getElementById('planPrice').value = plan ? (plan.price_cents / 100).toFixed(2) : '';
+    document.getElementById('planInterval').value = plan ? plan.billing_interval : 'month';
+    document.getElementById('planFeatures').value = plan ? (plan.features || []).join('\n') : '';
     planModal.classList.remove('mp-hidden');
   }
 
-  document.getElementById('admSavePlanBtn').addEventListener('click', async () => {
-    const id = document.getElementById('admPlanId').value;
+  document.getElementById('savePlanBtn').addEventListener('click', async () => {
+    const id = document.getElementById('planId').value;
     const payload = {
-      name: document.getElementById('admPlanName').value,
-      description: document.getElementById('admPlanDesc').value,
-      price_cents: parseInt(document.getElementById('admPlanPrice').value || '0', 10),
-      billing_interval: document.getElementById('admPlanInterval').value,
-      duration_days: parseInt(document.getElementById('admPlanDuration').value || '30', 10),
-      features: document.getElementById('admPlanFeatures').value.split('\n').map(s => s.trim()).filter(Boolean),
+      name: document.getElementById('planName').value,
+      description: document.getElementById('planDescription').value,
+      price_cents: Math.round(parseFloat(document.getElementById('planPrice').value || '0') * 100),
+      billing_interval: document.getElementById('planInterval').value,
+      features: document.getElementById('planFeatures').value.split('\n').map(s => s.trim()).filter(Boolean),
       active: true,
     };
     const url = id ? `/api/membership/admin/plans/${id}` : '/api/membership/admin/plans';
@@ -162,26 +159,26 @@ window.initAdmin = function () {
 
   // ── Product modal ─────────────────────────────────────────────────────
   const productModal = document.getElementById('productModal');
-  document.getElementById('admNewProductBtn').addEventListener('click', () => openProductModal());
-  document.getElementById('admCancelProductBtn').addEventListener('click', () => productModal.classList.add('mp-hidden'));
+  document.getElementById('newProductBtn').addEventListener('click', () => openProductModal());
+  document.getElementById('cancelProductBtn').addEventListener('click', () => productModal.classList.add('mp-hidden'));
 
   function openProductModal(product) {
-    document.getElementById('admProductModalTitle').textContent = product ? 'Edit tool' : 'New tool';
-    document.getElementById('admProductId').value = product ? product.id : '';
-    document.getElementById('admProductName').value = product ? product.name : '';
-    document.getElementById('admProductDesc').value = product ? product.description : '';
-    document.getElementById('admProductIcon').value = product ? product.icon : '';
-    document.getElementById('admProductCat').value = product ? product.category : '';
+    document.getElementById('productModalTitle').textContent = product ? 'Edit tool' : 'New tool';
+    document.getElementById('productId').value = product ? product.id : '';
+    document.getElementById('productName').value = product ? product.name : '';
+    document.getElementById('productDescription').value = product ? product.description : '';
+    document.getElementById('productIcon').value = product ? product.icon : '';
+    document.getElementById('productCategory').value = product ? product.category : '';
     productModal.classList.remove('mp-hidden');
   }
 
-  document.getElementById('admSaveProductBtn').addEventListener('click', async () => {
-    const id = document.getElementById('admProductId').value;
+  document.getElementById('saveProductBtn').addEventListener('click', async () => {
+    const id = document.getElementById('productId').value;
     const payload = {
-      name: document.getElementById('admProductName').value,
-      description: document.getElementById('admProductDesc').value,
-      icon: document.getElementById('admProductIcon').value || '🧰',
-      category: document.getElementById('admProductCat').value || 'general',
+      name: document.getElementById('productName').value,
+      description: document.getElementById('productDescription').value,
+      icon: document.getElementById('productIcon').value || '🧰',
+      category: document.getElementById('productCategory').value || 'general',
       active: true,
     };
     const url = id ? `/api/membership/admin/products/${id}` : '/api/membership/admin/products';
@@ -243,4 +240,4 @@ window.initAdmin = function () {
   };
 
   refreshAll();
-};
+})();

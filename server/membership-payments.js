@@ -38,15 +38,13 @@ function getCoreClient() {
 /**
  * Create a Midtrans Snap transaction token.
  * Returns { token, redirect_url, order_id }
- *
- * @param {string} [baseUrl] - The app's origin (e.g. "https://foo.replit.dev"), derived
- *   from the incoming request in the route handler so it always matches the domain the
- *   user is actually on — no hard-coded URL or env var needed.
  */
-async function createSnapToken({ orderId, amount, customerEmail, customerName, planName, items = [], baseUrl = '' }) {
+async function createSnapToken({ orderId, amount, customerEmail, customerName, planName, items = [] }) {
   const snap = getSnapClient();
 
   // Build the finish redirect URL so Midtrans can redirect after async payment (QRIS etc.)
+  const baseUrl = process.env.APP_BASE_URL ||
+    (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '');
   const finishUrl = baseUrl
     ? `${baseUrl}/membership/checkout/success?order_id=${encodeURIComponent(orderId)}&pending=1&email=${encodeURIComponent(customerEmail)}`
     : undefined;

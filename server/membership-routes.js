@@ -43,13 +43,6 @@ function init(app, db, publicDir) {
 
   router.get('/membership', (req, res) => res.redirect('/membership/home'));
 
-  // /membership/admin serves the unified dashboard; accepts admin OR member session
-  router.get('/membership/admin', (req, res) => {
-    const hasSession = req.session && (req.session.userId || req.session.memberId);
-    if (!hasSession) return res.redirect('/login');
-    res.sendFile(path.join(membershipPublicDir, 'dashboard.html'));
-  });
-
   const pages = {
     '/membership/home': 'home.html',
     '/membership/index.html': 'index.html',
@@ -58,6 +51,7 @@ function init(app, db, publicDir) {
     '/membership/login': 'login.html',
     '/membership/forgot-password': 'forgot-password.html',
     '/membership/reset-password': 'reset-password.html',
+    '/membership/admin': 'admin.html',
     '/membership/checkout': 'checkout.html',
     '/membership/checkout/success': 'checkout-success.html',
     '/membership/checkout/failed': 'checkout-failed.html',
@@ -76,12 +70,6 @@ function init(app, db, publicDir) {
   for (const [route, file] of Object.entries(memberPages)) {
     router.get(route, requireMember, (req, res) => res.sendFile(path.join(membershipPublicDir, file)));
   }
-
-  // ── Admin detection (public — returns boolean, no sensitive data) ─────────
-
-  router.get('/api/membership/is-admin', (req, res) => {
-    res.json({ isAdmin: !!(req.session && req.session.userId) });
-  });
 
   // ── Public API: plans & products ─────────────────────────────────────────
 
@@ -181,18 +169,12 @@ function init(app, db, publicDir) {
         'INSERT INTO transactions (order_id, member_id, plan_id, amount_cents, status, customer_email, customer_name) VALUES (?, ?, ?, ?, ?, ?, ?)'
       ).run(orderId, memberId, plan.id, amount, 'pending', email.toLowerCase(), name || email.split('@')[0]);
 
-      // Derive base URL from the incoming request so the Midtrans finish-redirect
-      // always points to whatever domain the app is currently running on
-      // (Replit dev, Replit deployed, Railway, etc.) — no env var needed.
-      const baseUrl = req.protocol + '://' + req.get('host');
-
       const snapResult = await payments.createSnapToken({
         orderId,
         amount,
         customerEmail: email.toLowerCase(),
         customerName: name || email.split('@')[0],
         planName: plan.name,
-        baseUrl,
         items: [{
           id: 'plan-' + plan.id,
           price: amount,
@@ -588,20 +570,20 @@ function init(app, db, publicDir) {
   });
 
   router.post('/api/membership/admin/plans', requireAdmin, (req, res) => {
-    const { name, price_cents, billing_interval, duration_days, description, features, sort_order } = req.body || {};
+    const { name, price_cents, billing_interval, description, features, sort_order } = req.body || {};
     if (!name || price_cents === undefined) return res.status(400).json({ error: 'Name and price are required' });
     const result = db.prepare(
-      'INSERT INTO plans (name, price_cents, billing_interval, duration_days, description, features_json, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(name, price_cents, billing_interval || 'day', duration_days || 30, description || '', JSON.stringify(features || []), sort_order || 0);
+      'INSERT INTO plans (name, price_cents, billing_interval, description, features_json, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(name, price_cents, billing_interval || 'month', description || '', JSON.stringify(features || []), sort_order || 0);
     res.json({ success: true, id: result.lastInsertRowid });
   });
 
   router.put('/api/membership/admin/plans/:id', requireAdmin, (req, res) => {
-    const { name, price_cents, billing_interval, duration_days, description, features, active, sort_order } = req.body || {};
+    const { name, price_cents, billing_interval, description, features, active, sort_order } = req.body || {};
     db.prepare(`
-      UPDATE plans SET name = ?, price_cents = ?, billing_interval = ?, duration_days = ?, description = ?, features_json = ?, active = ?, sort_order = ?
+      UPDATE plans SET name = ?, price_cents = ?, billing_interval = ?, description = ?, features_json = ?, active = ?, sort_order = ?
       WHERE id = ?
-    `).run(name, price_cents, billing_interval, duration_days || 30, description, JSON.stringify(features || []), active ? 1 : 0, sort_order || 0, req.params.id);
+    `).run(name, price_cents, billing_interval, description, JSON.stringify(features || []), active ? 1 : 0, sort_order || 0, req.params.id);
     res.json({ success: true });
   });
 
