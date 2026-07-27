@@ -204,7 +204,18 @@ function requireApiKey(req, res, next) {
     return next();
   }
 
-  // Accept member session with active subscription (extension via credentials:include)
+  // Accept member access_token (used by extension for cross-domain Railway calls)
+  if (apiKey) {
+    const memberRow = db.prepare(
+      "SELECT m.id FROM members m JOIN subscriptions s ON s.member_id = m.id WHERE m.access_token = ? AND s.status = 'active' AND s.current_period_end >= date('now') LIMIT 1"
+    ).get(apiKey);
+    if (memberRow) {
+      req.isMemberSession = true;
+      return next();
+    }
+  }
+
+  // Accept member session with active subscription (extension via credentials:include, same-origin)
   if (req.session && req.session.memberId) {
     const activeSub = db.prepare(
       "SELECT id FROM subscriptions WHERE member_id = ? AND status = 'active' AND current_period_end >= date('now')"

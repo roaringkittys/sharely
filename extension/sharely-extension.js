@@ -1,15 +1,18 @@
 /* sharely-extension.js for Sharely Extension 1.2 */
 
-// ── DEFAULT SERVER URL ─────────────────────────────────────────────────────
-// Set this to your deployed server URL before distributing the extension.
-// Users will never need to configure this manually.
+// ── SERVER URLS ────────────────────────────────────────────────────────────
+// SERVICE server (Railway) — cookies & service list ONLY.
 const DEFAULT_SERVER_URL = 'https://sharely-production-bc58.up.railway.app';
+// MEMBERSHIP server (Replit) — login, subscription checks, dashboard.
+const DEFAULT_MEMBERSHIP_URL = 'https://6cbfb053-e399-4cf0-a649-373f485ef582-00-386xnci2vytem.pike.replit.dev';
 // ──────────────────────────────────────────────────────────────────────────
 
 let allServices = [];
 let currentCategory = 'all';
-let serverUrl = '';
+let serverUrl = '';         // service server URL (Railway) — cookies & services only
+let membershipUrl = '';     // membership server URL (Replit) — auth, subscriptions, dashboard
 let apiKey = '';
+let memberAccessToken = ''; // member access_token used as X-API-Key for Railway service calls
 let currentMemberEmail = '';
 let currentMemberExpiry = '';
 let currentMemberName = '';
@@ -21,7 +24,7 @@ function escapeHtml(str) {
 
 async function loadStorage() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['serverUrl', 'apiKey', 'theme'], resolve);
+    chrome.storage.local.get(['serverUrl', 'membershipUrl', 'apiKey', 'memberAccessToken', 'theme'], resolve);
   });
 }
 
@@ -64,9 +67,9 @@ function updateMemberStrip(name, plan, expiresAt) {
 // ── Session check with chrome.storage.session caching ─────────────────────
 
 async function checkSession() {
-  if (!serverUrl) return null;
+  if (!membershipUrl) return null;
   try {
-    const res = await fetch(`${serverUrl}/api/membership/extension-session`, {
+    const res = await fetch(`${membershipUrl}/api/membership/extension-session`, {
       credentials: 'include',
     });
     if (!res.ok) return null;
@@ -387,7 +390,7 @@ async function fetchConfig() {
   showLoading();
 
   try {
-    // Try membership session first (auto-detected from browser cookies)
+    // Try membership session first (Replit, via cookies) — active members get an access_token
     const sessionData = await checkSession();
 
     if (sessionData) {
@@ -396,13 +399,15 @@ async function fetchConfig() {
         currentMemberName = sessionData.user.name || '';
         currentMemberExpiry = sessionData.subscription.expires_at;
         currentMemberPlan = sessionData.subscription.plan || '';
+        memberAccessToken = sessionData.user.access_token || '';
+        if (memberAccessToken) await saveStorage({ memberAccessToken });
         updateMemberFooter(currentMemberEmail, currentMemberExpiry);
         updateMemberStrip(currentMemberName, currentMemberPlan, currentMemberExpiry);
 
-        // Fetch services using session cookie
-        const configRes = await fetch(`${serverUrl}/api/extension/config`, {
-          credentials: 'include',
-        });
+        // Fetch services from Railway using the member access_token as the API key
+        const keyForService = memberAccessToken || apiKey;
+        const configHeaders = keyForService ? { 'X-API-Key': keyForService } : {};
+        const configRes = await fetch(`${serverUrl}/api/extension/config`, { headers: configHeaders });
 
         if (configRes.ok) {
           const data = await configRes.json();
@@ -541,7 +546,7 @@ $('#settingsButton, #openSettingsFromError').on('click', async () => {
   $('#devSection').hide();
   $('#devChevron').css('transform', '');
 
-  // Show account info if logged in via membership session
+  // Show account info if logged in via membership session (Replit)
   if (currentMemberEmail && currentMemberExpiry) {
     const days = Math.max(0, Math.ceil((new Date(currentMemberExpiry) - new Date()) / 86400000));
     $('#settingsEmail').text(currentMemberEmail);
@@ -568,11 +573,11 @@ $('#devToggle').on('click', () => {
   $('#devChevron').css('transform', open ? '' : 'rotate(180deg)');
 });
 
-// Login link from Settings (for non-logged-in users — opens dashboard)
+// Login link from Settings (for non-logged-in users — opens Replit dashboard)
 $('#settingsLoginLink').on('click', async (e) => {
   e.preventDefault();
   $('#settingsOverlay').hide();
-  const url = serverUrl ? `${serverUrl}/membership/login` : 'https://sharely.app/membership/login';
+  const url = membershipUrl ? `${membershipUrl}/membership/login` : 'https://sharely.app/membership/login';
   try { await chrome.tabs.create({ url }); } catch (_) { window.open(url, '_blank'); }
 });
 
@@ -591,7 +596,7 @@ $('#saveSettingsBtn').on('click', async () => {
     const headers = {};
     if (key) headers['X-API-Key'] = key;
 
-    const res = await fetch(`${url}/api/extension/config`, { headers, credentials: 'include' });
+    const res = await fetch(`${url}/api/extension/config`, { headers });
 
     if (!res.ok) throw new Error('Could not connect — check URL and key');
 
@@ -618,8 +623,9 @@ function closeCaptureOverlay() {
 }
 
 $('#captureButton').on('click', () => {
-  if (!serverUrl || !apiKey) {
-    showNotification('Not connected', 'Set your server URL and API key in settings first.');
+  const keyForCapture = memberAccessToken || apiKey;
+  if (!serverUrl || !keyForCapture) {
+    showNotification('Not connected', 'Set your server URL and API key in settings, or log in with a Sharely subscription.');
     setTimeout(closeNotification, 2500);
     return;
   }
@@ -694,11 +700,12 @@ $('#captureConfirmBtn').on('click', async () => {
       label,
     };
 
+    const keyForCapture = memberAccessToken || apiKey;
     const res = await fetch(`${serverUrl}/api/capture`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
+        'X-API-Key': keyForCapture,
       },
       body: JSON.stringify(payload),
     });
@@ -746,7 +753,7 @@ $('#adminButton').on('click', async () => {
 // ── Open dashboard button (logged-out state) ──────────────────────────────
 
 $('#openDashboardBtn').on('click', async () => {
-  const url = serverUrl ? `${serverUrl}/membership/login` : 'https://sharely.app/membership/login';
+  const url = membershipUrl ? `${membershipUrl}/membership/login` : 'https://sharely.app/membership/login';
   try {
     await chrome.tabs.create({ url });
   } catch (e) {
@@ -758,7 +765,7 @@ $('#openDashboardBtn').on('click', async () => {
 $(async () => {
   const stored = await loadStorage();
 
-  // Always sync to the baked-in default URL — migrates users from old URLs automatically
+  // Always sync to the baked-in default URLs — migrates users from old URLs automatically
   if (DEFAULT_SERVER_URL) {
     await saveStorage({ serverUrl: DEFAULT_SERVER_URL });
     serverUrl = DEFAULT_SERVER_URL;
@@ -766,9 +773,19 @@ $(async () => {
     serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
   }
 
+  if (DEFAULT_MEMBERSHIP_URL) {
+    await saveStorage({ membershipUrl: DEFAULT_MEMBERSHIP_URL });
+    membershipUrl = DEFAULT_MEMBERSHIP_URL;
+  } else {
+    membershipUrl = (stored.membershipUrl || '').replace(/\/+$/, '');
+  }
+
+  apiKey = stored.apiKey || '';
+  memberAccessToken = stored.memberAccessToken || '';
+
   if (stored.theme) applyTheme(stored.theme);
 
-  if (!serverUrl) {
+  if (!serverUrl || !membershipUrl) {
     showError('Server not configured. Contact support.');
     disableFilters();
     return;

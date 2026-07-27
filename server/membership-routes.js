@@ -97,9 +97,16 @@ function init(app, db, publicDir) {
       return res.json({ authenticated: false });
     }
 
-    const member = db.prepare('SELECT id, email, name FROM members WHERE id = ? AND status != ?')
+    let member = db.prepare('SELECT id, email, name, access_token FROM members WHERE id = ? AND status != ?')
       .get(req.session.memberId, 'banned');
     if (!member) return res.json({ authenticated: false });
+
+    // Auto-generate access_token on first use (needed for Railway cross-domain auth)
+    if (!member.access_token) {
+      const token = crypto.randomBytes(24).toString('hex');
+      db.prepare('UPDATE members SET access_token = ? WHERE id = ?').run(token, member.id);
+      member = { ...member, access_token: token };
+    }
 
     const sub = db.prepare(
       `SELECT s.*, p.name as plan_name FROM subscriptions s
@@ -117,7 +124,13 @@ function init(app, db, publicDir) {
 
     res.json({
       authenticated: true,
-      user: { id: member.id, email: member.email, name: member.name },
+      user: {
+        id: member.id,
+        email: member.email,
+        name: member.name,
+        // access_token is returned only for active subscribers — used as X-API-Key for Railway
+        access_token: (isActive && member.access_token) ? member.access_token : undefined,
+      },
       subscription: sub ? {
         active: isActive,
         plan: sub.plan_name,
