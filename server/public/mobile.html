@@ -572,8 +572,8 @@ function iconHtml(svc, size = 50, r = 14) {
 function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
 
 // ── Auth helpers ────────────────────────────────────────────────────────────
-function openLogin()  { window.location.href = `${MEMBERSHIP_URL}/membership/login`; }
-function openSignup() { window.location.href = `${MEMBERSHIP_URL}/membership/signup`; }
+function openLogin()  { window.location.href = `${MEMBERSHIP_URL}/membership/login?redirect=/mobile`; }
+function openSignup() { window.location.href = `${MEMBERSHIP_URL}/membership/signup?redirect=/mobile`; }
 async function signOut() {
   try { await fetch(`${MEMBERSHIP_URL}/api/membership/logout`, { method:'POST', credentials:'include' }); } catch(_){}
   window.location.href = '/mobile';
