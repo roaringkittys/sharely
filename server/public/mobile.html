@@ -2,398 +2,933 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Sharely — Mobile Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sharely">
+  <meta name="theme-color" content="#0f0f13">
+  <title>Sharely</title>
+  <link rel="manifest" href="/mobile-manifest.json">
+  <link rel="apple-touch-icon" href="/sharely-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a27;
+      --surface2: #22223a;
+      --border: rgba(255,255,255,0.07);
+      --purple: #6c5ce7;
+      --purple-light: #a29bfe;
+      --text: #f0f0fa;
+      --text-dim: #8888a8;
+      --green: #00cec9;
+      --red: #e17055;
+      --radius: 16px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: #0f0f13;
-      color: #e4e4ef;
-      min-height: 100vh;
-      -webkit-tap-highlight-color: transparent;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; min-height: -webkit-fill-available;
+      overscroll-behavior: none; overflow-x: hidden;
     }
-    header {
-      padding: 20px 16px 12px;
-      border-bottom: 1px solid #2d2d3f;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+
+    /* ── Splash ── */
+    #splash {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+      transition: opacity 0.35s ease;
     }
-    .logo-icon {
+    #splash.hide { opacity: 0; pointer-events: none; }
+    .splash-logo {
+      width: 84px; height: 84px;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      border-radius: 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 42px; font-weight: 800; color: #fff;
+      box-shadow: 0 8px 40px rgba(108,92,231,0.5);
+      animation: logoPop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes logoPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .splash-name { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .splash-sub { font-size: 13px; color: var(--text-dim); }
+    .spin {
+      width: 28px; height: 28px; border: 2px solid var(--border);
+      border-top-color: var(--purple); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin-top: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Auth gate ── */
+    #authGate {
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; padding: 32px 24px;
+      text-align: center; gap: 16px;
+    }
+    .auth-logo {
+      width: 76px; height: 76px;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      border-radius: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 38px; font-weight: 800; color: #fff;
+      box-shadow: 0 8px 32px rgba(108,92,231,0.35); margin-bottom: 8px;
+    }
+    .auth-title { font-size: 24px; font-weight: 800; }
+    .auth-sub { font-size: 14px; color: var(--text-dim); line-height: 1.6; max-width: 280px; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      color: #fff; border: none; border-radius: 14px;
+      padding: 16px 32px; font-size: 16px; font-weight: 700;
+      font-family: inherit; cursor: pointer; width: 100%; max-width: 320px;
+      box-shadow: 0 4px 20px rgba(108,92,231,0.35);
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .btn-primary:active { transform: scale(0.97); box-shadow: none; }
+
+    /* ── App shell ── */
+    #app { display: none; flex-direction: column; min-height: 100vh; }
+
+    /* ── Header ── */
+    .app-header {
+      padding: calc(var(--safe-top) + 14px) 20px 12px;
+      background: var(--bg);
+      position: sticky; top: 0; z-index: 100;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .header-logo {
       width: 36px; height: 36px;
-      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
       font-size: 18px; font-weight: 800; color: #fff;
     }
-    .logo-text { font-size: 18px; font-weight: 700; color: #fff; }
-    .tag { font-size: 11px; color: #a29bfe; background: rgba(162,155,254,0.12); padding: 3px 8px; border-radius: 6px; margin-left: auto; }
-    .container { padding: 16px; }
-    .intro {
-      background: rgba(108,92,231,0.08);
-      border: 1px solid rgba(108,92,231,0.2);
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 20px;
-      font-size: 13px;
-      line-height: 1.6;
-      color: #8888a0;
+    .header-title { font-size: 20px; font-weight: 800; flex: 1; }
+    .member-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #fff; cursor: pointer;
     }
-    .intro strong { color: #e4e4ef; }
-    .intro a { color: #a29bfe; text-decoration: none; }
-    .service-block { margin-bottom: 24px; }
-    .service-header {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 12px;
-      font-size: 15px; font-weight: 600;
+    .badge-active {
+      background: rgba(0,206,201,0.15); color: var(--green);
+      border: 1px solid rgba(0,206,201,0.3);
+      font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
     }
-    .service-header img {
-      width: 32px; height: 32px; border-radius: 8px; object-fit: cover;
-      background: rgba(255,255,255,0.07);
+
+    /* ── Search ── */
+    .search-wrap {
+      padding: 10px 16px 6px; background: var(--bg);
+      position: sticky; top: 60px; z-index: 99;
     }
-    .service-header .emoji { font-size: 22px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-    .account-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    .search-inner { position: relative; }
+    .search-icon {
+      position: absolute; left: 13px; top: 50%;
+      transform: translateY(-50%); font-size: 14px; color: var(--text-dim);
+      pointer-events: none;
     }
-    .account-card {
-      background: #1e1e2e;
-      border: 1px solid #2d2d3f;
-      border-radius: 12px;
-      padding: 14px 12px;
-      text-align: center;
-      cursor: pointer;
+    .search-input {
+      width: 100%; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 14px 10px 38px;
+      font-size: 15px; color: var(--text); font-family: inherit; outline: none;
+    }
+    .search-input::placeholder { color: var(--text-dim); }
+
+    /* ── Category tabs ── */
+    .tabs {
+      display: flex; padding: 6px 16px 8px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 12px; font-weight: 600;
+      font-family: inherit; cursor: pointer; margin-right: 6px;
       transition: all 0.15s;
     }
-    .account-card:active { transform: scale(0.97); }
-    .account-card .acc-icon {
-      width: 48px; height: 48px;
-      border-radius: 14px;
+    .tab-btn.active {
+      background: rgba(108,92,231,0.18); border-color: rgba(108,92,231,0.4);
+      color: var(--purple-light);
+    }
+
+    /* ── Service grid ── */
+    #servicesList { flex: 1; padding: 8px 16px calc(var(--safe-bottom) + 84px); }
+    .services-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    @media (max-width: 360px) { .services-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 600px) { .services-grid { grid-template-columns: repeat(5, 1fr); } }
+
+    .service-item {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 12px 4px 10px; border-radius: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      cursor: pointer; position: relative;
+      transition: transform 0.1s, background 0.1s;
+      -webkit-user-select: none; user-select: none;
+    }
+    .service-item:active { transform: scale(0.93); background: var(--surface2); }
+    .svc-icon {
+      width: 50px; height: 50px; border-radius: 14px;
+      background: var(--surface2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 28px; margin: 0 auto 8px;
-      background: rgba(255,255,255,0.07);
       overflow: hidden;
     }
-    .account-card .acc-icon img { width: 100%; height: 100%; object-fit: cover; }
-    .account-card .acc-label {
-      font-size: 13px; font-weight: 600; color: #e4e4ef;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    .svc-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .svc-icon .em { font-size: 26px; line-height: 1; }
+    .svc-name {
+      font-size: 11px; font-weight: 600; color: var(--text); text-align: center;
+      max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .account-card .acc-domain {
-      font-size: 10px; color: #8888a0; margin-top: 2px;
+    .ready-dot {
+      position: absolute; top: 7px; right: 7px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 6px rgba(0,206,201,0.6);
     }
-    .loading {
-      text-align: center; padding: 60px 20px; color: #8888a0; font-size: 14px;
-    }
-    .empty {
-      text-align: center; padding: 60px 20px; color: #8888a0; font-size: 14px;
+    .count-badge {
+      position: absolute; top: 5px; right: 5px;
+      background: var(--purple); color: #fff;
+      font-size: 9px; font-weight: 700;
+      min-width: 16px; height: 16px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; padding: 0 3px;
     }
 
-    /* Modal */
-    .modal-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.75);
-      z-index: 1000;
-      align-items: flex-end;
-      justify-content: center;
+    /* ── States ── */
+    .state-box {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px;
+      padding: 60px 24px; text-align: center; color: var(--text-dim);
     }
-    .modal-overlay.active { display: flex; }
-    .modal {
-      background: #1e1e2e;
-      border-top: 1px solid #2d2d3f;
-      border-radius: 20px 20px 0 0;
-      width: 100%;
-      max-height: 85vh;
-      overflow-y: auto;
-      padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 15px));
-      animation: slideUp 0.25s ease;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .modal-header h2 { font-size: 16px; font-weight: 700; }
-    .modal-close {
-      font-size: 22px; color: #8888a0; background: none; border: none; width: 36px; height: 36px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .steps {
-      font-size: 12px; color: #8888a0; line-height: 1.7; margin-bottom: 16px;
-    }
-    .steps strong { color: #e4e4ef; }
-    .bookmarklet-display {
-      background: #252535;
-      border: 1px solid #2d2d3f;
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 11px;
-      color: #8888a0;
-      word-break: break-all;
-      margin-bottom: 10px;
-      max-height: 80px;
-      overflow-y: auto;
-    }
-    .btn {
-      width: 100%; padding: 14px;
-      border: none; border-radius: 12px;
-      font-size: 14px; font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-      color: #fff;
-    }
-    .btn-outline {
-      background: transparent;
-      border: 1px solid #2d2d3f;
-      color: #e4e4ef;
-      margin-top: 8px;
-    }
-    .toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(120px);
-      background: #1e1e2e; border: 1px solid #2d2d3f; border-radius: 10px;
-      padding: 12px 20px; font-size: 13px; color: #e4e4ef;
-      z-index: 2000; transition: transform 0.3s;
-      white-space: nowrap;
-    }
-    .toast.show { transform: translateX(-50%) translateY(0); }
+    .state-box .ico { font-size: 40px; }
+    .state-box h3 { font-size: 17px; font-weight: 700; color: var(--text); }
+    .state-box p { font-size: 13px; line-height: 1.6; max-width: 260px; }
 
-    /* Instructions tab */
-    .help-btn {
-      position: fixed; bottom: 20px; right: 20px;
-      width: 48px; height: 48px; border-radius: 50%;
-      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-      color: #fff; font-size: 20px; border: none;
+    /* ── Bottom nav ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: rgba(15,15,19,0.9);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex; padding: 6px 0 calc(var(--safe-bottom) + 2px);
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: none; border: none; cursor: pointer; padding: 4px 0;
+      color: var(--text-dim); font-family: inherit; font-size: 10px; font-weight: 600;
+      transition: color 0.15s;
+    }
+    .nav-btn.active { color: var(--purple-light); }
+    .nav-icon { font-size: 22px; line-height: 1; }
+
+    /* ── Profile tab ── */
+    #profileTab {
+      display: none; padding: 16px 16px calc(var(--safe-bottom) + 88px);
+      flex-direction: column; gap: 12px;
+    }
+    .card {
+      background: var(--surface); border-radius: var(--radius);
+      border: 1px solid var(--border); padding: 20px;
+    }
+    .profile-avatar {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 12px rgba(108,92,231,0.4);
-      z-index: 100;
+      font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 12px;
     }
-    .help-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000;
-      overflow-y: auto;
+    .profile-name { font-size: 20px; font-weight: 800; }
+    .profile-email { font-size: 13px; color: var(--text-dim); margin: 2px 0 14px; }
+    .sub-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(0,206,201,0.1); border: 1px solid rgba(0,206,201,0.25);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 600; color: var(--green);
     }
-    .help-overlay.active { display: block; }
-    .help-box {
-      max-width: 400px; margin: 60px auto;
-      padding: 0 20px;
-      font-size: 13px; line-height: 1.7; color: #8888a0;
+    .sub-pill.expired { background: rgba(225,112,85,0.1); border-color: rgba(225,112,85,0.25); color: var(--red); }
+    .info-row {
+      display: flex; justify-content: space-between; padding: 13px 0;
+      border-bottom: 1px solid var(--border); font-size: 14px;
     }
-    .help-box h2 { color: #fff; font-size: 20px; margin-bottom: 16px; }
-    .help-box strong { color: #e4e4ef; }
-    .help-box ol { padding-left: 20px; margin-bottom: 16px; }
-    .help-box li { margin-bottom: 10px; }
-    .help-close {
-      position: fixed; top: 16px; right: 16px;
-      font-size: 24px; color: #fff; background: none; border: none;
+    .info-row:last-child { border-bottom: none; }
+    .info-key { color: var(--text-dim); }
+    .info-val { font-weight: 600; }
+
+    /* A2HS banner */
+    .a2hs-card {
+      background: rgba(108,92,231,0.08); border: 1px solid rgba(108,92,231,0.2);
+      border-radius: var(--radius); padding: 14px 16px;
+      display: flex; gap: 12px; align-items: flex-start;
     }
+    .a2hs-card .ico { font-size: 26px; flex-shrink: 0; }
+    .a2hs-card .txt { flex: 1; font-size: 13px; line-height: 1.6; }
+    .a2hs-card strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 14px; }
+    .a2hs-card small { color: var(--text-dim); }
+    .a2hs-dismiss {
+      background: none; border: none; color: var(--text-dim);
+      font-size: 18px; cursor: pointer; padding: 0; flex-shrink: 0;
+    }
+
+    .logout-btn {
+      width: 100%; background: rgba(225,112,85,0.1);
+      border: 1px solid rgba(225,112,85,0.2);
+      border-radius: var(--radius); padding: 15px;
+      color: var(--red); font-size: 15px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+    }
+    .logout-btn:active { background: rgba(225,112,85,0.2); }
+
+    /* ── Sheet overlay ── */
+    .overlay {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    }
+    .overlay.open { display: flex; align-items: flex-end; }
+    .sheet {
+      width: 100%; background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      padding-bottom: calc(var(--safe-bottom) + 12px);
+      max-height: 88vh; overflow-y: auto;
+      animation: sheetUp 0.26s cubic-bezier(0.34,1.4,0.64,1);
+    }
+    @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-handle {
+      display: flex; justify-content: center; padding: 10px 0 0;
+    }
+    .handle-bar {
+      width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12);
+    }
+    .sheet-head {
+      display: flex; align-items: center; gap: 12px; padding: 14px 20px 10px;
+    }
+    .sheet-icon {
+      width: 46px; height: 46px; border-radius: 13px;
+      background: var(--surface2); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .sheet-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .sheet-icon .em { font-size: 24px; }
+    .sheet-svc-name { font-size: 17px; font-weight: 700; }
+    .sheet-svc-domain { font-size: 12px; color: var(--text-dim); }
+    .sheet-close {
+      margin-left: auto; width: 30px; height: 30px;
+      background: var(--surface2); border: none; border-radius: 50%;
+      color: var(--text-dim); font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .section-label {
+      font-size: 11px; font-weight: 600; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 20px 8px;
+    }
+    .acc-row {
+      display: flex; align-items: center; gap: 12px; padding: 13px 20px;
+      cursor: pointer; border-top: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .acc-row:active { background: var(--surface2); }
+    .acc-row-icon {
+      width: 40px; height: 40px; border-radius: 11px;
+      background: var(--surface2); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .acc-row-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .acc-row-icon .em { font-size: 20px; }
+    .acc-row-label { font-size: 15px; font-weight: 600; flex: 1; }
+    .acc-row-status { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
+    .acc-row-status.ready { color: var(--green); }
+    .acc-row-arrow { color: var(--text-dim); font-size: 16px; }
+
+    /* ── Action sheet ── */
+    #actionOverlay { z-index: 600; }
+    .action-head {
+      display: flex; align-items: flex-start; gap: 12px; padding: 14px 20px 4px;
+    }
+    .action-icon {
+      width: 46px; height: 46px; border-radius: 13px;
+      background: var(--surface2); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .action-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .action-icon .em { font-size: 24px; }
+    .action-title { font-size: 17px; font-weight: 700; }
+    .action-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .action-close {
+      margin-left: auto; width: 30px; height: 30px;
+      background: var(--surface2); border: none; border-radius: 50%;
+      color: var(--text-dim); font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    /* Buttons */
+    .big-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin: 10px 18px; width: calc(100% - 36px);
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      color: #fff; border: none; border-radius: 14px;
+      padding: 15px; font-size: 16px; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(108,92,231,0.3);
+      transition: transform 0.1s;
+    }
+    .big-btn:active { transform: scale(0.97); }
+    .big-btn.green { background: linear-gradient(135deg, #00b894, #00cec9); box-shadow: 0 4px 20px rgba(0,206,201,0.3); }
+    .ghost-btn {
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 18px 10px; width: calc(100% - 36px);
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 14px; padding: 13px; font-size: 14px; font-weight: 600;
+      color: var(--text-dim); font-family: inherit; cursor: pointer;
+      transition: border-color 0.12s, color 0.12s;
+    }
+    .ghost-btn:active { border-color: var(--purple-light); color: var(--purple-light); }
+
+    /* Setup steps */
+    .steps-card {
+      margin: 4px 18px 10px; background: var(--surface2);
+      border-radius: 14px; overflow: hidden;
+    }
+    .step-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 13px 16px; border-bottom: 1px solid var(--border);
+    }
+    .step-row:last-child { border-bottom: none; }
+    .step-num {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(108,92,231,0.2); border: 1px solid rgba(108,92,231,0.35);
+      color: var(--purple-light); font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-txt { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+    .step-txt strong { color: var(--text); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: calc(var(--safe-bottom) + 76px);
+      left: 50%; transform: translateX(-50%) translateY(16px);
+      background: rgba(26,26,39,0.96); border: 1px solid var(--border);
+      border-radius: 24px; padding: 10px 20px;
+      font-size: 14px; font-weight: 500; color: var(--text);
+      white-space: nowrap; z-index: 9999;
+      opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo-icon">S</div>
-    <div class="logo-text">Sharely</div>
-    <span class="tag">Mobile</span>
-  </header>
 
-  <div class="container">
-    <div class="intro" id="introBox" style="display:none">
-      <strong>One-tap login from your phone</strong><br>
-      Save each bookmarklet to your browser. Then on any site, tap the bookmark to inject cookies instantly.
-      <a href="#" onclick="showHelp();return false">How does this work?</a>
-    </div>
-    <div id="servicesList">
-      <div class="loading">Loading services...</div>
-    </div>
+<!-- Splash screen -->
+<div id="splash">
+  <div class="splash-logo">S</div>
+  <div class="splash-name">Sharely</div>
+  <div class="splash-sub">Your premium services</div>
+  <div class="spin"></div>
+</div>
+
+<!-- Auth / expired gate -->
+<div id="authGate"></div>
+
+<!-- Main app -->
+<div id="app">
+  <div class="app-header">
+    <div class="header-logo">S</div>
+    <div class="header-title">Sharely</div>
+    <span class="badge-active" id="subBadge">Active</span>
+    <div class="member-avatar" id="memberAvatar" onclick="showTab('profile')">?</div>
   </div>
 
-  <!-- Bookmarklet Modal -->
-  <div class="modal-overlay" id="bmModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 id="bmTitle">Bookmarklet</h2>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+  <div class="search-wrap" id="searchWrap">
+    <div class="search-inner">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="searchInput" type="search"
+        placeholder="Search services…" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+  </div>
+  <div class="tabs" id="categoryTabs"></div>
+
+  <div id="servicesList"></div>
+
+  <!-- Profile tab -->
+  <div id="profileTab">
+    <div class="a2hs-card" id="a2hsCard">
+      <span class="ico">📲</span>
+      <span class="txt">
+        <strong>Add to Home Screen</strong>
+        <small>Tap Share → "Add to Home Screen" so Sharely opens like a real app.</small>
+      </span>
+      <button class="a2hs-dismiss" onclick="dismissA2hs()">✕</button>
+    </div>
+    <div class="card">
+      <div class="profile-avatar" id="profileAvatar">?</div>
+      <div class="profile-name" id="profileName">—</div>
+      <div class="profile-email" id="profileEmail">—</div>
+      <span class="sub-pill" id="profilePill">⚡ Active</span>
+    </div>
+    <div class="card">
+      <div class="info-row"><span class="info-key">Plan</span><span class="info-val" id="profilePlan">—</span></div>
+      <div class="info-row"><span class="info-key">Expires</span><span class="info-val" id="profileExpiry">—</span></div>
+      <div class="info-row"><span class="info-key">Services</span><span class="info-val" id="profileSvcCount">—</span></div>
+    </div>
+    <button class="logout-btn" onclick="signOut()">Sign Out</button>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="navServices" onclick="showTab('services')">
+      <span class="nav-icon">⚡</span>Services
+    </button>
+    <button class="nav-btn" id="navProfile" onclick="showTab('profile')">
+      <span class="nav-icon">👤</span>Profile
+    </button>
+  </nav>
+</div>
+
+<!-- Service accounts sheet -->
+<div class="overlay" id="svcOverlay" onclick="closeOverlay('svcOverlay')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"><div class="handle-bar"></div></div>
+    <div class="sheet-head">
+      <div class="sheet-icon" id="sheetIcon"></div>
+      <div>
+        <div class="sheet-svc-name" id="sheetName"></div>
+        <div class="sheet-svc-domain" id="sheetDomain"></div>
       </div>
-      <div class="steps">
-        <strong>Step 1:</strong> Long-press the button below and choose <strong>"Copy Link"</strong><br>
-        <strong>Step 2:</strong> Open your browser bookmarks, add a new one, paste this URL as the address<br>
-        <strong>Step 3:</strong> Go to <span id="bmDomain" style="color:#a29bfe"></span> and tap the bookmark → instant login
+      <button class="sheet-close" onclick="closeOverlay('svcOverlay')">✕</button>
+    </div>
+    <div class="section-label">Choose account</div>
+    <div id="sheetAccounts"></div>
+  </div>
+</div>
+
+<!-- Action sheet (setup / open) -->
+<div class="overlay" id="actionOverlay" onclick="closeOverlay('actionOverlay')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"><div class="handle-bar"></div></div>
+    <div class="action-head">
+      <div class="action-icon" id="actionIcon"></div>
+      <div>
+        <div class="action-title" id="actionTitle"></div>
+        <div class="action-sub" id="actionSub"></div>
       </div>
-      <div class="bookmarklet-display" id="bmUrl"></div>
-      <button class="btn btn-primary" id="copyBmBtn">Copy Link</button>
-      <button class="btn btn-outline" onclick="closeModal()">Close</button>
+      <button class="action-close" onclick="closeOverlay('actionOverlay')">✕</button>
     </div>
+    <div id="actionBody"></div>
   </div>
+</div>
 
-  <button class="help-btn" onclick="showHelp()">?</button>
+<div id="toast"></div>
 
-  <div class="help-overlay" id="helpOverlay">
-    <button class="help-close" onclick="hideHelp()">&times;</button>
-    <div class="help-box">
-      <h2>How Mobile Login Works</h2>
-      <p><strong>1. Bookmarklets are just saved bookmarks that run code.</strong></p>
-      <ol>
-        <li>Pick an account below (e.g., Netflix — Prime 1)</li>
-        <li>Copy the bookmarklet link, save it as a bookmark in Safari/Chrome</li>
-        <li>Next time you visit that site, tap the saved bookmark</li>
-        <li>It injects all session cookies instantly and refreshes the page</li>
-      </ol>
-      <p><strong>Why can't we just click it directly?</strong><br>
-      For security, browsers only allow bookmarklets to set cookies when run from a saved bookmark on the actual site. Copy + save once, use forever.</p>
-      <p><strong>On iPhone/Safari:</strong><br>
-      Share sheet → Add Bookmark → paste the URL → save. Rename it to "Netflix 1" for easy access.</p>
-      <p><strong>On Android/Chrome:</strong><br>
-      Tap and hold the link → Copy link → go to bookmarks → add → paste the URL.</p>
-      <button class="btn btn-primary" onclick="hideHelp()" style="margin-top:8px">Got it</button>
-    </div>
-  </div>
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const MEMBERSHIP_URL = window.location.origin;
+const SERVICE_URL    = 'https://sharely-production-bc58.up.railway.app';
 
-  <div class="toast" id="toast"></div>
+// ── State ───────────────────────────────────────────────────────────────────
+let memberData   = null;
+let accessToken  = '';
+let allServices  = [];
+let currentCat   = 'all';
+let currentBmUrl = '';
+let setupDone    = JSON.parse(localStorage.getItem('sly_setup') || '{}');
 
-  <script>
-    const API_BASE = window.location.origin;
-    let allServices = [];
+// ── Utils ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function setupKey(sid, lbl) { return `${sid}::${lbl}`; }
+function isSetup(sid, lbl)  { return !!setupDone[setupKey(sid, lbl)]; }
+function markSetup(sid, lbl){
+  setupDone[setupKey(sid, lbl)] = true;
+  localStorage.setItem('sly_setup', JSON.stringify(setupDone));
+}
+function clearSetup(sid, lbl){
+  delete setupDone[setupKey(sid, lbl)];
+  localStorage.setItem('sly_setup', JSON.stringify(setupDone));
+}
 
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2500);
+function toast(msg, ms = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function iconHtml(svc, size = 50, r = 14) {
+  const st = `width:${size}px;height:${size}px;border-radius:${r}px;background:var(--surface2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0`;
+  if (svc.icon_url) {
+    const src = svc.icon_url.startsWith('http') ? svc.icon_url : SERVICE_URL + svc.icon_url;
+    return `<div style="${st}"><img src="${src}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<span class=em style=font-size:${Math.floor(size*.52)}px>${svc.icon||'🌐'}</span>'"></div>`;
+  }
+  if (svc.icon && svc.icon.length <= 4)
+    return `<div style="${st}"><span class="em" style="font-size:${Math.floor(size*.52)}px">${svc.icon}</span></div>`;
+  return `<div style="${st}"><span class="em" style="font-size:${Math.floor(size*.52)}px">🌐</span></div>`;
+}
+
+function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Auth helpers ────────────────────────────────────────────────────────────
+function openLogin()  { window.location.href = `${MEMBERSHIP_URL}/membership/login`; }
+function openSignup() { window.location.href = `${MEMBERSHIP_URL}/membership/signup`; }
+async function signOut() {
+  try { await fetch(`${MEMBERSHIP_URL}/api/membership/logout`, { method:'POST', credentials:'include' }); } catch(_){}
+  window.location.href = '/mobile';
+}
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    const res  = await fetch(`${MEMBERSHIP_URL}/api/membership/extension-session`, { credentials:'include' });
+    const data = await res.json();
+
+    if (!data.authenticated) { showGate('login'); return; }
+
+    memberData  = data;
+    accessToken = (data.user && data.user.access_token) || '';
+
+    if (!data.subscription || !data.subscription.active) { showGate('expired', data); return; }
+
+    populateProfile(data);
+    revealApp();
+    fetchServices();
+  } catch(e) {
+    showGate('error');
+  }
+}
+
+function showGate(type, data) {
+  document.getElementById('splash').classList.add('hide');
+  const g = document.getElementById('authGate');
+  g.style.display = 'flex';
+
+  if (type === 'login') {
+    g.innerHTML = `
+      <div class="auth-logo">S</div>
+      <h1 class="auth-title">Welcome to Sharely</h1>
+      <p class="auth-sub">Sign in with your Sharely account to access your premium services.</p>
+      <button class="btn-primary" onclick="openLogin()">Sign In</button>
+      <p style="font-size:12px;color:var(--text-dim)">No account? <a href="#" onclick="openSignup()" style="color:var(--purple-light);text-decoration:none">Sign up</a></p>
+    `;
+  } else if (type === 'expired') {
+    const name = data && data.user ? (data.user.name || data.user.email) : '';
+    g.innerHTML = `
+      <div class="auth-logo">S</div>
+      <h1 class="auth-title">Subscription Expired</h1>
+      <p class="auth-sub">${name ? `Hi ${esc(name)}! ` : ''}Your subscription has expired. Renew to continue.</p>
+      <button class="btn-primary" onclick="window.location.href='${MEMBERSHIP_URL}/membership/billing'">Renew Subscription</button>
+      <button style="background:none;border:none;color:var(--text-dim);font-size:14px;font-family:inherit;cursor:pointer;padding:8px" onclick="signOut()">Sign out</button>
+    `;
+  } else {
+    g.innerHTML = `
+      <div class="auth-logo">S</div>
+      <h1 class="auth-title">Connection Error</h1>
+      <p class="auth-sub">Could not connect to Sharely. Check your internet and try again.</p>
+      <button class="btn-primary" onclick="location.reload()">Retry</button>
+    `;
+  }
+}
+
+function populateProfile(data) {
+  const name    = data.user.name || data.user.email;
+  const initial = name.charAt(0).toUpperCase();
+  document.getElementById('memberAvatar').textContent = initial;
+  document.getElementById('profileAvatar').textContent = initial;
+  document.getElementById('profileName').textContent   = data.user.name || '—';
+  document.getElementById('profileEmail').textContent  = data.user.email;
+
+  const sub = data.subscription;
+  if (sub) {
+    document.getElementById('profilePlan').textContent = sub.plan || 'Premium';
+    document.getElementById('profileExpiry').textContent =
+      new Date(sub.expires_at).toLocaleDateString('en-US',{ month:'short', day:'numeric', year:'numeric' });
+    const days = sub.days_remaining;
+    if (days <= 0) {
+      document.getElementById('subBadge').textContent = 'Expired';
+      document.getElementById('subBadge').style.cssText = 'background:rgba(225,112,85,.15);color:#e17055;border:1px solid rgba(225,112,85,.3);font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px';
+      document.getElementById('profilePill').textContent = '⚠ Expired';
+      document.getElementById('profilePill').classList.add('expired');
+    } else if (days <= 7) {
+      document.getElementById('subBadge').textContent = `${days}d left`;
     }
+  }
 
-    async function loadData() {
-      try {
-        const res = await fetch(`${API_BASE}/api/extension/config`, {
-          credentials: 'include'
-        });
-        if (res.status === 401) {
-          document.getElementById('servicesList').innerHTML = `
-            <div class="empty">
-              <p style="font-size:16px;margin-bottom:8px">🔒 Sign in required</p>
-              <p style="font-size:12px">Open the Sharely web app on this device first.</p>
-              <a href="/app" style="display:inline-block;margin-top:12px;padding:10px 20px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px">Open App</a>
-            </div>
-          `;
-          return;
-        }
-        if (!res.ok) throw new Error('Server error');
-        const data = await res.json();
-        allServices = (data.services || []).filter(s => s.accounts && s.accounts.length > 0);
-        renderServices(allServices);
-        if (allServices.length > 0) {
-          document.getElementById('introBox').style.display = 'block';
-        }
-      } catch (e) {
-        document.getElementById('servicesList').innerHTML = `
-          <div class="empty">
-            <p style="margin-bottom:6px">⚠️ Could not connect</p>
-            <p style="font-size:12px">Make sure you're connected to the internet.</p>
-          </div>
-        `;
-      }
+  // A2HS banner
+  const isPwa = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if (isPwa || localStorage.getItem('a2hs_ok')) {
+    document.getElementById('a2hsCard').style.display = 'none';
+  }
+}
+
+function revealApp() {
+  document.getElementById('splash').classList.add('hide');
+  setTimeout(() => {
+    document.getElementById('app').style.display = 'flex';
+  }, 300);
+}
+
+function dismissA2hs() {
+  localStorage.setItem('a2hs_ok','1');
+  document.getElementById('a2hsCard').style.display = 'none';
+}
+
+// ── Fetch services ──────────────────────────────────────────────────────────
+async function fetchServices() {
+  document.getElementById('servicesList').innerHTML =
+    `<div class="state-box"><div class="spin"></div></div>`;
+
+  try {
+    const headers = accessToken ? { 'X-API-Key': accessToken } : {};
+    const res  = await fetch(`${SERVICE_URL}/api/extension/config`, { headers });
+    if (res.status === 401) {
+      document.getElementById('servicesList').innerHTML =
+        `<div class="state-box"><div class="ico">🔐</div><h3>Access Denied</h3><p>Sign out and sign in again to refresh your access.</p></div>`;
+      return;
     }
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allServices = data.services || [];
+    document.getElementById('profileSvcCount').textContent = allServices.length;
+    buildTabs(allServices);
+    render(allServices, currentCat);
+  } catch(e) {
+    document.getElementById('servicesList').innerHTML = `
+      <div class="state-box">
+        <div class="ico">📡</div><h3>Could not load services</h3>
+        <p>Check your internet connection.</p>
+        <button class="btn-primary" style="max-width:200px;font-size:14px;padding:12px" onclick="fetchServices()">Retry</button>
+      </div>`;
+  }
+}
 
-    function renderServices(services) {
-      const box = document.getElementById('servicesList');
-      if (!services.length) {
-        box.innerHTML = '<div class="empty">No services with accounts available.</div>';
-        return;
-      }
+// ── Tabs ────────────────────────────────────────────────────────────────────
+function buildTabs(services) {
+  const cats = ['all', ...new Set(services.map(s => s.category).filter(Boolean))];
+  document.getElementById('categoryTabs').innerHTML = cats.map(c =>
+    `<button class="tab-btn ${c===currentCat?'active':''}" data-cat="${c}" onclick="selectCat('${c}')">
+      ${c==='all'?'All':c.charAt(0).toUpperCase()+c.slice(1)}
+    </button>`
+  ).join('');
+}
+function selectCat(cat) {
+  currentCat = cat;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat===cat));
+  render(allServices, cat, document.getElementById('searchInput').value.toLowerCase());
+}
 
-      let html = '';
-      services.forEach(s => {
-        let icon = '';
-        if (s.icon_url) {
-          icon = `<img src="${s.icon_url}" alt="" onerror="this.outerHTML='<span class=emoji>${s.icon||'🌐'}</span>'">`;
-        } else {
-          icon = `<span class="emoji">${s.icon || '🌐'}</span>`;
-        }
+// ── Render ──────────────────────────────────────────────────────────────────
+function render(services, cat, q = '') {
+  let list = services;
+  if (cat && cat !== 'all') list = list.filter(s => s.category === cat);
+  if (q) list = list.filter(s =>
+    s.name.toLowerCase().includes(q) || (s.domain||'').toLowerCase().includes(q));
 
-        const accounts = s.accounts.map(acc => {
-          const encodedLabel = encodeURIComponent(acc.label);
-          return `
-            <div class="account-card" onclick="openBookmarklet(${s.id}, '${encodedLabel}', '${s.name}', '${acc.label}', '${s.domain}')">
-              <div class="acc-icon">${icon}</div>
-              <div class="acc-label">${acc.label}</div>
-              <div class="acc-domain">${s.domain}</div>
-            </div>
-          `;
-        }).join('');
+  const el = document.getElementById('servicesList');
 
-        html += `
-          <div class="service-block">
-            <div class="service-header">
-              ${icon}
-              <span>${s.name}</span>
-            </div>
-            <div class="account-grid">${accounts}</div>
-          </div>
-        `;
-      });
-      box.innerHTML = html;
-    }
+  if (!list.length) {
+    el.innerHTML = `<div class="state-box"><div class="ico">🔎</div><h3>No services found</h3><p>Try a different search or category.</p></div>`;
+    return;
+  }
 
-    let currentBmUrl = '';
+  const grid = document.createElement('div');
+  grid.className = 'services-grid';
 
-    async function openBookmarklet(serviceId, encodedLabel, serviceName, label, domain) {
-      try {
-        const res = await fetch(`${API_BASE}/api/bookmarklet/${serviceId}/${encodedLabel}`, {
-          credentials: 'include'
-        });
-        if (!res.ok) throw new Error('Failed to generate');
-        const data = await res.json();
-        currentBmUrl = data.url;
+  list.forEach(svc => {
+    const accounts = getAccounts(svc);
+    const allReady  = accounts.length > 0 && accounts.every(a => isSetup(svc.id, a.label));
+    const multi     = accounts.length > 1;
 
-        document.getElementById('bmTitle').textContent = `${serviceName} — ${label}`;
-        document.getElementById('bmDomain').textContent = domain;
-        document.getElementById('bmUrl').textContent = data.url.substring(0, 200) + '...';
-        document.getElementById('bmModal').classList.add('active');
-      } catch (e) {
-        showToast('Failed to generate bookmarklet');
-      }
-    }
+    const item = document.createElement('div');
+    item.className = 'service-item';
+    item.innerHTML = `
+      <div class="svc-icon">${iconInner(svc, 50)}</div>
+      <div class="svc-name">${esc(svc.name)}</div>
+      ${allReady ? '<div class="ready-dot"></div>' : ''}
+      ${multi && !allReady ? `<div class="count-badge">${accounts.length}</div>` : ''}
+    `;
+    item.onclick = () => tapService(svc);
+    grid.appendChild(item);
+  });
 
-    document.getElementById('copyBmBtn').addEventListener('click', () => {
-      if (!currentBmUrl) return;
-      navigator.clipboard.writeText(currentBmUrl).then(() => {
-        showToast('Bookmarklet copied! Save it as a browser bookmark.');
-      }).catch(() => {
-        // Fallback
-        const ta = document.createElement('textarea');
-        ta.value = currentBmUrl;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        showToast('Bookmarklet copied! Save it as a browser bookmark.');
-      });
-    });
+  el.innerHTML = '';
+  el.appendChild(grid);
+}
 
-    function closeModal() {
-      document.getElementById('bmModal').classList.remove('active');
-    }
+function iconInner(svc, size) {
+  if (svc.icon_url) {
+    const src = svc.icon_url.startsWith('http') ? svc.icon_url : SERVICE_URL + svc.icon_url;
+    return `<img src="${src}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<span class=em style=font-size:${Math.floor(size*.52)}px>${svc.icon||'🌐'}</span>'">`;
+  }
+  if (svc.icon && svc.icon.length <= 4) return `<span class="em" style="font-size:${Math.floor(size*.52)}px">${svc.icon}</span>`;
+  return `<span class="em" style="font-size:${Math.floor(size*.52)}px">🌐</span>`;
+}
 
-    // Tap outside modal to close
-    document.getElementById('bmModal').addEventListener('click', (e) => {
-      if (e.target.id === 'bmModal') closeModal();
-    });
+function getAccounts(svc) {
+  if (svc.sub_services && svc.sub_services.length)
+    return svc.sub_services.flatMap(ss => (ss.accounts||[]).map(a => ({ ...a, _svc: ss })));
+  return (svc.accounts||[]).map(a => ({ ...a, _svc: svc }));
+}
 
-    function showHelp() {
-      document.getElementById('helpOverlay').classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-    function hideHelp() {
-      document.getElementById('helpOverlay').classList.remove('active');
-      document.body.style.overflow = '';
-    }
+// ── Tap service ─────────────────────────────────────────────────────────────
+function tapService(svc) {
+  const accounts = getAccounts(svc);
 
-    loadData();
-  </script>
+  if (!accounts.length) {
+    toast('No accounts configured yet.');
+    return;
+  }
+
+  if (accounts.length === 1) {
+    tapAccount(accounts[0]._svc || svc, accounts[0]);
+    return;
+  }
+
+  // Show account picker sheet
+  document.getElementById('sheetIcon').innerHTML  = iconHtml(svc, 46, 13);
+  document.getElementById('sheetName').textContent   = svc.name;
+  document.getElementById('sheetDomain').textContent = svc.domain;
+
+  document.getElementById('sheetAccounts').innerHTML = accounts.map(a => {
+    const effectiveSvc = a._svc || svc;
+    const ready = isSetup(effectiveSvc.id, a.label);
+    return `
+      <div class="acc-row" onclick="pickAccount(${effectiveSvc.id}, '${esc(JSON.stringify(effectiveSvc))}', '${esc(JSON.stringify(a))}')">
+        <div class="acc-row-icon">${iconInner(effectiveSvc, 40)}</div>
+        <div style="flex:1">
+          <div class="acc-row-label">${esc(a.label)}</div>
+          <div class="acc-row-status ${ready?'ready':''}">${ready?'✓ Ready to use':'Tap to set up'}</div>
+        </div>
+        <span class="acc-row-arrow">›</span>
+      </div>`;
+  }).join('');
+
+  document.getElementById('svcOverlay').classList.add('open');
+}
+
+function pickAccount(svcId, svcJson, accJson) {
+  closeOverlay('svcOverlay');
+  const svc = JSON.parse(svcJson);
+  const acc = JSON.parse(accJson);
+  tapAccount(svc, acc);
+}
+
+// ── Tap account ─────────────────────────────────────────────────────────────
+async function tapAccount(svc, acc) {
+  document.getElementById('actionIcon').innerHTML  = iconHtml(svc, 46, 13);
+  document.getElementById('actionTitle').textContent = svc.name;
+  document.getElementById('actionSub').textContent   = acc.label;
+  document.getElementById('actionBody').innerHTML    =
+    `<div class="state-box" style="padding:24px"><div class="spin"></div></div>`;
+  document.getElementById('actionOverlay').classList.add('open');
+
+  const domain  = (svc.domain||'').replace(/^\./,'');
+  const siteUrl = `https://${domain}`;
+  const ready   = isSetup(svc.id, acc.label);
+
+  if (ready) {
+    document.getElementById('actionBody').innerHTML = `
+      <p style="padding:0 18px 14px;font-size:13px;color:var(--text-dim);line-height:1.6">
+        ✓ Your bookmark is saved. Open <strong style="color:var(--text)">${esc(svc.name)}</strong> then tap your saved bookmark to log in instantly.
+      </p>
+      <button class="big-btn" onclick="window.open('${siteUrl}','_blank');closeOverlay('actionOverlay')">
+        🚀 Open ${esc(svc.name)}
+      </button>
+      <button class="ghost-btn" onclick="resetSetup(${svc.id},'${esc(acc.label)}')">
+        Reset bookmark setup
+      </button>
+    `;
+    return;
+  }
+
+  try {
+    const headers = accessToken ? { 'X-API-Key': accessToken } : {};
+    const res  = await fetch(`${SERVICE_URL}/api/bookmarklet/${svc.id}/${encodeURIComponent(acc.label)}`, { headers });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    currentBmUrl = data.url;
+
+    document.getElementById('actionBody').innerHTML = `
+      <div class="steps-card">
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <div class="step-txt"><strong>Copy the login bookmark</strong><br>Tap the button below to copy it.</div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <div class="step-txt"><strong>Save it in Safari</strong><br>Open Safari → go to <strong>${esc(domain)}</strong> → tap Share → Add Bookmark. Then edit the bookmark URL and paste.</div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">3</div>
+          <div class="step-txt"><strong>One tap from now on</strong><br>Visit <strong>${esc(domain)}</strong> and tap the bookmark — you're logged in instantly.</div>
+        </div>
+      </div>
+      <button class="big-btn" id="copyBtn" onclick="doCopy(${svc.id},'${esc(acc.label)}')">
+        📋 Copy Login Bookmark
+      </button>
+      <button class="ghost-btn" onclick="doneSetup(${svc.id},'${esc(acc.label)}','${siteUrl}')">
+        ✓ Saved the bookmark — open site
+      </button>
+    `;
+  } catch(e) {
+    document.getElementById('actionBody').innerHTML =
+      `<div class="state-box" style="padding:24px"><div class="ico">⚠️</div><p>Could not load bookmark. Try again.</p></div>`;
+  }
+}
+
+async function doCopy(sid, lbl) {
+  if (!currentBmUrl) return;
+  try { await navigator.clipboard.writeText(currentBmUrl); }
+  catch(_) {
+    const ta = document.createElement('textarea');
+    ta.value = currentBmUrl; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+  const btn = document.getElementById('copyBtn');
+  if (btn) { btn.textContent = '✓ Copied!'; btn.classList.add('green'); }
+  toast('Copied! Now save it as a Safari bookmark.');
+}
+
+function doneSetup(sid, lbl, siteUrl) {
+  markSetup(sid, lbl);
+  closeOverlay('actionOverlay');
+  toast('Bookmark saved! Opening site…');
+  setTimeout(() => window.open(siteUrl,'_blank'), 500);
+  render(allServices, currentCat, document.getElementById('searchInput').value.toLowerCase());
+}
+
+function resetSetup(sid, lbl) {
+  clearSetup(sid, lbl);
+  closeOverlay('actionOverlay');
+  toast('Bookmark reset.');
+  render(allServices, currentCat, document.getElementById('searchInput').value.toLowerCase());
+}
+
+// ── Tab switcher ─────────────────────────────────────────────────────────────
+function showTab(tab) {
+  const isServices = tab === 'services';
+  document.getElementById('servicesList').style.display  = isServices ? '' : 'none';
+  document.getElementById('profileTab').style.display    = isServices ? 'none' : 'flex';
+  document.getElementById('categoryTabs').style.display  = isServices ? '' : 'none';
+  document.getElementById('searchWrap').style.display    = isServices ? '' : 'none';
+  document.getElementById('navServices').classList.toggle('active', isServices);
+  document.getElementById('navProfile').classList.toggle('active', !isServices);
+}
+
+// ── Search ───────────────────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', e => {
+  render(allServices, currentCat, e.target.value.toLowerCase());
+});
+
+// ── Service worker ───────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/mobile-sw.js').catch(() => {});
+}
+
+boot();
+</script>
 </body>
 </html>

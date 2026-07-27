@@ -236,6 +236,14 @@ app.get('/app', (req, res) => {
 app.get('/mobile', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
 });
+app.get('/mobile-manifest.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'mobile-manifest.json'));
+});
+app.get('/mobile-sw.js', (req, res) => {
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'mobile-sw.js'));
+});
 
 app.get('/safari', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'safari.html'));
