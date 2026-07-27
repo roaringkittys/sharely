@@ -9,6 +9,8 @@ function init(db) {
   const migrations = [
     'ALTER TABLE members ADD COLUMN access_token TEXT DEFAULT NULL',
     'ALTER TABLE plans ADD COLUMN duration_days INTEGER DEFAULT 30',
+    'ALTER TABLE transactions ADD COLUMN customer_email TEXT DEFAULT NULL',
+    'ALTER TABLE transactions ADD COLUMN customer_name TEXT DEFAULT NULL',
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch (e) { /* column already exists */ }

@@ -42,6 +42,13 @@ function getCoreClient() {
 async function createSnapToken({ orderId, amount, customerEmail, customerName, planName, items = [] }) {
   const snap = getSnapClient();
 
+  // Build the finish redirect URL so Midtrans can redirect after async payment (QRIS etc.)
+  const baseUrl = process.env.APP_BASE_URL ||
+    (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '');
+  const finishUrl = baseUrl
+    ? `${baseUrl}/membership/checkout/success?order_id=${encodeURIComponent(orderId)}&pending=1&email=${encodeURIComponent(customerEmail)}`
+    : undefined;
+
   const parameter = {
     transaction_details: {
       order_id: orderId,
@@ -73,6 +80,7 @@ async function createSnapToken({ orderId, amount, customerEmail, customerName, p
       quantity: 1,
       name: planName || 'Subscription',
     }],
+    ...(finishUrl ? { callbacks: { finish: finishUrl } } : {}),
   };
 
   const transaction = await snap.createTransaction(parameter);

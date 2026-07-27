@@ -166,8 +166,8 @@ function init(app, db, publicDir) {
       const memberId = (req.session && req.session.memberId) || null;
 
       db.prepare(
-        'INSERT INTO transactions (order_id, member_id, plan_id, amount_cents, status) VALUES (?, ?, ?, ?, ?)'
-      ).run(orderId, memberId, plan.id, amount, 'pending');
+        'INSERT INTO transactions (order_id, member_id, plan_id, amount_cents, status, customer_email, customer_name) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).run(orderId, memberId, plan.id, amount, 'pending', email.toLowerCase(), name || email.split('@')[0]);
 
       const snapResult = await payments.createSnapToken({
         orderId,
@@ -203,7 +203,7 @@ function init(app, db, publicDir) {
 
       // If already settled locally, return immediately
       if (localTx.status === 'paid') {
-        return res.json({ status: 'paid', order_id: req.params.orderId, plan_id: localTx.plan_id });
+        return res.json({ status: 'paid', order_id: req.params.orderId, plan_id: localTx.plan_id, customer_email: localTx.customer_email || null });
       }
 
       // Otherwise check Midtrans (404 = transaction not yet created on their side)
@@ -232,6 +232,7 @@ function init(app, db, publicDir) {
         status: isPaid ? 'paid' : isFailed ? 'failed' : 'pending',
         order_id: req.params.orderId,
         plan_id: localTx.plan_id,
+        customer_email: localTx.customer_email || null,
         midtrans_status: remoteStatus.transaction_status,
       });
     } catch (err) {

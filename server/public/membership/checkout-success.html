@@ -60,9 +60,38 @@
             <div id="successCard">
               <div style="font-size:48px; margin-bottom:16px;">✅</div>
               <h2 style="font-size:22px; font-weight:700; margin-bottom:10px;">Payment received!</h2>
-              <p style="font-size:14px; color:#666; margin-bottom:20px;" class="mp-auth-sub" id="statusMsg">
+              <p style="font-size:14px; color:#666; margin-bottom:20px;" class="mp-auth-sub">
                 Your subscription is being activated. Create your account to get started.
               </p>
+
+              <!-- QRIS / async payment: polling indicator -->
+              <div id="pendingPolling" style="display:none; margin:24px 0;">
+                <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:14px;">
+                  <svg width="28" height="28" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#7c3aed">
+                    <g fill="none" fill-rule="evenodd">
+                      <g transform="translate(1 1)" stroke-width="3">
+                        <circle stroke-opacity=".25" cx="18" cy="18" r="18"/>
+                        <path d="M36 18c0-9.94-8.06-18-18-18">
+                          <animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="0.9s" repeatCount="indefinite"/>
+                        </path>
+                      </g>
+                    </g>
+                  </svg>
+                  <span style="font-size:15px; font-weight:600; color:#7c3aed;">Waiting for payment confirmation…</span>
+                </div>
+                <p style="font-size:13px; color:#888; margin:0;">
+                  This page updates automatically. Do not close this tab.<br>
+                  For QRIS: scan the QR code in the Midtrans popup, then return here.
+                </p>
+              </div>
+
+              <!-- Timeout fallback -->
+              <div id="pendingTimeout" style="display:none; margin:24px 0; padding:16px; background:#fff8f0; border:1px solid #f59e0b; border-radius:8px;">
+                <p style="font-size:14px; color:#92400e; margin:0 0 10px;">
+                  ⏳ Payment confirmation is taking longer than usual. If you completed the payment, please contact support with your order reference:
+                </p>
+                <code style="font-size:13px; word-break:break-all; color:#7c3aed;" id="timeoutOrderId"></code>
+              </div>
 
               <form id="createAccountForm" style="text-align:left; margin-top:20px;">
                 <div id="alertBox" class="ud-alert ud-alert-error"></div>
