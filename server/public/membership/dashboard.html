@@ -6,6 +6,34 @@
 <title>Dashboard | Sharely</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="/membership/css/groupy-theme.css">
+<link rel="stylesheet" href="/membership/css/membership.css">
+<style>
+  /* Admin panel embedded in dashboard */
+  #adminSection {
+    margin-top: 32px;
+    padding: 24px;
+    background: var(--mp-surface, #fff);
+    border: 1px solid var(--mp-border, #e5e7eb);
+    border-radius: 16px;
+  }
+  #adminSection .admin-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #7c3aed;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #adminSection .mp-tab-bar { display:flex; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--mp-border,#e5e7eb); flex-wrap:wrap; }
+  #adminSection .mp-tab { padding:10px 4px; margin-right:20px; color:var(--mp-text-dim,#6b7280); font-size:14.5px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; }
+  #adminSection .mp-tab.active { color:#111; border-bottom-color:#7c3aed; }
+  #adminSection .mp-tab-panel { display:none; }
+  #adminSection .mp-tab-panel.active { display:block; }
+  .mp-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000; }
+  .mp-modal-backdrop.mp-hidden { display:none; }
+  .mp-modal { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:28px; width:420px; max-width:90vw; }
+</style>
 </head>
 <body>
 
@@ -54,71 +82,194 @@
   <section class="dashboard">
     <div class="container">
 
-      <div class="menu-section" id="planSection">
-        <div class="menu-section-mini-header">Your plan</div>
-        <img src="" alt="Logo" class="top-right-image" style="display:none;" id="topRightLogo">
-        <div class="menu-section-plan-premium" id="planName">Free</div>
-        <div class="menu-section-plan-description" id="planExpiry">
-          You don't have an active plan yet. Choose a plan to unlock your services.
+      <!-- ── Member sections (hidden for admin-only sessions) ──────── -->
+      <div id="memberSections">
+        <div class="menu-section" id="planSection">
+          <div class="menu-section-mini-header">Your plan</div>
+          <img src="" alt="Logo" class="top-right-image" style="display:none;" id="topRightLogo">
+          <div class="menu-section-plan-premium" id="memberPlanName">Free</div>
+          <div class="menu-section-plan-description" id="planExpiry">
+            You don't have an active plan yet. Choose a plan to unlock your services.
+          </div>
         </div>
-      </div>
 
-      <div class="ext-connect-card" id="extConnectCard">
-        <h4><i class="fa fa-plug" style="margin-right:6px;"></i> Connect Your Extension</h4>
-        <p>Paste this token into your Sharely Extension settings to connect automatically.</p>
-        <div class="ext-connect-token">
-          <input type="text" id="accessTokenInput" readonly value="Loading..." />
-          <button id="copyTokenBtn">Copy</button>
+        <div class="ext-connect-card" id="extConnectCard">
+          <h4><i class="fa fa-plug" style="margin-right:6px;"></i> Connect Your Extension</h4>
+          <p>Paste this token into your Sharely Extension settings to connect automatically.</p>
+          <div class="ext-connect-token">
+            <input type="text" id="accessTokenInput" readonly value="Loading..." />
+            <button id="copyTokenBtn">Copy</button>
+          </div>
+          <div class="ext-connect-copied" id="copiedMsg">Copied to clipboard!</div>
         </div>
-        <div class="ext-connect-copied" id="copiedMsg">Copied to clipboard!</div>
-      </div>
 
-      <div class="menu-section">
-        <div class="menu-section-header">Account</div>
-        <a href="/membership/settings" class="menu-item">
-          <span class="icon"><i class="fa fa-pen-to-square"></i></span> Edit profile
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="/membership/billing" class="menu-item">
-          <span class="icon"><i class="fa fa-paperclip"></i></span> Order history
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="#" class="menu-item" id="logoutRow">
-          <span class="icon"><i class="fa fa-sign-out" style="color:#e74c3c;"></i></span> Log out
-          <span class="chevron" style="color:#e74c3c;">&#8250;</span>
-        </a>
-      </div>
+        <div class="menu-section">
+          <div class="menu-section-header">Account</div>
+          <a href="/membership/settings" class="menu-item">
+            <span class="icon"><i class="fa fa-pen-to-square"></i></span> Edit profile
+            <span class="chevron">&#8250;</span>
+          </a>
+          <a href="/membership/billing" class="menu-item">
+            <span class="icon"><i class="fa fa-paperclip"></i></span> Order history
+            <span class="chevron">&#8250;</span>
+          </a>
+          <a href="#" class="menu-item" id="logoutRow">
+            <span class="icon"><i class="fa fa-sign-out" style="color:#e74c3c;"></i></span> Log out
+            <span class="chevron" style="color:#e74c3c;">&#8250;</span>
+          </a>
+        </div>
 
-      <div class="menu-section">
-        <div class="menu-section-header">Premium</div>
-        <a href="/membership/pricing" class="menu-item">
-          <span class="icon"><i class="fa fa-shopping-cart"></i></span> Purchase premium
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="/membership/billing" class="menu-item">
-          <span class="icon"><i class="fa fa-paperclip"></i></span> Order history
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="/membership/upgrade" class="menu-item">
-          <span class="icon"><i class="fa fa-right-left"></i></span> Upgrade plan
-          <span class="chevron">&#8250;</span>
-        </a>
-      </div>
+        <div class="menu-section">
+          <div class="menu-section-header">Premium</div>
+          <a href="/membership/pricing" class="menu-item">
+            <span class="icon"><i class="fa fa-shopping-cart"></i></span> Purchase premium
+            <span class="chevron">&#8250;</span>
+          </a>
+          <a href="/membership/billing" class="menu-item">
+            <span class="icon"><i class="fa fa-paperclip"></i></span> Order history
+            <span class="chevron">&#8250;</span>
+          </a>
+          <a href="/membership/upgrade" class="menu-item">
+            <span class="icon"><i class="fa fa-right-left"></i></span> Upgrade plan
+            <span class="chevron">&#8250;</span>
+          </a>
+        </div>
 
-      <div class="menu-section">
-        <div class="menu-section-header">Extension</div>
-        <a href="/api/membership/download-extension" class="menu-item">
-          <span class="icon"><i class="fa fa-download"></i></span> Download Extension (.zip)
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="#" class="menu-item" onclick="return false;" style="opacity:.7">
-          <span class="icon"><i class="fa fa-play"></i></span> Watch installation tutorial
-          <span class="chevron">&#8250;</span>
-        </a>
-      </div>
+        <div class="menu-section">
+          <div class="menu-section-header">Extension</div>
+          <a href="/api/membership/download-extension" class="menu-item">
+            <span class="icon"><i class="fa fa-download"></i></span> Download Extension (.zip)
+            <span class="chevron">&#8250;</span>
+          </a>
+          <a href="#" class="menu-item" onclick="return false;" style="opacity:.7">
+            <span class="icon"><i class="fa fa-play"></i></span> Watch installation tutorial
+            <span class="chevron">&#8250;</span>
+          </a>
+        </div>
+      </div><!-- /#memberSections -->
+
+      <!-- ── Admin section (shown only to Sharely admins) ──────────── -->
+      <div id="adminSection" style="display:none;">
+        <div class="admin-section-title">
+          <i class="fa fa-shield-halved"></i> Membership Admin
+        </div>
+
+        <div class="mp-stat-grid">
+          <div class="mp-stat-card"><span>Total members</span><strong id="statMembers">—</strong></div>
+          <div class="mp-stat-card"><span>Active subscriptions</span><strong id="statActiveSubs">—</strong></div>
+          <div class="mp-stat-card"><span>Monthly recurring revenue</span><strong id="statMrr">—</strong></div>
+          <div class="mp-stat-card"><span>Total revenue</span><strong id="statRevenue">—</strong></div>
+        </div>
+
+        <div class="mp-tab-bar">
+          <div class="mp-tab active" data-tab="plans">Plans</div>
+          <div class="mp-tab" data-tab="products">Tools</div>
+          <div class="mp-tab" data-tab="members">Members</div>
+          <div class="mp-tab" data-tab="subscriptions">Subscriptions</div>
+          <div class="mp-tab" data-tab="billing">Billing</div>
+        </div>
+
+        <div class="mp-tab-panel active" id="panel-plans">
+          <div class="mp-app-header" style="margin-bottom:16px;">
+            <div></div>
+            <button class="mp-btn mp-btn-primary mp-btn-sm" id="admNewPlanBtn">+ New plan</button>
+          </div>
+          <div class="mp-table-wrap">
+            <table class="mp-table">
+              <thead><tr><th>Name</th><th>Price</th><th>Interval / Duration</th><th>Active</th><th>Tools</th><th></th></tr></thead>
+              <tbody id="plansRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mp-tab-panel" id="panel-products">
+          <div class="mp-app-header" style="margin-bottom:16px;">
+            <div></div>
+            <button class="mp-btn mp-btn-primary mp-btn-sm" id="admNewProductBtn">+ New tool</button>
+          </div>
+          <div class="mp-table-wrap">
+            <table class="mp-table">
+              <thead><tr><th>Icon</th><th>Name</th><th>Category</th><th>Active</th><th></th></tr></thead>
+              <tbody id="productsRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mp-tab-panel" id="panel-members">
+          <div class="mp-table-wrap">
+            <table class="mp-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+              <tbody id="membersRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mp-tab-panel" id="panel-subscriptions">
+          <div class="mp-table-wrap">
+            <table class="mp-table">
+              <thead><tr><th>Member</th><th>Plan</th><th>Status</th><th>Renews</th></tr></thead>
+              <tbody id="subscriptionsRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mp-tab-panel" id="panel-billing">
+          <div class="mp-table-wrap">
+            <table class="mp-table">
+              <thead><tr><th>Date</th><th>Member</th><th>Amount</th><th>Status</th><th>Reference</th></tr></thead>
+              <tbody id="billingRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /#adminSection -->
 
     </div>
   </section>
+
+  <!-- Admin modals — IDs prefixed "adm" to avoid collision with member section -->
+  <div class="mp-modal-backdrop mp-hidden" id="planModal">
+    <div class="mp-modal">
+      <h3 style="margin-bottom:18px;" id="admPlanModalTitle">New plan</h3>
+      <input type="hidden" id="admPlanId" />
+      <div class="mp-field"><label>Name</label><input type="text" id="admPlanName" /></div>
+      <div class="mp-field"><label>Description</label><input type="text" id="admPlanDesc" /></div>
+      <div class="mp-grid-2">
+        <div class="mp-field"><label>Price (IDR, e.g. 99000)</label><input type="number" id="admPlanPrice" step="1" min="0" /></div>
+        <div class="mp-field"><label>Interval</label>
+          <select id="admPlanInterval">
+            <option value="day">Daily</option>
+            <option value="month">Monthly</option>
+            <option value="year">Yearly</option>
+          </select>
+        </div>
+      </div>
+      <div class="mp-field"><label>Duration (days)</label><input type="number" id="admPlanDuration" min="1" value="30" /></div>
+      <div class="mp-field"><label>Features (one per line)</label>
+        <textarea id="admPlanFeatures" rows="4" style="width:100%; padding:11px 14px; border-radius:10px; border:1px solid #e5e7eb; font-family:inherit;"></textarea>
+      </div>
+      <div class="mp-flex mp-gap-8" style="margin-top:20px;">
+        <button class="mp-btn mp-btn-primary" id="admSavePlanBtn">Save</button>
+        <button class="mp-btn mp-btn-ghost" id="admCancelPlanBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mp-modal-backdrop mp-hidden" id="productModal">
+    <div class="mp-modal">
+      <h3 style="margin-bottom:18px;" id="admProductModalTitle">New tool</h3>
+      <input type="hidden" id="admProductId" />
+      <div class="mp-field"><label>Name</label><input type="text" id="admProductName" /></div>
+      <div class="mp-field"><label>Description</label><input type="text" id="admProductDesc" /></div>
+      <div class="mp-grid-2">
+        <div class="mp-field"><label>Icon (emoji)</label><input type="text" id="admProductIcon" placeholder="🧰" /></div>
+        <div class="mp-field"><label>Category</label><input type="text" id="admProductCat" /></div>
+      </div>
+      <div class="mp-flex mp-gap-8" style="margin-top:20px;">
+        <button class="mp-btn mp-btn-primary" id="admSaveProductBtn">Save</button>
+        <button class="mp-btn mp-btn-ghost" id="admCancelProductBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="ud-footer">
     <div class="container">
@@ -170,54 +321,75 @@
   <a href="javascript:void(0)" class="back-to-top" id="backToTop"><i class="fa-solid fa-arrow-up"></i></a>
 
   <script src="/membership/js/membership.js"></script>
+  <script src="/membership/js/admin.js"></script>
   <script>
     (async function () {
-      const data = await MembershipUI.requireMemberSession();
-      if (!data) return;
+      // Check both member and admin status in parallel — do NOT auto-redirect here
+      const [memberRes, adminCheckRes] = await Promise.all([
+        fetch('/api/membership/me'),
+        fetch('/api/membership/is-admin'),
+      ]);
 
-      const firstName = (data.member.name || data.member.email).split(' ')[0];
+      const isAdmin = adminCheckRes.ok ? (await adminCheckRes.json()).isAdmin : false;
+      let memberData = null;
 
-      // Plan section
-      if (data.subscription && data.subscription.status === 'active') {
-        const expiry = new Date(data.subscription.current_period_end);
-        const days = Math.max(0, Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24)));
-        document.getElementById('planName').textContent = data.subscription.plan_name;
-        document.getElementById('planExpiry').innerHTML =
-          'Your <b>' + data.subscription.plan_name + '</b> is valid until ' + MembershipUI.formatDate(data.subscription.current_period_end) +
-          ' (UTC). <b>' + days + ' day' + (days !== 1 ? 's' : '') + ' remaining.</b>';
-      } else if (data.subscription) {
-        document.getElementById('planName').textContent = data.subscription.plan_name;
-        document.getElementById('planExpiry').textContent = 'Expired — renew to continue using Sharely.';
-      } else {
-        document.getElementById('planName').textContent = 'Free';
-        document.getElementById('planExpiry').textContent = "You don't have an active plan yet. Choose a plan to unlock your services.";
-      }
-
-      // Extension connect token
-      if (data.member.access_token) {
-        const tokenInput = document.getElementById('accessTokenInput');
-        tokenInput.value = data.member.access_token;
-        document.getElementById('copyTokenBtn').addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(tokenInput.value);
-            const msg = document.getElementById('copiedMsg');
-            msg.style.display = 'block';
-            setTimeout(() => { msg.style.display = 'none'; }, 2000);
-          } catch (e) {
-            tokenInput.select();
-            document.execCommand('copy');
-          }
-        });
-      }
-
-      // Logout
-      async function doLogout(e) {
-        if (e) e.preventDefault();
-        await fetch('/api/membership/logout', { method: 'POST' });
+      if (memberRes.ok) {
+        memberData = await memberRes.json();
+      } else if (!isAdmin) {
+        // Neither a member nor an admin — redirect to member login
         window.location.href = '/membership/login';
+        return;
       }
-      document.getElementById('logoutBtn').addEventListener('click', doLogout);
-      document.getElementById('logoutRow').addEventListener('click', doLogout);
+
+      if (memberData) {
+        // ── Member sections ──────────────────────────────────────────
+        if (memberData.subscription && memberData.subscription.status === 'active') {
+          const expiry = new Date(memberData.subscription.current_period_end);
+          const days = Math.max(0, Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24)));
+          document.getElementById('memberPlanName').textContent = memberData.subscription.plan_name;
+          document.getElementById('planExpiry').innerHTML =
+            'Your <b>' + memberData.subscription.plan_name + '</b> is valid until ' +
+            MembershipUI.formatDate(memberData.subscription.current_period_end) +
+            ' (UTC). <b>' + days + ' day' + (days !== 1 ? 's' : '') + ' remaining.</b>';
+        } else if (memberData.subscription) {
+          document.getElementById('memberPlanName').textContent = memberData.subscription.plan_name;
+          document.getElementById('planExpiry').textContent = 'Expired — renew to continue using Sharely.';
+        } else {
+          document.getElementById('memberPlanName').textContent = 'Free';
+          document.getElementById('planExpiry').textContent =
+            "You don't have an active plan yet. Choose a plan to unlock your services.";
+        }
+
+        // Extension connect token
+        if (memberData.member.access_token) {
+          const tokenInput = document.getElementById('accessTokenInput');
+          tokenInput.value = memberData.member.access_token;
+          document.getElementById('copyTokenBtn').addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(tokenInput.value);
+              const msg = document.getElementById('copiedMsg');
+              msg.style.display = 'block';
+              setTimeout(() => { msg.style.display = 'none'; }, 2000);
+            } catch (e) {
+              tokenInput.select();
+              document.execCommand('copy');
+            }
+          });
+        }
+
+        // Logout
+        async function doLogout(e) {
+          if (e) e.preventDefault();
+          await fetch('/api/membership/logout', { method: 'POST' });
+          window.location.href = '/membership/login';
+        }
+        document.getElementById('logoutBtn').addEventListener('click', doLogout);
+        document.getElementById('logoutRow').addEventListener('click', doLogout);
+      } else {
+        // Admin-only session: hide member sections, show only admin panel
+        document.getElementById('memberSections').style.display = 'none';
+        document.getElementById('logoutBtn').href = '/login';
+      }
 
       // Back to top
       const backToTop = document.getElementById('backToTop');
@@ -225,6 +397,12 @@
         backToTop.classList.toggle('show', window.scrollY > 300);
       });
       backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+      // ── Admin panel ──────────────────────────────────────────────────
+      if (isAdmin) {
+        document.getElementById('adminSection').style.display = 'block';
+        window.initAdmin();
+      }
     })();
   </script>
 </body>
