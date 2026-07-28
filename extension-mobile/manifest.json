@@ -1,20 +1,25 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Sharely for Orion",
-  "version": "1.0.1",
-  "description": "Touch-friendly Sharely access for Orion Browser.",
-  "browser_action": {
+  "version": "1.0.2",
+  "description": "One-tap access to your Sharely premium services on Orion Browser.",
+  "action": {
     "default_title": "Sharely",
     "default_popup": "popup.html"
   },
   "background": {
-    "scripts": ["browser-api.js", "background.js"],
-    "persistent": true
+    "service_worker": "background.js"
   },
+  "host_permissions": [
+    "*://*/*"
+  ],
   "permissions": [
     "cookies",
     "storage",
-    "tabs",
-    "*://*/*"
-  ]
+    "tabs"
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "128": "icons/icon-128.png"
+  }
 }
