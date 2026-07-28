@@ -1,5 +1,5 @@
 /* Sharely Orion mobile background page. Cookie values are never logged. */
-importScripts('browser-api.js');
+/* browser-api.js is loaded first via manifest background.scripts — no importScripts needed. */
 
 function cookieUrl(cookie) {
   const domain = String(cookie.domain || '').replace(/^\./, '');
