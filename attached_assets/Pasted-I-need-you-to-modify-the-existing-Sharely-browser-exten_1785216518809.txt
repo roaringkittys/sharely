@@ -1,0 +1,286 @@
+I need you to modify the existing Sharely browser extension project into a separate **mobile/iOS-compatible WebExtension build targeting Orion Browser on iOS**.
+
+IMPORTANT: Do NOT destroy or replace the existing desktop Chrome extension. Keep the current desktop implementation working. Create a separate mobile/Orion-compatible implementation or build target.
+
+## Existing Sharely functionality
+
+The extension's core purpose is:
+
+1. User logs into Sharely.
+2. Sharely retrieves an authorized session-cookie configuration for a subscription/account.
+3. Extension receives the cookie data from the Sharely backend.
+4. Extension places the supplied cookies into the target website's cookie store using the browser's cookie API where the browser permits this.
+5. Extension opens the target website.
+6. The user should arrive at the website with the supplied session state, where technically supported.
+
+The existing extension currently uses APIs such as:
+
+* cookies
+* storage
+* tabs
+* contextMenus
+* background/service-worker logic
+* Sharely backend API
+
+Preserve this functionality and API contract as much as possible.
+
+## PRIMARY GOAL
+
+Create an Orion-compatible mobile WebExtension.
+
+Do NOT assume Chrome Manifest V3 compatibility.
+
+First inspect the current project and identify exactly which APIs/features are incompatible with Orion.
+
+Then build the smallest possible compatible architecture around APIs Orion actually supports.
+
+## IMPORTANT COMPATIBILITY REQUIREMENT
+
+Use official Orion Browser/WebExtensions documentation and Apple's WebExtension limitations as the source of truth.
+
+Do NOT guess that an API is supported.
+
+Before implementing, determine:
+
+* Supported manifest version
+* Background page vs service worker support
+* cookies API support
+* storage API support
+* tabs API support
+* contextMenus support
+* permissions syntax
+* host_permissions behavior
+* browser.* vs chrome.* API compatibility
+* extension popup support
+* mobile extension limitations
+* cookie API limitations on iOS/Orion
+
+If Orion does NOT support a required capability, explicitly report it instead of implementing a fake workaround.
+
+## SECURITY / AUTHENTICATION
+
+The extension must NEVER ask the user to paste a session cookie manually.
+
+The extension should only receive session data from the authenticated Sharely backend.
+
+Do not log session cookie values to console.
+Do not expose session cookie values in the popup UI.
+Do not store session cookies in localStorage.
+Do not send cookies to third-party servers.
+Do not weaken cookie security attributes.
+
+Only use the cookie API to establish session state where the browser explicitly allows it.
+
+## ARCHITECTURE
+
+Prefer this architecture:
+
+Sharely Web App
+↓
+Authenticated Sharely API
+↓
+Orion WebExtension
+↓
+Browser cookie API
+↓
+Target website
+↓
+Open target URL
+
+The extension should authenticate to Sharely using the existing authentication mechanism already present in this repository.
+
+Reuse existing API endpoints and data structures instead of creating a second authentication system.
+
+## BUILD SEPARATION
+
+Create:
+
+/extension-desktop
+/extension-mobile
+
+or an equivalent clean build structure.
+
+The existing Chrome extension must continue working.
+
+The mobile build should have its own manifest if necessary.
+
+Do not add Orion-specific hacks to the desktop build.
+
+## MOBILE UI
+
+Create a simple mobile-friendly popup/interface.
+
+The user should see:
+
+Sharely
+──────────────
+
+Logged in as:
+[user]
+
+Available accounts:
+
+[ Account 1 ]
+Open
+
+[ Account 2 ]
+Open
+
+[ Account 3 ]
+Open
+
+The interface should be optimized for touch.
+
+Large buttons.
+No hover-dependent interactions.
+No tiny desktop-only UI.
+No context-menu dependency for the primary mobile flow.
+
+The primary action should be:
+
+Select account
+→ retrieve authorized session
+→ set supported cookies
+→ open target website
+
+## COOKIE HANDLING
+
+Implement cookie injection using the browser's supported cookie API.
+
+For every cookie, correctly handle:
+
+* name
+* value
+* domain
+* path
+* secure
+* httpOnly
+* expiration
+* sameSite
+* host-only behavior where applicable
+
+Do NOT blindly copy unsupported cookie properties.
+
+Do NOT convert an HttpOnly cookie into a normal JavaScript cookie.
+
+The browser's cookie API must be responsible for setting HttpOnly cookies if Orion supports this operation.
+
+If Orion cannot set a particular cookie property, report the exact limitation.
+
+## IMPORTANT TESTING REQUIREMENT
+
+Before connecting the full Sharely backend, create a minimal internal test mode.
+
+It should allow testing:
+
+1. Can the extension install in Orion?
+2. Can the extension load?
+3. Can it request the cookies permission?
+4. Can it call cookies.getAll()?
+5. Can it call cookies.set()?
+6. Can it set an HttpOnly cookie through the browser cookie API?
+7. Can it set cookies for a permitted target domain?
+8. Can it open the target website afterward?
+
+Create a test page or debug action for this.
+
+Do NOT use a real third-party account for testing.
+
+Use a local/test domain or an explicitly configured test domain.
+
+## ERROR HANDLING
+
+If Orion doesn't support a required API, show a useful error:
+
+"Orion does not support this Sharely feature on iOS."
+
+Do not silently fail.
+
+Log only technical metadata such as:
+
+* API unavailable
+* permission denied
+* cookie set failed
+* target domain rejected
+* authentication expired
+
+NEVER log actual cookie values, tokens, passwords, or session contents.
+
+## MANIFEST
+
+Create the smallest manifest possible.
+
+Avoid unnecessary permissions.
+
+Only request permissions actually required by Sharely.
+
+Do not blindly copy the current Chrome manifest.
+
+If Orion requires Manifest V2 or another specific structure, use that for the mobile build.
+
+If Orion supports both MV2 and MV3 but one is more reliable for cookie manipulation, choose the more compatible option and explain why.
+
+## API COMPATIBILITY LAYER
+
+If useful, create something like:
+
+/src/browser-api.js
+
+with a compatibility abstraction:
+
+const browserAPI = globalThis.browser || globalThis.chrome;
+
+Then use:
+
+browserAPI.cookies
+browserAPI.storage
+browserAPI.tabs
+
+through the abstraction instead of scattering browser-specific assumptions throughout the project.
+
+Do not use Chrome-only APIs unless verified to work in Orion.
+
+## DO NOT BREAK EXISTING FEATURES
+
+Preserve the existing:
+
+* Sharely API integration
+* account retrieval
+* authentication
+* account selection
+* session retrieval
+* cookie definitions
+* target URLs
+* desktop Chrome functionality
+
+Only change the implementation where necessary for Orion compatibility.
+
+## DELIVERABLES
+
+After implementation, give me:
+
+1. A summary of the current extension architecture.
+2. The exact reason the existing extension fails in Orion.
+3. The exact Orion compatibility limitations discovered.
+4. The new mobile extension architecture.
+5. Files created/modified.
+6. How to build the mobile extension.
+7. How to install it into Orion on iOS.
+8. A test procedure.
+9. Which Sharely features work on Orion.
+10. Which features cannot work because of Orion/iOS restrictions.
+
+MOST IMPORTANT:
+
+Do not tell me the extension is "Orion compatible" merely because it builds.
+
+The final test must establish whether the actual Sharely workflow works:
+
+Sharely authentication
+→ retrieve authorized session
+→ browser cookie API
+→ set session cookies
+→ open target website
+→ verify session state
+
+If any step cannot be performed by Orion on iOS, stop and clearly identify that limitation rather than attempting to bypass the browser's security model.

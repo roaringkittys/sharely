@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sharely for Orion</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101016; --card:#1b1b28; --muted:#9292aa; --purple:#7667ed; --green:#00c9a7; --red:#e17055; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; max-width:460px; background:var(--bg); color:#f4f3ff; font:14px -apple-system,BlinkMacSystemFont,"Inter",sans-serif; }
+    header { padding:18px 18px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #2b2b38; }
+    .logo { width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#6c5ce7,#a29bfe);font-weight:800;font-size:18px; }
+    h1 { margin:0; font-size:18px; flex:1; } h2 { font-size:15px; margin:20px 0 10px; }
+    main { padding:0 16px 18px; } .muted { color:var(--muted); font-size:12px; line-height:1.5; }
+    .status { margin-top:14px; padding:11px 12px; border-radius:11px; background:var(--card); color:var(--muted); }
+    .status.ok { color:var(--green); } .status.error { color:var(--red); }
+    .account { width:100%; display:flex; align-items:center; gap:10px; margin:8px 0; padding:14px; color:#fff; text-align:left; background:var(--card); border:1px solid #2b2b38; border-radius:13px; cursor:pointer; }
+    .account:active { transform:scale(.98); } .account span { flex:1; } .account b { font-size:16px; color:#a29bfe; }
+    button.primary { width:100%; margin-top:14px; padding:14px; border:0; border-radius:12px; color:#fff; background:linear-gradient(135deg,#6c5ce7,#a29bfe); font-weight:700; cursor:pointer; }
+    button.secondary { width:100%; margin-top:10px; padding:12px; border:1px solid #38384d; border-radius:12px; color:#c7c5df; background:transparent; cursor:pointer; }
+    #login { display:none; } .hidden { display:none !important; } .spinner { padding:30px; text-align:center; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <header><div class="logo">S</div><h1>Sharely</h1><span id="apiState" class="muted">Checking…</span></header>
+  <main>
+    <section id="loading" class="spinner">Connecting to Sharely…</section>
+    <section id="login">
+      <h2>Sign in required</h2>
+      <p class="muted">Sign in through Sharely, then reopen this popup.</p>
+      <button class="primary" id="loginButton">Open Sharely login</button>
+    </section>
+    <section id="content" class="hidden">
+      <div id="member" class="status"></div>
+      <h2>Available accounts</h2>
+      <div id="accounts"></div>
+      <button class="secondary" id="testButton">Run Orion capability test</button>
+      <p id="message" class="muted"></p>
+    </section>
+  </main>
+  <script src="browser-api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

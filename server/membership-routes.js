@@ -17,7 +17,11 @@ function init(app, db, publicDir) {
   // CORS helper for extension requests (credentialed fetch from chrome-extension://)
   function extCors(req, res, next) {
     const origin = req.headers.origin || '';
-    if (origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://')) {
+    if (
+      origin.startsWith('chrome-extension://') ||
+      origin.startsWith('moz-extension://') ||
+      origin.startsWith('safari-web-extension://')
+    ) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');

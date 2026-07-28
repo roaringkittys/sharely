@@ -18,3 +18,9 @@ id = "bxV4bzd8n19l3jM1sUDZn"
 uri = "file://server/public/groupy-guard-deobfuscated.zip"
 type = "unspecified"
 title = "Groupy Guard — Full Deobfuscated JSON (VM decoded to readable structure)"
+
+[[outputs]]
+id = "xzVyyExd4J0q6gUkc8RVX"
+uri = "file://sharely-orion-mobile.zip"
+type = "unspecified"
+title = "Sharely Orion mobile extension"
