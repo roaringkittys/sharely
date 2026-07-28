@@ -62,6 +62,20 @@ $('testButton').onclick = async () => {
   showMessage('Testing temporary cookie access…');
   const result = await send('CAPABILITY_TEST');
   showMessage(result.message, result.supported ? 'ok' : 'error');
+  const diagnostic = $('diagnostic');
+  diagnostic.classList.remove('hidden');
+  const labels = {
+    extensionLoaded: 'Extension loaded',
+    cookiesApi: 'Cookies API',
+    getAll: 'cookies.getAll',
+    set: 'cookies.set',
+    testCookieWrite: 'Test cookie write',
+    testCookieRead: 'Test cookie read',
+    openTarget: 'Open target page',
+  };
+  diagnostic.innerHTML = Object.entries(result.report || {}).map(([key, item]) =>
+    `<div class="diagnostic-row"><b>${labels[key] || key}</b><span>${item.pass ? 'PASS' : 'FAIL'} — ${escapeHtml(item.detail)}</span></div>`
+  ).join('');
 };
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));

@@ -20,9 +20,19 @@ No workaround attempts to bypass WebKit's cookie security model.
 
 ## Build / install
 
-This target has no bundler or package dependencies. Zip the contents of this
-directory (not the directory itself), then install the resulting WebExtension
-using Orion's extension installation flow. Orion's iOS extension installation
+Build a clean package from the project root:
+
+```sh
+npm run build:orion
+npm run validate:orion
+```
+
+The output is `dist/sharely-orion.zip`. The build puts runtime files directly
+at the ZIP root (not inside an `extension-mobile/` wrapper) and rejects
+metadata, dependencies, malformed manifests, or missing runtime files.
+
+Install the resulting WebExtension using Orion's extension installation flow.
+Orion's iOS extension installation
 and third-party-extension settings are controlled by Orion; use its current
 official iOS extension documentation for the exact device steps.
 

@@ -83,13 +83,25 @@ async function injectCookies(cookies, targetUrl) {
 }
 
 async function runCapabilityTest() {
-  if (!api.available || !api.hasApi('cookies.set') || !api.hasApi('cookies.getAll')) {
-    return { supported: false, message: 'Orion does not support this Sharely feature on iOS.' };
+  const report = {
+    extensionLoaded: { pass: true, detail: 'Background page responded.' },
+    cookiesApi: { pass: api.hasApi('cookies.set') && api.hasApi('cookies.getAll'), detail: '' },
+    getAll: { pass: false, detail: 'Not run.' },
+    set: { pass: false, detail: 'Not run.' },
+    testCookieWrite: { pass: false, detail: 'Not run.' },
+    testCookieRead: { pass: false, detail: 'Not run.' },
+    openTarget: { pass: false, detail: 'Not run.' },
+  };
+  if (!report.cookiesApi.pass) {
+    report.cookiesApi.detail = 'cookies.set or cookies.getAll is unavailable.';
+    return { supported: false, report, message: 'Orion does not support this Sharely feature on iOS.' };
   }
   const domain = 'example.com';
   const name = 'sharely_orion_test';
   const url = `https://${domain}/`;
   try {
+    const before = await api.cookiesGetAll({ domain });
+    report.getAll = { pass: Array.isArray(before), detail: `Returned ${before.length} cookies.` };
     const setResult = await api.cookiesSet({
       url,
       name,
@@ -100,17 +112,30 @@ async function runCapabilityTest() {
       httpOnly: true,
       sameSite: 'lax',
     });
+    report.set = { pass: Boolean(setResult), detail: setResult ? 'cookies.set returned a cookie.' : 'cookies.set returned no cookie.' };
+    report.testCookieWrite = { pass: Boolean(setResult && setResult.name === name), detail: setResult ? 'Test cookie write accepted.' : 'Test cookie write rejected.' };
     const cookies = await api.cookiesGetAll({ domain });
     const found = (cookies || []).some(cookie => cookie.name === name);
+    report.testCookieRead = { pass: found, detail: found ? 'Test cookie was read back.' : 'Test cookie was not returned.' };
     if (api.hasApi('cookies.remove')) await api.cookiesRemove({ url, name });
+    if (api.hasApi('tabs.create')) {
+      await api.tabsCreate({ url });
+      report.openTarget = { pass: true, detail: 'example.com opened.' };
+    } else {
+      report.openTarget = { pass: false, detail: 'tabs.create is unavailable.' };
+    }
+    const passed = Object.values(report).every(item => item.pass);
     return {
-      supported: Boolean(setResult && found),
-      message: setResult && found
-        ? 'Cookie API test passed.'
-        : 'Orion rejected the test cookie or did not return it on read-back.',
+      supported: passed,
+      report,
+      message: passed ? 'Cookie API test passed.' : 'Orion rejected one or more cookie operations.',
     };
   } catch (error) {
-    return { supported: false, message: error?.message || 'Cookie permission denied.' };
+    const reason = error?.message || 'Cookie permission denied.';
+    for (const key of Object.keys(report)) {
+      if (!report[key].pass && report[key].detail === 'Not run.') report[key].detail = reason;
+    }
+    return { supported: false, report, message: reason };
   }
 }
 

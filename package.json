@@ -4,6 +4,8 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
+    "build:orion": "node scripts/build-orion.js",
+    "validate:orion": "node scripts/build-orion.js --validate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

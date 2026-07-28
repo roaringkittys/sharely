@@ -24,3 +24,9 @@ id = "xzVyyExd4J0q6gUkc8RVX"
 uri = "file://sharely-orion-mobile.zip"
 type = "unspecified"
 title = "Sharely Orion mobile extension (fixed)"
+
+[[outputs]]
+id = "IOfyYkJfqmoABgZEUpCpA"
+uri = "file://dist/sharely-orion.zip"
+type = "unspecified"
+title = "Sharely Orion extension — validated build"
