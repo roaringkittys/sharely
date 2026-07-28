@@ -160,7 +160,8 @@ function corsForExtension(req, res, next) {
   if (
     origin.startsWith('chrome-extension://') ||
     origin.startsWith('moz-extension://') ||
-    origin.startsWith('safari-web-extension://')
+    origin.startsWith('safari-web-extension://') ||
+    origin.startsWith('safari-extension://')
   ) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
