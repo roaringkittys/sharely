@@ -1,0 +1,311 @@
+I need you to fix the current Sharely Orion mobile extension project so that it can actually be imported/installed into **Orion Browser on iOS**.
+
+IMPORTANT: Do not rebuild the project from scratch. Inspect the current project and fix the existing implementation.
+
+## CURRENT PROBLEM
+
+When I import the generated extension ZIP into Orion Browser on iOS, Orion reports:
+
+"Invalid Extension" / "Extension Error"
+
+I need you to identify the exact cause and fix it.
+
+## FIRST: VERIFY THE EXTENSION PACKAGE
+
+The final ZIP must have `manifest.json` at the ROOT of the ZIP.
+
+Correct:
+
+sharely-orion-mobile.zip
+├── manifest.json
+├── background.js
+├── browser-api.js
+├── popup.html
+├── popup.js
+└── README.md
+
+Incorrect:
+
+sharely-orion-mobile.zip
+└── sharely-orion-mobile/
+├── manifest.json
+├── background.js
+└── ...
+
+Do not put the extension directory itself inside the ZIP.
+
+Also do not include:
+
+* __MACOSX
+* .DS_Store
+* node_modules
+* source-control folders
+* build artifacts
+* unnecessary hidden files
+
+Create a clean ZIP specifically for Orion.
+
+## SECOND: INSPECT MANIFEST COMPATIBILITY
+
+Inspect the current manifest.json carefully.
+
+Use the simplest WebExtension manifest that Orion iOS currently supports.
+
+Do NOT assume Chrome MV3 compatibility.
+
+Before making changes, verify the current Orion iOS WebExtension limitations using official Orion documentation.
+
+Check specifically:
+
+* manifest_version
+* background scripts
+* service workers
+* browser_action / action
+* permissions
+* host_permissions
+* cookies API
+* storage API
+* tabs API
+* extension popup
+* mobile WebExtension limitations
+
+If Manifest V2 is currently more compatible with Orion, keep Manifest V2.
+
+Do not upgrade to MV3 unless Orion's current documentation confirms that it is supported and necessary.
+
+## THIRD: KEEP SHARELY FUNCTIONALITY
+
+The extension must retain the existing Sharely functionality:
+
+1. User authenticates with Sharely.
+2. Extension communicates with Sharely backend.
+3. Extension retrieves the authorized account/session information.
+4. Extension uses the browser cookie API where supported.
+5. Extension sets the required cookies for the target domain.
+6. Extension opens the target website.
+7. User gets the expected authenticated session if technically supported.
+
+Do NOT replace this with username/password automation.
+
+Do NOT ask users to paste cookies manually.
+
+Do NOT expose cookie values in the UI.
+
+Do NOT log cookie values.
+
+## FOURTH: CREATE A MINIMAL ORION TEST
+
+Before implementing the entire Sharely workflow, create a small diagnostic mode.
+
+The diagnostic should test:
+
+### Test 1
+
+Can the extension load?
+
+### Test 2
+
+Can the extension access the cookies API?
+
+### Test 3
+
+Can it call:
+
+browser.cookies.getAll()
+
+or the appropriate compatible API?
+
+### Test 4
+
+Can it call:
+
+browser.cookies.set()
+
+or the appropriate compatible API?
+
+### Test 5
+
+Can it set a test cookie on a controlled test domain?
+
+### Test 6
+
+Can it read the test cookie afterward?
+
+### Test 7
+
+Can it open the target URL after setting the cookie?
+
+Display clear results:
+
+ORION COMPATIBILITY TEST
+
+Extension loaded: PASS
+Cookies API: PASS/FAIL
+cookies.getAll: PASS/FAIL
+cookies.set: PASS/FAIL
+Test cookie write: PASS/FAIL
+Test cookie read: PASS/FAIL
+Open target page: PASS/FAIL
+
+If something fails, show the actual API/error reason.
+
+Do not claim compatibility simply because the extension loads.
+
+## FIFTH: COOKIE HANDLING
+
+The existing Sharely service uses session cookies.
+
+Preserve cookie properties where the browser API supports them:
+
+* name
+* value
+* domain
+* path
+* secure
+* httpOnly
+* expiration
+* sameSite
+
+Do not attempt to convert an HttpOnly cookie into document.cookie.
+
+The browser's extension cookie API should be responsible for setting HttpOnly cookies if Orion permits it.
+
+Do not implement any workaround that bypasses Orion's security model.
+
+## SIXTH: BROWSER API COMPATIBILITY
+
+Create a small browser compatibility abstraction.
+
+Prefer:
+
+const browserAPI = globalThis.browser || globalThis.chrome;
+
+Then use:
+
+browserAPI.cookies
+browserAPI.storage
+browserAPI.tabs
+
+through that abstraction.
+
+Avoid Chrome-specific APIs unless Orion documentation confirms support.
+
+If an API exists in Chrome but not Orion, implement a clean fallback or disable that feature.
+
+## SEVENTH: MOBILE UI
+
+The popup must be designed for iPhone/iPad touch interaction.
+
+Use:
+
+* large buttons
+* simple layout
+* no hover-only controls
+* no right-click/context-menu dependency
+* clear loading state
+* clear success/error state
+
+Example:
+
+SHARELY
+
+Logged in as:
+[user@example.com](mailto:user@example.com)
+
+Available accounts:
+
+[ Open Account ]
+
+[ Open Account ]
+
+[ Open Account ]
+
+When an account is selected:
+
+Loading session...
+Setting supported cookies...
+Opening website...
+
+Then show:
+
+✓ Session loaded
+
+or:
+
+✕ Orion cannot perform this operation
+
+## EIGHTH: DESKTOP EXTENSION MUST NOT BREAK
+
+Do not modify the existing Chrome desktop extension unnecessarily.
+
+If necessary, maintain separate builds:
+
+/extension-desktop
+/extension-orion
+
+The Orion build should be independent from desktop-specific APIs.
+
+## NINTH: BUILD SCRIPT
+
+Create a reliable build command that produces:
+
+dist/sharely-orion.zip
+
+The resulting ZIP MUST contain:
+
+dist/sharely-orion.zip
+├── manifest.json
+├── background.js
+├── browser-api.js
+├── popup.html
+├── popup.js
+└── other required runtime files
+
+NOT:
+
+dist/sharely-orion.zip
+└── sharely-orion/
+└── manifest.json
+
+Add a validation script that fails the build if:
+
+* manifest.json is missing
+* manifest.json is not at ZIP root
+* __MACOSX exists
+* .DS_Store exists
+* node_modules exists
+* manifest is invalid
+* required runtime files are missing
+
+## TENTH: DO NOT GUESS
+
+If Orion doesn't support something required by Sharely, tell me exactly what is unsupported.
+
+Do not create fake compatibility.
+
+Do not tell me "it should work."
+
+Actually test the extension package and validate the generated ZIP structure.
+
+## FINAL DELIVERABLE
+
+After fixing the project, give me:
+
+1. Exact root cause of the previous "Invalid Extension" error.
+2. Exact changes made.
+3. Orion manifest version being used and why.
+4. Orion APIs confirmed to work.
+5. Orion APIs confirmed NOT to work.
+6. Exact command to build the extension.
+7. Exact location of the generated ZIP.
+8. Exact instructions to import it into Orion iOS.
+9. Results of the cookie capability test.
+10. Whether the full Sharely session-cookie workflow is technically possible in Orion iOS.
+
+MOST IMPORTANT:
+
+First make the extension INSTALLABLE in Orion.
+
+Then make the cookie test work.
+
+Only after those two things work should you connect the full Sharely session workflow.
