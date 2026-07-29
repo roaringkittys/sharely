@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sharely</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101016; --card:#1b1b28; --line:#2b2b38; --muted:#9292aa; --purple:#7667ed; --green:#00c9a7; --red:#e17055; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-width:320px; max-width:460px; background:var(--bg); color:#f4f3ff; font:14px -apple-system,BlinkMacSystemFont,"Inter",sans-serif; }
+    header { padding:18px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line); }
+    .logo { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:linear-gradient(135deg,#6c5ce7,#a29bfe); font-weight:800; font-size:18px; }
+    h1 { margin:0; font-size:18px; flex:1; } h2 { font-size:15px; margin:20px 0 10px; }
+    main { padding:0 16px 18px; } .muted { color:var(--muted); font-size:12px; line-height:1.5; }
+    .status { margin-top:14px; padding:11px 12px; border-radius:11px; background:var(--card); color:var(--muted); }
+    .status.ok { color:var(--green); } .status.error { color:var(--red); }
+    .account { width:100%; display:flex; align-items:center; gap:10px; margin:8px 0; padding:14px; color:#fff; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:13px; cursor:pointer; }
+    .account:active { transform:scale(.98); } .account span { flex:1; } .account b { font-size:16px; color:#a29bfe; }
+    button.primary { width:100%; margin-top:14px; padding:14px; border:0; border-radius:12px; color:#fff; background:linear-gradient(135deg,#6c5ce7,#a29bfe); font-weight:700; cursor:pointer; }
+    button.secondary { width:100%; margin-top:10px; padding:12px; border:1px solid #38384d; border-radius:12px; color:#c7c5df; background:transparent; cursor:pointer; }
+    .hidden { display:none !important; } .spinner { padding:30px; text-align:center; color:var(--muted); }
+    .diagnostic { margin-top:12px; padding:12px; background:var(--card); border-radius:11px; }
+    .diagnostic-row { display:flex; gap:8px; padding:5px 0; border-bottom:1px solid var(--line); font-size:12px; }
+    .diagnostic-row:last-child { border-bottom:0; } .diagnostic-row b { width:118px; }
+  </style>
+</head>
+<body>
+  <header><div class="logo">S</div><h1>Sharely</h1><span id="apiState" class="muted">Connecting…</span></header>
+  <main>
+    <section id="loading" class="spinner">Connecting to Sharely…</section>
+    <section id="login" class="hidden">
+      <h2>Sign in required</h2>
+      <p class="muted">Sign in through Sharely, then reopen this popup.</p>
+      <button class="primary" id="loginButton">Open Sharely login</button>
+    </section>
+    <section id="content" class="hidden">
+      <div id="member" class="status"></div>
+      <h2>Available accounts</h2>
+      <div id="accounts"></div>
+      <button class="secondary" id="testButton">Run Orion capability test</button>
+      <p id="message" class="muted"></p>
+      <div id="diagnostic" class="diagnostic hidden"></div>
+    </section>
+  </main>
+  <script>
+    const MEMBERSHIP_URL = 'https://6cbfb053-e399-4cf0-a649-373f485ef582-00-386xnci2vytem.pike.replit.dev';
+    const SERVICE_URL = 'https://sharely-production-bc58.up.railway.app';
+    let accessToken = '';
+    const $ = id => document.getElementById(id);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const send = (type, payload = {}) => new Promise(resolve => chrome.runtime.sendMessage({ type, ...payload }, resolve));
+    function openUrl(url) { chrome.tabs.create({ url }); }
+    function status(text, kind = '') { $('message').textContent = text; $('message').className = `muted ${kind}`; }
+
+    async function load() {
+      $('apiState').textContent = chrome.cookies?.set ? 'Cookie API found' : 'Cookie API unavailable';
+      try {
+        const sessionResponse = await fetch(`${MEMBERSHIP_URL}/api/membership/extension-session`, { credentials: 'include' });
+        const session = await sessionResponse.json();
+        if (!session.authenticated || !session.subscription?.active) {
+          $('loading').classList.add('hidden'); $('login').classList.remove('hidden'); return;
+        }
+        accessToken = session.user.access_token || '';
+        $('member').textContent = `Logged in as ${session.user.email}`;
+        const response = await fetch(`${SERVICE_URL}/api/extension/config`, {
+          headers: accessToken ? { 'X-API-Key': accessToken } : {},
+        });
+        if (!response.ok) throw new Error('Could not retrieve Sharely accounts.');
+        const config = await response.json();
+        const accounts = [];
+        for (const service of config.services || []) {
+          for (const account of service.accounts || []) accounts.push({ service, account });
+          for (const sub of service.sub_services || []) {
+            for (const account of sub.accounts || []) accounts.push({ service: sub, account });
+          }
+        }
+        $('accounts').innerHTML = accounts.length
+          ? accounts.map((item, index) => `<button class="account" data-index="${index}"><span>${escapeHtml(item.service.name)} · ${escapeHtml(item.account.label)}</span><b>Open</b></button>`).join('')
+          : '<p class="muted">No accounts are currently available.</p>';
+        $('accounts').querySelectorAll('.account').forEach(button => {
+          button.onclick = () => openAccount(accounts[Number(button.dataset.index)]);
+        });
+        $('loading').classList.add('hidden'); $('content').classList.remove('hidden');
+      } catch (error) {
+        $('loading').classList.add('hidden'); $('content').classList.remove('hidden');
+        $('member').textContent = error.message || 'Unable to connect to Sharely.';
+        $('member').className = 'status error';
+      }
+    }
+
+    async function openAccount({ service, account }) {
+      status('Retrieving authorized session…');
+      const targetUrl = `https://${String(service.domain).replace(/^\./, '')}`;
+      const result = await send('INJECT_AND_OPEN', { cookies: account.cookies, targetUrl });
+      if (result?.success) status(`Opened ${service.name}. ${result.results.success.length} cookies verified.`, 'ok');
+      else status(result?.error || 'Orion could not inject this Sharely account.', 'error');
+    }
+
+    $('loginButton').onclick = () => openUrl(`${MEMBERSHIP_URL}/membership/login?redirect=/membership/dashboard`);
+    $('testButton').onclick = async () => {
+      status('Testing temporary cookie access…');
+      const result = await send('CAPABILITY_TEST');
+      status(result.message, result.supported ? 'ok' : 'error');
+      $('diagnostic').classList.remove('hidden');
+      const labels = { extensionLoaded:'Extension loaded', cookiesApi:'Cookies API', getAll:'cookies.getAll', set:'cookies.set', testCookieWrite:'Test cookie write', testCookieRead:'Test cookie read', openTarget:'Open target page' };
+      $('diagnostic').innerHTML = Object.entries(result.report || {}).map(([key, item]) =>
+        `<div class="diagnostic-row"><b>${labels[key] || key}</b><span>${item.pass ? 'PASS' : 'FAIL'} — ${escapeHtml(item.detail)}</span></div>`
+      ).join('');
+    };
+    load();
+  </script>
+</body>
+</html>

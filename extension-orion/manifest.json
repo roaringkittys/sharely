@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Sharely Extension",
+  "version": "2.3.1",
+  "description": "Sharely one-click access to your premium services.",
+  "homepage_url": "https://sharely.id",
+  "action": {
+    "default_popup": "./index.html"
+  },
+  "side_panel": {
+    "default_path": "./index.html"
+  },
+  "background": {
+    "service_worker": "./background.js"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "windows": "Alt+Shift+S",
+        "mac": "Alt+Shift+S",
+        "chromeos": "Alt+Shift+S",
+        "linux": "Alt+Shift+S"
+      }
+    }
+  },
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "permissions": [
+    "cookies",
+    "declarativeNetRequest",
+    "browsingData",
+    "management",
+    "sidePanel",
+    "contextMenus"
+  ],
+  "icons": {
+    "16": "./icon-16.png",
+    "128": "./icon-128.png"
+  }
+}

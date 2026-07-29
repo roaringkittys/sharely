@@ -9,11 +9,11 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const root   = path.resolve(__dirname, '..');
-const source = path.join(root, 'extension-mobile');
+const source = path.join(root, 'extension-orion');
 const dist   = path.join(root, 'dist');
 const output = path.join(dist, 'sharely-orion.zip');
 
-const required = ['manifest.json', 'browser-api.js', 'background.js', 'popup.html', 'popup.js'];
+const required = ['manifest.json', 'index.html', 'background.js'];
 const forbidden = /(^|\/)(__MACOSX|\.git|node_modules)(\/|$)|(^|\/)\.DS_Store$/;
 
 function fail(message) {
@@ -37,12 +37,9 @@ function readManifest() {
     }
     if (!manifest.action) fail('MV3 manifest must use "action", not "browser_action"');
     if (manifest.browser_action) fail('MV3 manifest must not have "browser_action"');
-  } else {
+    } else {
     if (!manifest.background || !Array.isArray(manifest.background.scripts)) {
       fail('MV2 manifest must have background.scripts array');
-    }
-    if (manifest.background.scripts[0] !== 'browser-api.js') {
-      fail('MV2: browser-api.js must be first in background.scripts');
     }
   }
   return manifest;

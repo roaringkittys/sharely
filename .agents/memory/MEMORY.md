@@ -1,0 +1,1 @@
+- [Orion extension compatibility](orion-extension-compatibility.md) — preserve the Groupy-derived root-level MV3 archive shape and validate each incremental change.
