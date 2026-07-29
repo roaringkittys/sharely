@@ -77,6 +77,22 @@ async function isMemberSessionValid() {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
+  // Orion/WebKit may not attach connect.sid to extension-origin fetches.
+  // Return only the membership session cookie to the popup; no cookie values
+  // are logged or persisted by the extension.
+  if (message.type === 'GET_MEMBERSHIP_SESSION_COOKIE') {
+    const url = `${String(message.membershipUrl || '').replace(/\/+$/, '')}/`;
+    chrome.cookies.get({ url, name: 'connect.sid' }, cookie => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        sendResponse({ success: false, error: error.message });
+        return;
+      }
+      sendResponse({ success: true, cookie: cookie?.value || '' });
+    });
+    return true;
+  }
+
   if (message.type === 'INJECT_AND_OPEN') {
     const { cookies, targetUrl } = message;
     const results = { success: [], failed: [] };

@@ -116,6 +116,18 @@ async function capabilityTest() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'GET_MEMBERSHIP_SESSION_COOKIE') {
+    const url = String(message.membershipUrl || '').replace(/\/+$/, '') + '/';
+    chrome.cookies.get({ url, name: 'connect.sid' }, cookie => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        sendResponse({ success: false, error: error.message });
+        return;
+      }
+      sendResponse({ success: true, cookie: cookie?.value || '' });
+    });
+    return true;
+  }
   if (message.type === 'CAPABILITY_TEST') {
     capabilityTest().then(sendResponse, error => sendResponse({ supported: false, message: error.message }));
     return true;

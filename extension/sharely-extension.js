@@ -69,8 +69,24 @@ function updateMemberStrip(name, plan, expiresAt) {
 async function checkSession() {
   if (!membershipUrl) return null;
   try {
+    // Normal Chrome sends credentials:include here. Orion may not, so obtain
+    // the existing Replit session cookie through the background cookie API.
+    let sessionHeaders = {};
+    try {
+      const cookieResult = await new Promise(resolve => {
+        chrome.runtime.sendMessage(
+          { type: 'GET_MEMBERSHIP_SESSION_COOKIE', membershipUrl },
+          resolve
+        );
+      });
+      if (cookieResult && cookieResult.success && cookieResult.cookie) {
+        sessionHeaders['X-Sharely-Session'] = cookieResult.cookie;
+      }
+    } catch (_) {}
+
     const res = await fetch(`${membershipUrl}/api/membership/extension-session`, {
       credentials: 'include',
+      headers: sessionHeaders,
     });
     if (!res.ok) return null;
     const data = await res.json();

@@ -49,13 +49,20 @@
     const $ = id => document.getElementById(id);
     const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const send = (type, payload = {}) => new Promise(resolve => chrome.runtime.sendMessage({ type, ...payload }, resolve));
+    async function sessionHeaders() {
+      const result = await send('GET_MEMBERSHIP_SESSION_COOKIE', { membershipUrl: MEMBERSHIP_URL });
+      return result?.success && result.cookie ? { 'X-Sharely-Session': result.cookie } : {};
+    }
     function openUrl(url) { chrome.tabs.create({ url }); }
     function status(text, kind = '') { $('message').textContent = text; $('message').className = `muted ${kind}`; }
 
     async function load() {
       $('apiState').textContent = chrome.cookies?.set ? 'Cookie API found' : 'Cookie API unavailable';
       try {
-        const sessionResponse = await fetch(`${MEMBERSHIP_URL}/api/membership/extension-session`, { credentials: 'include' });
+        const sessionResponse = await fetch(`${MEMBERSHIP_URL}/api/membership/extension-session`, {
+          credentials: 'include',
+          headers: await sessionHeaders(),
+        });
         const session = await sessionResponse.json();
         if (!session.authenticated || !session.subscription?.active) {
           $('loading').classList.add('hidden'); $('login').classList.remove('hidden'); return;

@@ -137,10 +137,27 @@ const upload = multer({
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-User-Session']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-User-Session', 'X-Sharely-Session']
 }));
 app.use(express.json());
 app.use(cookieParser());
+// Orion may not attach the Replit session cookie to extension-origin fetches.
+// Accept the cookie value only from the extension-specific header; normal web
+// requests continue to use the standard Cookie header.
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  const sessionCookie = req.headers['x-sharely-session'];
+  if (
+    sessionCookie &&
+    (origin.startsWith('chrome-extension://') ||
+      origin.startsWith('moz-extension://') ||
+      origin.startsWith('safari-web-extension://') ||
+      origin.startsWith('safari-extension://'))
+  ) {
+    req.headers.cookie = `connect.sid=${sessionCookie}`;
+  }
+  next();
+});
 app.set('trust proxy', 1); // Trust Replit reverse proxy so secure cookies work
 app.use(session({
   secret: SESSION_SECRET,
@@ -166,7 +183,7 @@ function corsForExtension(req, res, next) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, X-API-Key, X-User-Session');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, X-API-Key, X-User-Session, X-Sharely-Session');
   }
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();

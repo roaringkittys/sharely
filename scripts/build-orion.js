@@ -9,11 +9,14 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const root   = path.resolve(__dirname, '..');
-const source = path.join(root, 'extension-orion');
+// The uploaded Orion-compatible package is the same structure as the main
+// Sharely extension. Build from that source so popup, API, and cookie logic
+// stay identical across desktop and Orion.
+const source = path.join(root, 'extension');
 const dist   = path.join(root, 'dist');
 const output = path.join(dist, 'sharely-orion.zip');
 
-const required = ['manifest.json', 'index.html', 'background.js'];
+const required = ['manifest.json', 'popup.html', 'background.js', 'sharely-extension.js'];
 const forbidden = /(^|\/)(__MACOSX|\.git|node_modules)(\/|$)|(^|\/)\.DS_Store$/;
 
 function fail(message) {
