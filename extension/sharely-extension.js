@@ -1,15 +1,9 @@
 /* sharely-extension.js for Sharely Extension 1.2 */
 
-// ── SERVER URLS (hardcoded — do not change) ───────────────────────────────
-const DEFAULT_SERVER_URL     = 'https://sharely-production-bc58.up.railway.app';
-const DEFAULT_MEMBERSHIP_URL = 'https://sharely-production-bc58.up.railway.app';
-const DEFAULT_API_KEY        = 'sk_sharely_TUqm6Reu4pDTMYmy98Ini3PhZrD2ip0w';
-// ──────────────────────────────────────────────────────────────────────────
-
 let allServices = [];
 let currentCategory = 'all';
-let serverUrl = '';         // service server URL (Railway) — cookies & services only
-let membershipUrl = '';     // membership server URL (Replit) — auth, subscriptions, dashboard
+let serverUrl = '';         // service server URL — cookies & services
+let membershipUrl = '';     // membership server URL — auth, subscriptions, dashboard
 let apiKey = '';
 let memberAccessToken = ''; // member access_token used as X-API-Key for Railway service calls
 let currentMemberEmail = '';
@@ -552,6 +546,15 @@ $('#accountPicker').on('click', function (e) { e.stopPropagation(); });
 
 // Settings
 $('#settingsButton, #openSettingsFromError').on('click', async () => {
+  const stored = await loadStorage();
+
+  $('#settingServerUrl').val(stored.serverUrl || serverUrl || '');
+  $('#settingMembershipUrl').val(stored.membershipUrl || membershipUrl || '');
+  $('#settingApiKey').val(stored.apiKey || '');
+  $('#settingsStatus').text('');
+  $('#devSection').hide();
+  $('#devChevron').css('transform', '');
+
   // Show account info if logged in via membership session
   if (currentMemberEmail && currentMemberExpiry) {
     const days = Math.max(0, Math.ceil((new Date(currentMemberExpiry) - new Date()) / 86400000));
@@ -571,12 +574,52 @@ $('#settingsButton, #openSettingsFromError').on('click', async () => {
 
 $('#closeSettings').on('click', () => $('#settingsOverlay').hide());
 
-// Login link from Settings (for non-logged-in users — opens dashboard)
+// Developer section toggle
+$('#devToggle').on('click', () => {
+  const $sec = $('#devSection');
+  const open = $sec.is(':visible');
+  $sec.slideToggle(150);
+  $('#devChevron').css('transform', open ? '' : 'rotate(180deg)');
+});
+
+// Login link from Settings (for non-logged-in users)
 $('#settingsLoginLink').on('click', async (e) => {
   e.preventDefault();
   $('#settingsOverlay').hide();
   const url = membershipUrl ? `${membershipUrl}/membership/login` : 'https://sharely.app/membership/login';
   try { await chrome.tabs.create({ url }); } catch (_) { window.open(url, '_blank'); }
+});
+
+$('#saveSettingsBtn').on('click', async () => {
+  const url = ($('#settingServerUrl').val() || '').trim().replace(/\/+$/, '');
+  const membership = ($('#settingMembershipUrl').val() || '').trim().replace(/\/+$/, '');
+  const key = ($('#settingApiKey').val() || '').trim();
+
+  if (!url || !membership) {
+    $('#settingsStatus').css('color', '#e74c3c').text('Both server URLs are required.');
+    return;
+  }
+
+  $('#settingsStatus').css('color', '#aaa').text('Testing connection...');
+
+  try {
+    const headers = {};
+    if (key) headers['X-API-Key'] = key;
+    const res = await fetch(`${url}/api/extension/config`, { headers });
+    if (!res.ok) throw new Error('Could not connect — check URL and key');
+
+    await saveStorage({ serverUrl: url, membershipUrl: membership, apiKey: key });
+    serverUrl = url;
+    membershipUrl = membership;
+    apiKey = key;
+    $('#settingsStatus').css('color', '#2ecc71').text('Connected!');
+    setTimeout(() => {
+      $('#settingsOverlay').hide();
+      fetchConfig();
+    }, 700);
+  } catch (err) {
+    $('#settingsStatus').css('color', '#e74c3c').text('Failed: ' + err.message);
+  }
 });
 
 // ── One-Click Capture ─────────────────────────────────────────────────
@@ -730,24 +773,9 @@ $('#openDashboardBtn').on('click', async () => {
 $(async () => {
   const stored = await loadStorage();
 
-  // Always sync to the baked-in default URLs — migrates users from old URLs automatically
-  if (DEFAULT_SERVER_URL) {
-    await saveStorage({ serverUrl: DEFAULT_SERVER_URL });
-    serverUrl = DEFAULT_SERVER_URL;
-  } else {
-    serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
-  }
-
-  if (DEFAULT_MEMBERSHIP_URL) {
-    await saveStorage({ membershipUrl: DEFAULT_MEMBERSHIP_URL });
-    membershipUrl = DEFAULT_MEMBERSHIP_URL;
-  } else {
-    membershipUrl = (stored.membershipUrl || '').replace(/\/+$/, '');
-  }
-
-  // Always apply the hardcoded API key — overwrites any previously stored value
-  await saveStorage({ apiKey: DEFAULT_API_KEY });
-  apiKey = DEFAULT_API_KEY;
+  serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
+  membershipUrl = (stored.membershipUrl || '').replace(/\/+$/, '');
+  apiKey = stored.apiKey || '';
   memberAccessToken = stored.memberAccessToken || '';
 
   if (stored.theme) applyTheme(stored.theme);
