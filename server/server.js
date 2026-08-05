@@ -287,8 +287,12 @@ app.get('/magic-sent', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'magic-sent.html'));
 });
 
+app.get('/admin', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.get('/login', (req, res) => {
-  if (req.session && req.session.userId) return res.redirect('/');
+  if (req.session && req.session.userId) return res.redirect('/admin');
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
@@ -813,8 +817,8 @@ app.get('/api/download/extension', requireAuth, (req, res) => {
   }
 });
 
-app.get('/', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.get('/', (req, res) => {
+  res.redirect('/membership/home');
 });
 
 app.listen(PORT, '0.0.0.0', () => {
