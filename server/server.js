@@ -15,7 +15,14 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 
-const dbPath = path.join(__dirname, 'data', 'sharely.db');
+const fs = require('fs');
+
+const volumeDb = '/data/sharely.db';
+const localDb = path.join(__dirname, 'data', 'sharely.db');
+
+const dbPath = fs.existsSync(volumeDb)
+  ? volumeDb
+  : localDb;
 if (!fs.existsSync(path.join(__dirname, 'data'))) {
   fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
 }

@@ -21,6 +21,8 @@
     "express-session": "^1.19.0",
     "midtrans-client": "^1.4.3",
     "multer": "^2.0.2",
-    "nodemailer": "^8.0.2"
+    "nodemailer": "^8.0.2",
+    "pg": "^8.22.0",
+    "postgres": "^3.4.9"
   }
 }
