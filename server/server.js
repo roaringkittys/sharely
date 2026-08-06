@@ -15,8 +15,6 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 
-const fs = require('fs');
-
 const localDbDir = path.join(__dirname, 'data');
 const localDb = path.join(localDbDir, 'sharely.db');
 const volumeDb = process.env.DB_PATH || '/data/sharely.db';
