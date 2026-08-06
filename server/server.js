@@ -17,15 +17,18 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 
 const fs = require('fs');
 
-const volumeDb = '/data/sharely.db';
-const localDb = path.join(__dirname, 'data', 'sharely.db');
+const localDbDir = path.join(__dirname, 'data');
+const localDb = path.join(localDbDir, 'sharely.db');
+const volumeDb = process.env.DB_PATH || '/data/sharely.db';
 
-const dbPath = fs.existsSync(volumeDb)
-  ? volumeDb
-  : localDb;
-if (!fs.existsSync(path.join(__dirname, 'data'))) {
-  fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+if (!fs.existsSync(localDbDir)) {
+  fs.mkdirSync(localDbDir, { recursive: true });
 }
+
+const dbPath = fs.existsSync(volumeDb) ? volumeDb : localDb;
+
+console.log('Using database:', dbPath);
+
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
