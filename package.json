@@ -14,15 +14,15 @@
   "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^12.11.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "midtrans-client": "^1.4.3",
-    "multer": "^2.0.2",
-    "nodemailer": "^8.0.2",
-    "pg": "^8.22.0",
+    "multer": "^2.2.0",
+    "nodemailer": "^8.0.11",
+    "pg": "^8.23.0",
     "postgres": "^3.4.9"
   }
 }

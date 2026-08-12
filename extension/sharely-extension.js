@@ -17,7 +17,7 @@ function escapeHtml(str) {
 
 async function loadStorage() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['serverUrl', 'membershipUrl', 'apiKey', 'memberAccessToken', 'theme'], resolve);
+    chrome.storage.local.get(['serverUrl', 'membershipUrl', 'apiKey', 'memberAccessToken', 'memberSessionToken', 'theme'], resolve);
   });
 }
 
@@ -32,8 +32,30 @@ function showLoggedOut(message) {
   $('#loaded').addClass('d-none');
   $('#errored').addClass('d-none');
   $('#loggedOutState').removeClass('d-none');
-  if (message) $('#loggedOutMsg').text(message);
+  $('#loggedOutTitle').text('Log in to Sharely');
+  $('#loggedOutMsg').text(message || 'Use your member account or an extension token to load services.');
+  $('#extensionLoginForm').show();
+  $('#subscriptionInactive').hide();
   disableFilters();
+}
+
+function showSubscriptionInactive(message, email, expiresAt) {
+  $('#loading').addClass('d-none');
+  $('#loaded').addClass('d-none');
+  $('#errored').addClass('d-none');
+  $('#loggedOutState').removeClass('d-none');
+  $('#loggedOutTitle').text('Membership required');
+  $('#loggedOutMsg').text(message || 'Your account is logged in, but it does not have an active membership.');
+  $('#extensionLoginForm').hide();
+  $('#subscriptionInactive').show();
+  disableFilters();
+  memberAccessToken = '';
+  saveStorage({ memberAccessToken: '' });
+  if (email) {
+    currentMemberEmail = email;
+    currentMemberExpiry = expiresAt || '';
+    updateMemberFooter(email, expiresAt || new Date().toISOString());
+  }
 }
 
 function updateMemberFooter(email, expiresAt) {
@@ -76,12 +98,16 @@ async function checkSession() {
         sessionHeaders['X-Sharely-Session'] = cookieResult.cookie;
       }
     } catch (_) {}
+    const stored = await loadStorage();
+    if (!sessionHeaders['X-Sharely-Session'] && stored.memberAccessToken) {
+      sessionHeaders['X-Extension-Token'] = stored.memberAccessToken;
+    }
 
     const res = await fetch(`${membershipUrl}/api/membership/extension-session`, {
       credentials: 'include',
       headers: sessionHeaders,
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { authenticated: false };
     const data = await res.json();
     // Cache result in chrome.storage.session (auto-cleared when browser closes)
     if (chrome.storage.session) {
@@ -89,7 +115,7 @@ async function checkSession() {
     }
     return data;
   } catch (e) {
-    return null;
+    return { networkError: true };
   }
 }
 
@@ -388,6 +414,7 @@ function closeNotification() {
 async function fetchConfig() {
   const stored = await loadStorage();
   serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
+  membershipUrl = (stored.membershipUrl || '').replace(/\/+$/, '');
   apiKey = stored.apiKey || '';
 
   if (!serverUrl) {
@@ -402,6 +429,12 @@ async function fetchConfig() {
     // Try membership session first (Replit, via cookies) — active members get an access_token
     const sessionData = await checkSession();
 
+    if (sessionData && sessionData.networkError) {
+      showError('Network error. Check your connection and try again.');
+      disableFilters();
+      return;
+    }
+
     if (sessionData) {
       if (sessionData.authenticated && sessionData.subscription && sessionData.subscription.active) {
         currentMemberEmail = sessionData.user.email;
@@ -413,9 +446,9 @@ async function fetchConfig() {
         updateMemberFooter(currentMemberEmail, currentMemberExpiry);
         updateMemberStrip(currentMemberName, currentMemberPlan, currentMemberExpiry);
 
-        // Fetch services from Railway using the member access_token as the API key
-        const keyForService = memberAccessToken || apiKey;
-        const configHeaders = keyForService ? { 'X-API-Key': keyForService } : {};
+        // Only an active member token may load services. The admin API key
+        // is intentionally never used as the member login fallback.
+        const configHeaders = memberAccessToken ? { 'X-API-Key': memberAccessToken } : {};
         const configRes = await fetch(`${serverUrl}/api/extension/config`, { headers: configHeaders });
 
         if (configRes.ok) {
@@ -428,69 +461,97 @@ async function fetchConfig() {
           if (data.theme) applyTheme(data.theme);
           return;
         }
+        if (configRes.status === 401 || configRes.status === 403) {
+          await saveStorage({ memberAccessToken: '' });
+          memberAccessToken = '';
+          showLoggedOut('Your login is no longer valid. Please log in again.');
+          return;
+        }
+        throw new Error(`Service server responded with status ${configRes.status}`);
       } else if (sessionData.authenticated && sessionData.subscription && !sessionData.subscription.active) {
-        // Logged in but subscription expired — fall back to API key or show message
-        if (!apiKey) {
-          showLoggedOut('Your Sharely subscription has expired. Visit your dashboard to renew.');
-          return;
-        }
+        showSubscriptionInactive(
+          'Your Sharely subscription is expired or inactive. Renew your membership to unlock services.',
+          sessionData.user && sessionData.user.email,
+          sessionData.subscription && sessionData.subscription.expires_at
+        );
+        return;
       } else if (!sessionData.authenticated) {
-        // Not logged in — fall back to API key or show logged-out state
-        if (!apiKey) {
-          showLoggedOut();
-          return;
-        }
-      }
-    }
-
-    // Fall back to admin API key if available
-    if (apiKey) {
-      const res = await fetch(`${serverUrl}/api/extension/config`, {
-        headers: { 'X-API-Key': apiKey },
-      });
-
-      if (res.status === 401) {
-        showError('API key invalid. Check your settings.');
-        disableFilters();
+        await saveStorage({ memberAccessToken: '' });
+        memberAccessToken = '';
+        showLoggedOut();
         return;
       }
-
-      if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
-
-      const data = await res.json();
-      allServices = data.services || [];
-      currentCategory = 'all';
-      $('.category-filter').removeClass('active');
-      $('#all-category').addClass('active');
-      filterAndRender();
-      if (data.theme) applyTheme(data.theme);
-      return;
     }
 
     showLoggedOut();
 
   } catch (err) {
-    if (apiKey) {
-      // Retry with just the API key on network errors
-      try {
-        const res = await fetch(`${serverUrl}/api/extension/config`, {
-          headers: { 'X-API-Key': apiKey },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          allServices = data.services || [];
-          currentCategory = 'all';
-          $('.category-filter').removeClass('active');
-          $('#all-category').addClass('active');
-          filterAndRender();
-          if (data.theme) applyTheme(data.theme);
-          return;
-        }
-      } catch (_) {}
-    }
     showError('Cannot connect to Sharely server. Check your settings.');
     disableFilters();
     console.error('Sharely fetch error:', err);
+  }
+}
+
+async function loginExtension() {
+  const email = ($('#extensionEmail').val() || '').trim();
+  const password = $('#extensionPassword').val() || '';
+  const token = ($('#extensionToken').val() || '').trim();
+  const $button = $('#extensionLoginBtn');
+  const $error = $('#extensionLoginError');
+
+  $error.hide().text('');
+  if (!token && (!email || !password)) {
+    $error.text('Enter your email and password, or enter an extension token.').show();
+    return;
+  }
+  if (!membershipUrl) {
+    $error.text('Membership server is not configured. Open Settings to configure it.').show();
+    return;
+  }
+
+  $button.prop('disabled', true).text('Logging in…');
+  try {
+    const res = await fetch(`${membershipUrl}/api/membership/extension-login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, token }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 403 && data.code === 'SUBSCRIPTION_INACTIVE') {
+      showSubscriptionInactive(
+        data.error,
+        data.user && data.user.email,
+        data.subscription && data.subscription.expires_at
+      );
+      return;
+    }
+    if (!res.ok || !data.access_granted) {
+      $error.text(data.error || 'Login failed. Check your details and try again.').show();
+      return;
+    }
+
+    memberAccessToken = data.access_token || '';
+    currentMemberEmail = data.user && data.user.email || email;
+    currentMemberName = data.user && data.user.name || '';
+    currentMemberExpiry = data.subscription && data.subscription.expires_at || '';
+    currentMemberPlan = data.subscription && data.subscription.plan || '';
+    await saveStorage({ memberAccessToken, memberSessionToken: data.session_token || '' });
+    if (chrome.storage.session) {
+      await new Promise(resolve => chrome.storage.session.set({
+        memberSession: {
+          authenticated: true,
+          user: data.user,
+          subscription: data.subscription,
+        },
+      }, resolve));
+    }
+    await fetchConfig();
+  } catch (err) {
+    $error.text('Network error. Check your connection and try again.').show();
+  } finally {
+    $button.prop('disabled', false).text('Log in');
   }
 }
 
@@ -561,7 +622,7 @@ $('#settingsButton, #openSettingsFromError').on('click', async () => {
     $('#settingsEmail').text(currentMemberEmail);
     $('#settingsExpiry').text(days > 0 ? `Subscription valid for ${days} more day${days !== 1 ? 's' : ''}` : 'Subscription expired');
     $('#settingsAccountInfo').show();
-    $('#signOutBtn').hide();
+    $('#signOutBtn').show();
     $('#settingsNotLoggedIn').hide();
   } else {
     $('#settingsAccountInfo').hide();
@@ -588,6 +649,41 @@ $('#settingsLoginLink').on('click', async (e) => {
   $('#settingsOverlay').hide();
   const url = membershipUrl ? `${membershipUrl}/membership/login` : 'https://sharely.app/membership/login';
   try { await chrome.tabs.create({ url }); } catch (_) { window.open(url, '_blank'); }
+});
+
+$('#extensionLoginBtn').on('click', loginExtension);
+$('#extensionPassword, #extensionToken').on('keydown', (e) => {
+  if (e.key === 'Enter') loginExtension();
+});
+
+$('#purchaseMembershipBtn').on('click', async () => {
+  const url = membershipUrl
+    ? `${membershipUrl}/membership/pricing`
+    : 'https://sharely.app/membership/pricing';
+  try { await chrome.tabs.create({ url }); } catch (_) { window.open(url, '_blank'); }
+});
+
+$('#signOutBtn').on('click', async () => {
+  try {
+    if (membershipUrl) {
+      await fetch(`${membershipUrl}/api/membership/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  } catch (_) {}
+  memberAccessToken = '';
+  currentMemberEmail = '';
+  currentMemberExpiry = '';
+  currentMemberName = '';
+  currentMemberPlan = '';
+  await saveStorage({ memberAccessToken: '', memberSessionToken: '' });
+  if (chrome.storage.session) {
+    await new Promise(resolve => chrome.storage.session.remove('memberSession', resolve));
+  }
+  $('#settingsOverlay').hide();
+  showLoggedOut('You have been logged out.');
 });
 
 $('#saveSettingsBtn').on('click', async () => {
@@ -755,17 +851,6 @@ $('#adminButton').on('click', async () => {
   } else {
     showNotification('Not configured', 'Set your server URL in settings first.');
     setTimeout(closeNotification, 2000);
-  }
-});
-
-// ── Open dashboard button (logged-out state) ──────────────────────────────
-
-$('#openDashboardBtn').on('click', async () => {
-  const url = membershipUrl ? `${membershipUrl}/membership/login` : 'https://sharely.app/membership/login';
-  try {
-    await chrome.tabs.create({ url });
-  } catch (e) {
-    window.open(url, '_blank');
   }
 });
 

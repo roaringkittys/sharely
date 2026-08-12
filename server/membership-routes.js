@@ -25,8 +25,8 @@ function init(app, db, publicDir) {
     ) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Access-Control-Allow-Credentials', 'true');
-      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, X-Sharely-Session');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, X-Sharely-Session, X-Extension-Token');
     }
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     next();
@@ -98,12 +98,17 @@ function init(app, db, publicDir) {
 
   router.options('/api/membership/extension-session', extCors, (req, res) => res.sendStatus(204));
   router.get('/api/membership/extension-session', extCors, (req, res) => {
-    if (!req.session || !req.session.memberId) {
+    const extensionToken = String(req.headers['x-extension-token'] || '').trim();
+    const memberId = req.session && req.session.memberId;
+    if (!memberId && !extensionToken) {
       return res.json({ authenticated: false });
     }
 
-    let member = db.prepare('SELECT id, email, name, access_token FROM members WHERE id = ? AND status != ?')
-      .get(req.session.memberId, 'banned');
+    let member = memberId
+      ? db.prepare('SELECT id, email, name, access_token FROM members WHERE id = ? AND status != ?')
+        .get(memberId, 'banned')
+      : db.prepare('SELECT id, email, name, access_token FROM members WHERE access_token = ? AND status = ?')
+        .get(extensionToken, 'active');
     if (!member) return res.json({ authenticated: false });
 
     // Auto-generate access_token on first use (needed for Railway cross-domain auth)
@@ -142,6 +147,100 @@ function init(app, db, publicDir) {
         expires_at: sub.current_period_end,
         days_remaining: daysRemaining,
       } : null,
+    });
+  });
+
+  // Extension login is deliberately separate from the admin API-key flow.
+  // A member may authenticate with their account password or with the
+  // extension token issued by an administrator. Subscription access is
+  // checked before any service credential is returned.
+  router.options('/api/membership/extension-login', extCors, (req, res) => res.sendStatus(204));
+  router.post('/api/membership/extension-login', extCors, (req, res) => {
+    const { email, password, token } = req.body || {};
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const submittedToken = String(token || '').trim();
+
+    if (!normalizedEmail && !submittedToken) {
+      return res.status(400).json({ error: 'Enter your email and password, or enter an extension token.' });
+    }
+    if (!submittedToken && (!normalizedEmail || !password)) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    let member;
+    if (submittedToken) {
+      member = db.prepare('SELECT * FROM members WHERE access_token = ?').get(submittedToken);
+      if (!member) {
+        return res.status(401).json({ error: 'Invalid extension token. Check the token and try again.', code: 'INVALID_TOKEN' });
+      }
+      if (normalizedEmail && member.email !== normalizedEmail) {
+        return res.status(401).json({ error: 'The token does not belong to this email address.', code: 'INVALID_TOKEN' });
+      }
+    } else {
+      member = db.prepare('SELECT * FROM members WHERE email = ?').get(normalizedEmail);
+      if (!member || !bcrypt.compareSync(String(password), member.password)) {
+        return res.status(401).json({ error: 'Invalid email or password.', code: 'INVALID_CREDENTIALS' });
+      }
+    }
+
+    if (member.status !== 'active') {
+      return res.status(403).json({ error: 'This member account is not active.', code: 'ACCOUNT_INACTIVE' });
+    }
+
+    req.session.memberId = member.id;
+    const subscription = db.prepare(`
+      SELECT s.*, p.name as plan_name
+      FROM subscriptions s JOIN plans p ON s.plan_id = p.id
+      WHERE s.member_id = ?
+      ORDER BY s.created_at DESC LIMIT 1
+    `).get(member.id);
+    const active = Boolean(
+      subscription &&
+      subscription.status === 'active' &&
+      subscription.current_period_end &&
+      new Date(subscription.current_period_end) >= new Date()
+    );
+    const daysRemaining = active
+      ? Math.max(0, Math.ceil((new Date(subscription.current_period_end) - new Date()) / 86400000))
+      : 0;
+
+    if (!active) {
+      return res.status(403).json({
+        authenticated: true,
+        access_granted: false,
+        code: 'SUBSCRIPTION_INACTIVE',
+        error: subscription ? 'Your Sharely subscription is expired or inactive.' : 'Your Sharely account does not have an active subscription.',
+        purchase_url: '/membership/pricing',
+        user: { email: member.email, name: member.name },
+        subscription: subscription ? {
+          active: false,
+          plan: subscription.plan_name,
+          expires_at: subscription.current_period_end,
+          days_remaining: 0,
+        } : null,
+      });
+    }
+
+    // Existing members created before token login are assigned a token the
+    // first time they use the extension. Admins can rotate it in Membership.
+    if (!member.access_token) {
+      member.access_token = crypto.randomBytes(24).toString('hex');
+      db.prepare('UPDATE members SET access_token = ? WHERE id = ?').run(member.access_token, member.id);
+    }
+
+    res.json({
+      success: true,
+      authenticated: true,
+      access_granted: true,
+      session_token: req.sessionID,
+      access_token: member.access_token,
+      user: { id: member.id, email: member.email, name: member.name },
+      subscription: {
+        active: true,
+        plan: subscription.plan_name,
+        expires_at: subscription.current_period_end,
+        days_remaining: daysRemaining,
+      },
     });
   });
 
@@ -566,6 +665,7 @@ function init(app, db, publicDir) {
   router.get('/api/membership/admin/members', requireAdmin, (req, res) => {
     const members = db.prepare(`
       SELECT m.id, m.email, m.name, m.status, m.created_at,
+             CASE WHEN m.access_token IS NULL THEN 0 ELSE 1 END as has_access_token,
              s.status as subscription_status, p.name as plan_name
       FROM members m
       LEFT JOIN subscriptions s ON s.member_id = m.id AND s.status = 'active'
@@ -573,6 +673,14 @@ function init(app, db, publicDir) {
       ORDER BY m.created_at DESC
     `).all();
     res.json(members);
+  });
+
+  router.post('/api/membership/admin/members/:id/access-token', requireAdmin, (req, res) => {
+    const member = db.prepare('SELECT id FROM members WHERE id = ?').get(req.params.id);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    const token = crypto.randomBytes(24).toString('hex');
+    db.prepare('UPDATE members SET access_token = ? WHERE id = ?').run(token, member.id);
+    res.json({ success: true, token });
   });
 
   router.post('/api/membership/admin/members/:id/status', requireAdmin, (req, res) => {

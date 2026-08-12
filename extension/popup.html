@@ -69,9 +69,28 @@
     <div id="loggedOutState" class="full-page-container fadeIn d-none">
       <div class="error-box">
         <div style="font-size:38px;margin-bottom:12px">🔒</div>
-        <h3 class="error-title">Not Logged In</h3>
-        <p class="error-msg" id="loggedOutMsg">Log in to your Sharely dashboard to use this extension.</p>
-        <button class="ud-main-btn mt-3" id="openDashboardBtn">Open Dashboard</button>
+        <h3 class="error-title" id="loggedOutTitle">Log in to Sharely</h3>
+        <p class="error-msg" id="loggedOutMsg">Use your member account or an extension token to load services.</p>
+        <div id="extensionLoginForm" class="auth-form">
+          <div class="auth-field">
+            <label for="extensionEmail">Email</label>
+            <input type="email" id="extensionEmail" autocomplete="email" placeholder="you@example.com">
+          </div>
+          <div class="auth-field">
+            <label for="extensionPassword">Password</label>
+            <input type="password" id="extensionPassword" autocomplete="current-password" placeholder="Your password">
+          </div>
+          <div class="auth-field">
+            <label for="extensionToken">Token <span>(optional)</span></label>
+            <input type="text" id="extensionToken" autocomplete="off" placeholder="Admin-issued extension token">
+            <div class="auth-field-hint">Use a token instead of a password when one was provided by an administrator.</div>
+          </div>
+          <div id="extensionLoginError" class="auth-error" style="display:none"></div>
+          <button class="ud-main-btn mt-2" id="extensionLoginBtn">Log in</button>
+        </div>
+        <div id="subscriptionInactive" style="display:none">
+          <button class="ud-main-btn mt-3" id="purchaseMembershipBtn">View membership plans</button>
+        </div>
       </div>
     </div>
   </main>

@@ -53,25 +53,25 @@ function buildCookieUrl(domain, path) {
 // ── Session guard ─────────────────────────────────────────────────────────
 // Reads the cached member session from chrome.storage.session (written by
 // the popup's checkSession()) to verify access before injecting cookies.
-// Falls back gracefully: if no session cache exists, allows injection
-// (popup already verified auth). Only blocks when cache explicitly shows
-// the session is not authenticated and no admin API key is configured.
+// Injection is denied until the popup has verified an active member session.
+// This prevents an old admin key or a stale local token from bypassing the
+// subscription gate.
 async function isMemberSessionValid() {
   try {
-    const stored = await chrome.storage.local.get(['apiKey']);
-    const adminKey = (stored.apiKey || '').trim();
-
-    if (!chrome.storage.session) return true; // session API unavailable — allow
+    if (!chrome.storage.session) return false;
     const cached = await new Promise(r => chrome.storage.session.get('memberSession', r));
-    if (!cached.memberSession) return true; // no cache yet — allow (popup will enforce)
+    if (!cached.memberSession) return false;
 
     const { authenticated, subscription } = cached.memberSession;
-    const hasActiveSub = authenticated && subscription && subscription.active;
+    const hasActiveSub = authenticated &&
+      subscription &&
+      subscription.active &&
+      subscription.expires_at &&
+      new Date(subscription.expires_at).getTime() >= Date.now();
 
-    // Only block if we know session is invalid AND there is no admin key fallback
-    return hasActiveSub || !!adminKey;
+    return Boolean(hasActiveSub);
   } catch (e) {
-    return true; // On any error allow injection — do not silently break cookie inject
+    return false;
   }
 }
 

@@ -75,6 +75,7 @@
         <td><span class="mp-badge mp-badge-${m.status}">${m.status}</span></td>
         <td>${MembershipUI.formatDate(m.created_at)}</td>
         <td>
+          <button class="mp-btn mp-btn-ghost mp-btn-sm" onclick="AdminUI.issueExtensionToken(${m.id})">New extension token</button>
           ${m.status === 'active'
             ? `<button class="mp-btn mp-btn-danger mp-btn-sm" onclick="AdminUI.setMemberStatus(${m.id}, 'suspended')">Suspend</button>`
             : `<button class="mp-btn mp-btn-ghost mp-btn-sm" onclick="AdminUI.setMemberStatus(${m.id}, 'active')">Reactivate</button>`}
@@ -236,6 +237,18 @@
         body: JSON.stringify({ status }),
       });
       loadMembers();
+    },
+    async issueExtensionToken(id) {
+      const res = await fetch(`/api/membership/admin/members/${id}/access-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Could not create extension token.');
+        return;
+      }
+      window.prompt('Copy this extension token. It will not be shown again here:', data.token);
     },
   };
 

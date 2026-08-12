@@ -1,0 +1,93 @@
+Update the main Sharely browser extension login flow.
+
+Main files to focus on:
+- extension/popup.html
+- extension/sharely-extension.js
+- extension/background.js
+- server/membership-routes.js / server routes as needed
+
+Goal:
+Make extension login simple with exactly 3 fields:
+
+1. Email
+2. Password
+3. Access Token (optional)
+
+Login rules:
+
+A. Existing paid member
+- User enters email + password.
+- Token can be empty.
+- Authenticate against the normal Sharely member account.
+- Check that the member has an active paid subscription.
+- If active, allow the extension to load and use Sharely.
+- Store a secure session/token so they stay logged in.
+
+B. New user with admin-generated token
+- User enters email + password + access token.
+- Validate the token generated from the admin dashboard.
+- Create/register the user and connect the token to that account.
+- Token must be valid, unused, and not expired.
+- After successful registration, check access/subscription and allow the extension.
+
+C. Existing account but not paid
+- Email + password login can succeed as an account login.
+- But if the account does not have an active paid subscription, DO NOT allow extension access.
+- Show a clear message:
+  "Your account is not active. Please purchase a plan first."
+- Add a button:
+  "Purchase Membership"
+- Button opens:
+  https://sharely.id/membership/pricing
+
+D. Invalid credentials
+- Show:
+  "Invalid email or password."
+
+E. Invalid/expired/used access token
+- Show the exact useful error.
+- Do not create the account.
+
+Important:
+- Keep the existing extension functionality after login.
+- Do not break service loading, capture, settings, logout, or existing member access-token behavior.
+- Remove/avoid duplicate authentication systems where possible.
+- The extension should use one clear authenticated state after login.
+- Do not expose passwords or sensitive tokens in the UI or logs.
+- Keep the admin authentication system completely separate from member authentication.
+
+UI:
+- Replace the current confusing login/settings behavior with a simple login screen.
+- Show only:
+  Email
+  Password
+  Access Token (Optional)
+  Login button
+- Add:
+  "Don't have an account? Purchase membership"
+- Show clear states:
+  Logged in
+  Subscription active
+  Subscription expired/not paid
+  Invalid login
+  Invalid token
+
+Backend:
+- Reuse the existing member database and subscription checks where possible.
+- Reuse existing membership email/password authentication instead of creating another password system.
+- Use the admin-generated access token only for new-user registration/activation.
+- After authentication, return enough information for the extension to know:
+  authenticated
+  subscription active/inactive
+  email
+  expiry date
+  access token/session token if needed for extension API calls
+
+Before changing code:
+1. Inspect the current extension auth flow.
+2. Inspect the existing membership login/signup APIs.
+3. Inspect how subscriptions are checked.
+4. Inspect how admin-generated access tokens work.
+5. Reuse existing logic instead of creating duplicate auth logic.
+
+Keep the implementation as simple as possible and preserve all current extension features.

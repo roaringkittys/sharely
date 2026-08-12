@@ -1,4 +1,6 @@
-const { requireAdmin, requireMember } = require('./auth-middleware');
+const { requireAdmin, requireMember } = require('./server/auth-middleware');
+// Legacy admin API routes use the older requireAuth name.
+const requireAuth = requireAdmin;
 
 const express = require('express');
 const session = require('express-session');
@@ -147,7 +149,7 @@ const upload = multer({
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-User-Session', 'X-Sharely-Session']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-User-Session', 'X-Sharely-Session', 'X-Extension-Token']
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -193,7 +195,7 @@ function corsForExtension(req, res, next) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, X-API-Key, X-User-Session, X-Sharely-Session');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, X-API-Key, X-User-Session, X-Sharely-Session, X-Extension-Token');
   }
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
@@ -211,7 +213,8 @@ membershipDb.init(db);
 membershipRoutes.init(app, db, path.join(__dirname, 'public'));
 
 function requireApiKey(req, res, next) {
-  // Accept admin API key
+  // Admin API key remains for dashboard/admin tooling only. The extension
+  // member flow uses the member access token below and never needs this key.
   const apiKey = req.headers['x-api-key'];
   const stored = db.prepare("SELECT value FROM extension_settings WHERE key = 'api_key'").get();
   if (apiKey && stored && apiKey === stored.value) return next();
@@ -230,7 +233,7 @@ function requireApiKey(req, res, next) {
     return next();
   }
 
-  // Accept member access_token (used by extension for cross-domain Railway calls)
+  // Accept member access_token (issued by Membership Admin for extension use)
   if (apiKey) {
     const memberRow = db.prepare(
       "SELECT m.id FROM members m JOIN subscriptions s ON s.member_id = m.id WHERE m.access_token = ? AND s.status = 'active' AND s.current_period_end >= date('now') LIMIT 1"
