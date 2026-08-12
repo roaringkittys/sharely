@@ -1,5 +1,5 @@
 /* sharely-extension.js for Sharely Extension 1.2 */
-
+const SHARELY_URL = 'https://sharely.id';
 let allServices = [];
 let currentCategory = 'all';
 let serverUrl = '';         // service server URL — cookies & services
@@ -413,9 +413,9 @@ function closeNotification() {
 
 async function fetchConfig() {
   const stored = await loadStorage();
-  serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
-  membershipUrl = (stored.membershipUrl || '').replace(/\/+$/, '');
-  apiKey = stored.apiKey || '';
+  serverUrl = SHARELY_URL;
+  membershipUrl = SHARELY_URL;
+  apiKey = '';
 
   if (!serverUrl) {
     showError('Configure your server URL in settings first.');
@@ -494,28 +494,28 @@ async function fetchConfig() {
 
 async function loginExtension() {
   const email = ($('#extensionEmail').val() || '').trim();
-  const password = $('#extensionPassword').val() || '';
   const token = ($('#extensionToken').val() || '').trim();
   const $button = $('#extensionLoginBtn');
   const $error = $('#extensionLoginError');
 
   $error.hide().text('');
-  if (!token && (!email || !password)) {
-    $error.text('Enter your email and password, or enter an extension token.').show();
-    return;
-  }
-  if (!membershipUrl) {
-    $error.text('Membership server is not configured. Open Settings to configure it.').show();
+
+  if (!email || !token) {
+    $error.text('Enter your email and token.').show();
     return;
   }
 
   $button.prop('disabled', true).text('Logging in…');
+
   try {
-    const res = await fetch(`${membershipUrl}/api/membership/extension-login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, token }),
+    const res = await fetch(
+      'https://sharely.id/api/membership/extension-login',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, token })
     });
     const data = await res.json().catch(() => ({}));
 
@@ -858,9 +858,9 @@ $('#adminButton').on('click', async () => {
 $(async () => {
   const stored = await loadStorage();
 
-  serverUrl = (stored.serverUrl || '').replace(/\/+$/, '');
-  membershipUrl = (stored.membershipUrl || '').replace(/\/+$/, '');
-  apiKey = stored.apiKey || '';
+  serverUrl = SHARELY_URL;
+  membershipUrl = SHARELY_URL;
+  apiKey = '';
   memberAccessToken = stored.memberAccessToken || '';
 
   if (stored.theme) applyTheme(stored.theme);
