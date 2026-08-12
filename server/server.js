@@ -1,3 +1,5 @@
+const { requireAdmin, requireMember } = require('./auth-middleware');
+
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
@@ -208,12 +210,6 @@ const membershipRoutes = require('./membership-routes');
 membershipDb.init(db);
 membershipRoutes.init(app, db, path.join(__dirname, 'public'));
 
-function requireAuth(req, res, next) {
-  if (req.session && req.session.userId) return next();
-  if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Unauthorized' });
-  res.redirect('/login');
-}
-
 function requireApiKey(req, res, next) {
   // Accept admin API key
   const apiKey = req.headers['x-api-key'];
@@ -295,7 +291,7 @@ app.get('/magic-sent', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'magic-sent.html'));
 });
 
-app.get('/admin', requireAuth, (req, res) => {
+app.get('/admin', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
