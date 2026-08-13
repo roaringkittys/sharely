@@ -77,13 +77,16 @@
             <input type="email" id="extensionEmail" autocomplete="email" placeholder="you@example.com">
           </div>
           <div class="auth-field">
-            <label for="extensionPassword">Password</label>
-            <input type="password" id="extensionPassword" autocomplete="current-password" placeholder="Your password">
-          </div>
-          <div class="auth-field">
-            <label for="extensionToken">Token <span>(optional)</span></label>
-            <input type="text" id="extensionToken" autocomplete="off" placeholder="Admin-issued extension token">
-            <div class="auth-field-hint">Use a token instead of a password when one was provided by an administrator.</div>
+            <label for="extensionToken">Token</label>
+            <input
+              type="text"
+              id="extensionToken"
+              autocomplete="off"
+              placeholder="Enter your extension token"
+            >
+            <div class="auth-field-hint">
+              Use the token provided by Sharely.
+            </div>
           </div>
           <div id="extensionLoginError" class="auth-error" style="display:none"></div>
           <button class="ud-main-btn mt-2" id="extensionLoginBtn">Log in</button>

@@ -647,19 +647,19 @@ $('#devToggle').on('click', () => {
 $('#settingsLoginLink').on('click', async (e) => {
   e.preventDefault();
   $('#settingsOverlay').hide();
-  const url = membershipUrl ? `${membershipUrl}/membership/login` : 'https://sharely.app/membership/login';
+  const url = membershipUrl ? `${membershipUrl}/membership/login` : 'https://sharely.id/membership/login';
   try { await chrome.tabs.create({ url }); } catch (_) { window.open(url, '_blank'); }
 });
 
 $('#extensionLoginBtn').on('click', loginExtension);
-$('#extensionPassword, #extensionToken').on('keydown', (e) => {
+$('#extensionToken').on('keydown', (e) => {
   if (e.key === 'Enter') loginExtension();
 });
 
 $('#purchaseMembershipBtn').on('click', async () => {
   const url = membershipUrl
     ? `${membershipUrl}/membership/pricing`
-    : 'https://sharely.app/membership/pricing';
+    : 'https://sharely.id/membership/pricing';
   try { await chrome.tabs.create({ url }); } catch (_) { window.open(url, '_blank'); }
 });
 
