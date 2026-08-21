@@ -1130,8 +1130,7 @@ async function fetchConfig() {
           currentCategory =
             'all';
 
-          $('.category-filter')
-            .removeClass('active');
+               .removeClass('active');
 
           $('#all-category')
             .addClass('active');
