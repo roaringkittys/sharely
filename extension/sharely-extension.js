@@ -2,14 +2,12 @@
 
 const SHARELY_URL = 'https://sharely.id';
 
-const API_KEY = 'sk_sharely_TUqm6Reu4pDTMYmy98Ini3PhZrD2ip0w';
-
 let allServices = [];
 let currentCategory = 'all';
 
-let serverUrl = SHARELY_URL;
-let membershipUrl = SHARELY_URL;
-let apiKey = API_KEY;
+let serverUrl = '';
+let membershipUrl = '';
+let apiKey = '';
 
 /*
  * IMPORTANT:
@@ -54,6 +52,10 @@ async function loadStorage() {
   return new Promise(resolve => {
     chrome.storage.local.get(
       [
+        'serverUrl',
+        'membershipUrl',
+        'apiKey',
+        'memberAccessToken',
         'memberSessionToken',
         'deviceFingerprint',
         'theme'
@@ -1019,8 +1021,7 @@ function closeNotification() {
 // Fetch services
 // ─────────────────────────────────────────────────────────────────────────────
 
-  async function fetchConfig() {
-
+async function fetchConfig() {
   const stored =
     await loadStorage();
 
@@ -1031,7 +1032,7 @@ function closeNotification() {
     SHARELY_URL;
 
   apiKey =
-    API_KEY;
+    stored.apiKey || '';
 
   if (!serverUrl) {
     showError(
@@ -1105,9 +1106,9 @@ function closeNotification() {
          * apiKey remains the service/API key if configured.
          */
         const configHeaders =
-          API_KEY
+          apiKey
             ? {
-                'X-API-Key': API_KEY
+                'X-API-Key': apiKey
               }
             : {};
 
@@ -1151,7 +1152,7 @@ function closeNotification() {
           configRes.status === 403
         ) {
           showError(
-            'Service authentication failed. Contact Sharely support.'
+            'Service API authentication failed. Check your API key in Settings.'
           );
 
           return;
@@ -1547,6 +1548,139 @@ $('#accountPicker')
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+$('#settingsButton, #openSettingsFromError')
+  .on(
+    'click',
+    async () => {
+      const stored =
+        await loadStorage();
+
+      $('#settingServerUrl')
+        .val(
+          stored.serverUrl ||
+          serverUrl ||
+          ''
+        );
+
+      $('#settingMembershipUrl')
+        .val(
+          stored.membershipUrl ||
+          membershipUrl ||
+          ''
+        );
+
+      $('#settingApiKey')
+        .val(
+          stored.apiKey ||
+          ''
+        );
+
+      $('#settingsStatus')
+        .text('');
+
+      $('#devSection')
+        .hide();
+
+      $('#devChevron')
+        .css(
+          'transform',
+          ''
+        );
+
+
+      if (
+        currentMemberEmail &&
+        currentMemberExpiry
+      ) {
+        const days =
+          Math.max(
+            0,
+            Math.ceil(
+              (
+                new Date(
+                  currentMemberExpiry
+                ) -
+                new Date()
+              ) /
+              86400000
+            )
+          );
+
+        $('#settingsEmail')
+          .text(
+            currentMemberEmail
+          );
+
+        $('#settingsExpiry')
+          .text(
+            days > 0
+              ? `Access valid for ${days} more day${days !== 1 ? 's' : ''}`
+              : 'Access expired'
+          );
+
+        $('#settingsAccountInfo')
+          .show();
+
+        $('#signOutBtn')
+          .show();
+
+        $('#settingsNotLoggedIn')
+          .hide();
+
+      } else {
+        $('#settingsAccountInfo')
+          .hide();
+
+        $('#signOutBtn')
+          .hide();
+
+        $('#settingsNotLoggedIn')
+          .show();
+      }
+
+      $('#settingsOverlay')
+        .show();
+    }
+  );
+
+$('#closeSettings')
+  .on(
+    'click',
+    () => $('#settingsOverlay').hide()
+  );
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Developer section
+// ─────────────────────────────────────────────────────────────────────────────
+
+$('#devToggle')
+  .on(
+    'click',
+    () => {
+      const $sec =
+        $('#devSection');
+
+      const open =
+        $sec.is(':visible');
+
+      $sec.slideToggle(150);
+
+      $('#devChevron')
+        .css(
+          'transform',
+          open
+            ? ''
+            : 'rotate(180deg)'
+        );
+    }
+  );
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Settings login link
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1669,6 +1803,115 @@ $('#signOutBtn')
   );
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Save settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+$('#saveSettingsBtn')
+  .on(
+    'click',
+    async () => {
+      const url =
+        ($('#settingServerUrl').val() || '')
+          .trim()
+          .replace(/\/+$/, '');
+
+      const membership =
+        ($('#settingMembershipUrl').val() || '')
+          .trim()
+          .replace(/\/+$/, '');
+
+      const key =
+        ($('#settingApiKey').val() || '')
+          .trim();
+
+      if (!url || !membership) {
+        $('#settingsStatus')
+          .css(
+            'color',
+            '#e74c3c'
+          )
+          .text(
+            'Both server URLs are required.'
+          );
+
+        return;
+      }
+
+      $('#settingsStatus')
+        .css(
+          'color',
+          '#aaa'
+        )
+        .text(
+          'Testing connection...'
+        );
+
+      try {
+        const headers = {};
+
+        if (key) {
+          headers['X-API-Key'] =
+            key;
+        }
+
+        const res =
+          await fetch(
+            `${url}/api/extension/config`,
+            {
+              headers
+            }
+          );
+
+        if (!res.ok) {
+          throw new Error(
+            'Could not connect — check URL and key'
+          );
+        }
+
+        await saveStorage({
+          serverUrl: url,
+          membershipUrl: membership,
+          apiKey: key
+        });
+
+        serverUrl = url;
+        membershipUrl = membership;
+        apiKey = key;
+
+        $('#settingsStatus')
+          .css(
+            'color',
+            '#2ecc71'
+          )
+          .text(
+            'Connected!'
+          );
+
+        setTimeout(
+          () => {
+            $('#settingsOverlay')
+              .hide();
+
+            fetchConfig();
+          },
+          700
+        );
+
+      } catch (err) {
+        $('#settingsStatus')
+          .css(
+            'color',
+            '#e74c3c'
+          )
+          .text(
+            'Failed: ' +
+            err.message
+          );
+      }
+    }
+  );
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // One-Click Capture
@@ -1687,7 +1930,7 @@ $('#captureButton')
     'click',
     () => {
       const keyForCapture =
-        API_KEY;
+        apiKey;
 
       if (
         !serverUrl ||
@@ -1695,7 +1938,7 @@ $('#captureButton')
       ) {
         showNotification(
           'Not connected',
-          'Sharely server unavailable.'
+          'Set your server URL and API key in Settings.'
         );
 
         setTimeout(
@@ -1880,7 +2123,7 @@ $('#captureConfirmBtn')
         };
 
         const keyForCapture =
-          API_KEY;
+          apiKey;
 
         const res =
           await fetch(
@@ -2006,8 +2249,8 @@ $(async () => {
   membershipUrl =
     SHARELY_URL;
 
-    apikey =
-      API_KEY;
+  apiKey =
+    stored.apiKey || '';
 
   memberAccessToken =
     '';
