@@ -1,3 +1,4 @@
+const { v2: cloudinary } = require('cloudinary');
 const { requireAdmin, requireMember } = require('./server/auth-middleware');
 // Legacy admin API routes use the older requireAuth name.
 const requireAuth = requireAdmin;
@@ -14,6 +15,12 @@ const multer = require('multer');
 const crypto = require('crypto');
 const userSystem = require('./user-system');
 const { verifyUserSession } = userSystem;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -130,18 +137,18 @@ function generateApiKey() {
 }
 
 // Multer setup for icon uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.png';
-    cb(null, `service-${req.params.id}-${Date.now()}${ext}`);
-  }
-});
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
+    const allowed = [
+      'image/png',
+      'image/jpeg',
+      'image/gif',
+      'image/webp',
+      'image/svg+xml'
+    ];
+
     cb(null, allowed.includes(file.mimetype));
   }
 });
@@ -362,11 +369,39 @@ app.delete('/api/services/:id', requireAuth, (req, res) => {
 });
 
 // Upload icon for a service
-app.post('/api/services/:id/upload-icon', requireAuth, upload.single('icon'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded or invalid file type' });
-  const iconUrl = `/uploads/${req.file.filename}`;
-  db.prepare('UPDATE services SET icon_url=? WHERE id=?').run(iconUrl, req.params.id);
-  res.json({ success: true, icon_url: iconUrl });
+app.post('/api/services/:id/upload-icon', requireAuth, upload.single('icon'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'No file uploaded or invalid file type'
+      });
+    }
+
+    const result = await cloudinary.uploader.upload(
+      `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+      {
+        folder: 'sharely/service-icons'
+      }
+    );
+
+    const iconUrl = result.secure_url;
+
+    db.prepare(
+      'UPDATE services SET icon_url=? WHERE id=?'
+    ).run(iconUrl, req.params.id);
+
+    res.json({
+      success: true,
+      icon_url: iconUrl
+    });
+
+  } catch (error) {
+    console.error('Icon upload error:', error);
+
+    res.status(500).json({
+      error: 'Failed to upload icon'
+    });
+  }
 });
 
 // Remove icon from a service
