@@ -279,6 +279,514 @@
       </div>
       <div class="form-group">
         <label>Custom Logo (PNG/JPG — shown in extension instead of emoji)</label>
+
+        <div style="display:flex;gap:10px;align-items:center">
+          <img
+            id="serviceIconPreview"
+            src=""
+            alt="Logo preview"
+            style="
+              width:48px;
+              height:48px;
+              border-radius:10px;
+              object-fit:cover;
+              display:none;
+              border:1px solid rgba(255,255,255,0.1);
+            "
+          >
+
+          <div style="flex:1">
+            <input
+              type="file"
+              id="serviceIconFile"
+              accept="image/*"
+              style="display:none"
+            >
+
+            <button
+              class="btn btn-outline btn-sm"
+              id="uploadIconBtn"
+              type="button"
+            >
+              Upload Logo
+            </button>
+
+            <button
+              class="btn btn-danger btn-sm"
+              id="removeIconBtn"
+              type="button"
+              style="display:none"
+            >
+              Remove
+            </button>
+
+            <div
+              id="iconUploadStatus"
+              style="font-size:11px;color:#aaa;margin-top:4px"
+            ></div>
+          </div>
+        </div>
+
+        <!-- Cloudinary URL -->
+        <div style="margin-top:12px">
+          <label style="font-size:12px">
+            Or use Cloudinary URL
+          </label>
+
+          <input
+            type="url"
+            id="serviceIconUrl"
+            placeholder="https://res.cloudinary.com/..."
+            style="width:100%;margin-top:5px"
+          >
+
+          <div
+            style="
+              font-size:11px;
+              color:#777;
+              margin-top:5px;
+            "
+          >
+            Paste the Secure URL of an image already uploaded to Cloudinary.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          class="btn btn-outline"
+          onclick="closeModal('serviceModal')"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn btn-primary"
+          id="saveServiceBtn"
+        >
+          Save
+        </button>
+      </div>
+      <div style="margin-top:10px">
+        <label style="font-size:12px">Cloudinary URL</label>
+        <input
+          type="url"
+          id="serviceIconUrl"
+          placeholder="https://res.cloudinary.com/..."
+          style="width:100%;margin-top:5px"
+        >
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('serviceModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveServiceBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="cookieModal">
+    <div class="modal">
+      <h2 id="cookieModalTitle">Add Cookie</h2>
+      <input type="hidden" id="cookieId">
+      <div class="form-group">
+        <label>Service</label>
+        <select id="cookieService"></select>
+      </div>
+      <div class="form-group">
+        <label>Label</label>
+        <input type="text" id="cookieLabel" placeholder="e.g. Account 1">
+      </div>
+      <div class="form-group">
+        <label>Cookie Name</label>
+        <input type="text" id="cookieName" placeholder="e.g. __Secure-next-auth.session-token">
+      </div>
+      <div class="form-group">
+        <label>Cookie Value</label>
+        <textarea id="cookieValue" rows="3" placeholder="Paste the cookie value here"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Cookie Domain</label>
+        <input type="text" id="cookieDomain" placeholder="e.g. .chatgpt.com">
+      </div>
+      <div class="form-group">
+        <label>Path</label>
+        <input type="text" id="cookiePath" value="/">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label>Same Site</label>
+          <select id="cookieSameSite">
+            <option value="lax">Lax</option>
+            <option value="strict">Strict</option>
+            <option value="no_restriction">None (cross-site)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Expiry (unix timestamp)</label>
+          <input type="number" id="cookieExpiry" value="0" placeholder="0 = session">
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;margin-bottom:10px">
+        <label class="toggle">
+          <input type="checkbox" id="cookieSecure" checked>
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:13px">Secure</span>
+        <label class="toggle">
+          <input type="checkbox" id="cookieHttpOnly">
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:13px">HttpOnly</span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('cookieModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveCookieBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="bulkModal">
+    <div class="modal">
+      <h2>Bulk Import Cookies</h2>
+      <div class="form-group">
+        <label>Service</label>
+        <select id="bulkService"></select>
+      </div>
+      <div class="form-group">
+        <label>Label</label>
+        <input type="text" id="bulkLabel" placeholder="e.g. Netflix Account">
+      </div>
+        <div class="form-group">
+          <label>JSON Data</label>
+          <p style="font-size:11px;opacity:0.7;margin-bottom:5px">Paste cookie JSON or use the extractor snippet from the dashboard home.</p>
+          <textarea id="bulkJson" rows="5" placeholder='{"name": "value", ...}'></textarea>
+        </div>
+      <div class="form-group">
+        <label>Cookie Domain</label>
+        <input type="text" id="bulkDomain" placeholder="e.g. .netflix.com">
+      </div>
+      <div class="form-group">
+        <label>Path</label>
+        <input type="text" id="bulkPath" value="/">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label>Same Site</label>
+          <select id="bulkSameSite">
+            <option value="lax">Lax</option>
+            <option value="strict">Strict</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Expiry (unix timestamp)</label>
+          <input type="number" id="bulkExpiry" value="0">
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;margin-bottom:10px">
+        <label class="toggle">
+          <input type="checkbox" id="bulkSecure" checked>
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:13px">Secure</span>
+        <label class="toggle">
+          <input type="checkbox" id="bulkHttpOnly">
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:13px">HttpOnly</span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('bulkModal')">Cancel</button>
+        <button class="btn btn-primary" id="processBulkBtn">Import All</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sharely Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="icon" type="image/png" href="/sharely-logo.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6c5ce7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/sharely-logo.png">
+</head>
+<body>
+  <div class="app-layout">
+    <nav class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">S</div>
+        <span>Sharely</span>
+      </div>
+      <div class="sidebar-nav">
+        <a href="#dashboard" class="active" data-page="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#services" data-page="services">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Services</span>
+        </a>
+        <a href="#cookies" data-page="cookies">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="6" cy="14" r="1"/><circle cx="14" cy="16" r="1"/></svg>
+          <span>Cookies</span>
+        </a>
+        <a href="#profiles" data-page="profiles">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Profiles</span>
+        </a>
+        <a href="#users" data-page="users">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Users</span>
+        </a>
+        <a href="#tokens" data-page="tokens">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>Tokens</span>
+        </a>
+        <a href="#settings" data-page="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Settings</span>
+        </a>
+      </div>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline btn-sm btn-full" id="logoutBtn">Sign Out</button>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div id="page-dashboard" class="page">
+        <div class="page-header"><h1>Dashboard</h1></div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="card">
+          <div class="card-header"><h2>Recent Cookies</h2></div>
+          <div id="recentCookiesTable"></div>
+        </div>
+      </div>
+
+      <div id="page-services" class="page" style="display:none">
+        <div class="page-header">
+          <h1>Services</h1>
+          <button class="btn btn-primary" id="addServiceBtn">+ Add Service</button>
+        </div>
+        <div class="card">
+          <div id="servicesTable"></div>
+        </div>
+      </div>
+
+      <div id="page-cookies" class="page" style="display:none">
+        <div class="page-header">
+          <h1>Cookies</h1>
+          <div style="display:flex;gap:10px;align-items:center">
+            <select id="cookieServiceFilter" style="width:200px">
+              <option value="">All Services</option>
+            </select>
+            <div class="view-toggle-group" id="cookieViewToggle">
+              <button data-view="list" id="viewListBtn">List</button>
+              <button data-view="grid" id="viewGridBtn" class="active">Grid</button>
+            </div>
+            <button class="btn btn-outline" id="bulkImportBtn">Bulk Import</button>
+            <button class="btn btn-primary" id="addCookieBtn">+ Add Cookie</button>
+          </div>
+        </div>
+        <div class="card">
+          <div id="cookiesTable"></div>
+        </div>
+      </div>
+
+      <!-- Profiles Page -->
+      <div id="page-profiles" class="page" style="display:none">
+        <div class="page-header">
+          <h1>Session Profiles</h1>
+          <div style="display:flex;gap:10px;align-items:center">
+            <select id="profileServiceFilter" style="width:200px">
+              <option value="">All Services</option>
+            </select>
+            <button class="btn btn-outline" id="refreshProfilesBtn">Refresh</button>
+          </div>
+        </div>
+        <div class="card">
+          <div id="profilesTable"></div>
+        </div>
+      </div>
+
+      <!-- Users Page -->
+      <div id="page-users" class="page" style="display:none">
+        <div class="page-header">
+          <h1>Users</h1>
+          <div style="display:flex;gap:10px;align-items:center">
+            <span id="userAnalytics" style="font-size:13px;color:var(--text-secondary)"></span>
+            <a href="/register" target="_blank" class="btn btn-outline btn-sm">+ Registration Page</a>
+          </div>
+        </div>
+        <div class="card">
+          <div id="usersTable"><div class="empty-state"><p>Loading users...</p></div></div>
+        </div>
+      </div>
+
+      <!-- Tokens Page -->
+      <div id="page-tokens" class="page" style="display:none">
+        <div class="page-header">
+          <h1>Access Tokens</h1>
+        </div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><h2>Generate New Tokens</h2></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:16px">
+            <div class="form-group">
+              <label>Number of Tokens</label>
+              <input type="number" id="tokenCount" value="10" min="1" max="500">
+            </div>
+            <div class="form-group">
+              <label>Duration</label>
+              <select id="tokenDuration">
+                <option value="30">30 days</option>
+                <option value="60">60 days</option>
+                <option value="90">90 days</option>
+                <option value="180">180 days</option>
+                <option value="365">1 year</option>
+              </select>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end">
+              <button class="btn btn-primary w-100" id="generateTokensBtn">Generate</button>
+            </div>
+          </div>
+          <div id="generatedTokensBox" style="display:none;padding:0 16px 16px">
+            <label>Generated Tokens (click to copy all)</label>
+            <textarea id="generatedTokensText" readonly style="width:100%;height:160px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-family:monospace;font-size:12px;padding:10px;resize:vertical"></textarea>
+            <button class="btn btn-outline btn-sm" id="copyTokensBtn" style="margin-top:8px">Copy All Tokens</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>All Tokens</h2></div>
+          <div id="tokensTable"><div class="empty-state"><p>Loading tokens...</p></div></div>
+        </div>
+      </div>
+
+      <div id="page-settings" class="page" style="display:none">
+        <div class="page-header"><h1>Settings</h1></div>
+        <div class="card">
+          <div class="card-header"><h2>Extension Connection</h2></div>
+          <div class="setting-group">
+            <label>Step 1 — Download the Extensions</label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+              <a href="/sharely-extension.zip" download class="btn btn-primary" style="display:inline-block;text-decoration:none">⬇ Sharely Extension (main)</a>
+              <a href="/sharely-capture.zip" download class="btn btn-outline" style="display:inline-block;text-decoration:none">📷 Sharely Capture (companion)</a>
+              <a href="/sharely-manager.zip" download class="btn btn-outline" style="display:inline-block;text-decoration:none">⚙ Sharely Manager (admin)</a>
+              <a href="/sharely-account-manager.zip" download class="btn btn-outline" style="display:inline-block;text-decoration:none;border-color:#a29bfe;color:#a29bfe">👤 Account Manager (admin)</a>
+              <a href="/mobile" target="_blank" class="btn btn-outline" style="display:inline-block;text-decoration:none;border-color:#00d2d3;color:#00d2d3">📱 Mobile Bookmarks</a>
+            </div>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px">In Chrome: go to <code>chrome://extensions</code>, enable Developer Mode, click "Load unpacked" and load each extension folder separately.</p>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:4px"><strong>Capture companion:</strong> Navigate to any site you're logged into, click the 📷 icon — it reads all cookies and sends them directly to this dashboard.</p>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:4px"><strong>Manager:</strong> For admins — auto-syncs session cookies whenever they change. Enable "Auto-sync this site" on any tab and cookies upload automatically.</p>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:4px"><strong>Account Manager:</strong> One-click sync of the active tab's cookies. Auto-detects if the session already exists and updates it, or creates a new numbered account (Netflix 1, Netflix 2…).</p>
+          </div>
+          <div class="setting-group" style="margin-top:16px">
+            <label>Step 2 — Copy this Server URL into extension Settings</label>
+            <div class="api-key-display" id="serverUrlDisplay" style="cursor:pointer" title="Click to copy">Loading...</div>
+          </div>
+          <div class="setting-group">
+            <label>Step 3 — Copy this API Key into extension Settings</label>
+            <div class="api-key-display" id="apiKeyDisplay" style="cursor:pointer" title="Click to copy">Loading...</div>
+            <button class="btn btn-outline btn-sm" id="regenerateKeyBtn" style="margin-top:8px">Regenerate Key</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Extension Settings</h2></div>
+          <form id="settingsForm">
+            <div class="form-group">
+              <label>Extension Name</label>
+              <input type="text" id="setting-extension_name">
+            </div>
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="setting-extension_version">
+            </div>
+            <div class="form-group">
+              <label>Theme</label>
+              <select id="setting-theme">
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2>API Key</h2>
+            <button class="btn btn-outline btn-sm" id="regenerateKeyBtn">Regenerate</button>
+          </div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">
+            Use this key in your extension to connect to this admin dashboard.
+          </p>
+          <div class="api-key-display" id="apiKeyDisplay">Loading...</div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Change Password</h2></div>
+          <form id="passwordForm">
+            <div class="form-group">
+              <label>Current Password</label>
+              <input type="password" id="currentPassword">
+            </div>
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" id="newPassword">
+            </div>
+            <button type="submit" class="btn btn-primary">Update Password</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="serviceModal">
+    <div class="modal">
+      <h2 id="serviceModalTitle">Add Service</h2>
+      <input type="hidden" id="serviceId">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="serviceName" placeholder="e.g. ChatGPT">
+      </div>
+      <div class="form-group">
+        <label>Domain</label>
+        <input type="text" id="serviceDomain" placeholder="e.g. chatgpt.com">
+      </div>
+      <div class="form-group">
+        <label>Parent Service <span style="font-size:11px;color:#888;font-weight:400">(optional — makes this a sub-service)</span></label>
+        <select id="serviceParent">
+          <option value="">— Top-level service (no parent) —</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="form-group">
+          <label>Emoji Icon (fallback)</label>
+          <input type="text" id="serviceIcon" placeholder="e.g. 🤖" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="serviceCategory">
+            <option value="productivity">Productivity & AI</option>
+            <option value="streaming">Entertainment</option>
+            <option value="design">Design</option>
+            <option value="music">Music</option>
+            <option value="education">Education</option>
+            <option value="utilities">Utilities</option>
+            <option value="proexclusive">Pro Exclusive</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Custom Logo (PNG/JPG — shown in extension instead of emoji)</label>
         <div style="display:flex;gap:10px;align-items:center">
           <img id="serviceIconPreview" src="" alt="" style="width:48px;height:48px;border-radius:10px;object-fit:cover;display:none;border:1px solid rgba(255,255,255,0.1)">
           <div style="flex:1">
@@ -288,6 +796,14 @@
             <div id="iconUploadStatus" style="font-size:11px;color:#aaa;margin-top:4px"></div>
           </div>
         </div>
+      <div style="margin-top:10px">
+        <label style="font-size:12px">Cloudinary URL</label>
+        <input
+          type="url"
+          id="serviceIconUrl"
+          placeholder="https://res.cloudinary.com/..."
+          style="width:100%;margin-top:5px"
+        >
       </div>
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="closeModal('serviceModal')">Cancel</button>
