@@ -65,12 +65,22 @@
 
       <div class="ext-connect-card" id="extConnectCard">
         <h4><i class="fa fa-plug" style="margin-right:6px;"></i> Connect Your Extension</h4>
-        <p>Paste this token into your Sharely Extension settings to connect automatically.</p>
+        <p>Connect the Sharely extension using your email and this token.</p>
+        <ol style="margin:4px 0 12px 18px;padding:0;font-size:13px;color:#555;line-height:1.7">
+          <li>Install the extension (<a href="/api/membership/download-extension">download</a>).</li>
+          <li>Open it &rarr; sign in with <b id="connectEmail">your email</b>.</li>
+          <li>Paste the access token below when asked.</li>
+        </ol>
         <div class="ext-connect-token">
           <input type="text" id="accessTokenInput" readonly value="Loading..." />
           <button id="copyTokenBtn">Copy</button>
         </div>
         <div class="ext-connect-copied" id="copiedMsg">Copied to clipboard!</div>
+      </div>
+
+      <div class="menu-section" id="toolsSection" style="display:none">
+        <div class="menu-section-header">Your services</div>
+        <div id="toolsList" style="padding:4px 2px 2px"></div>
       </div>
 
       <div class="menu-section">
@@ -209,6 +219,22 @@
           }
         });
       }
+
+      // Extension email + your services
+      var ce = document.getElementById('connectEmail');
+      if (ce) ce.textContent = data.member.email;
+      try {
+        const tRes = await fetch('/api/membership/my-tools');
+        if (tRes.ok) {
+          const tools = (await tRes.json()).tools || [];
+          if (tools.length) {
+            document.getElementById('toolsSection').style.display = '';
+            document.getElementById('toolsList').innerHTML = tools.map(function (t) {
+              return '<span style="display:inline-block;padding:6px 12px;margin:4px;border-radius:999px;background:rgba(124,58,237,.1);color:#7c3aed;font-size:13px;font-weight:600">' + (t.name || '') + '</span>';
+            }).join('');
+          }
+        }
+      } catch (e) {}
 
       // Logout
       async function doLogout(e) {
