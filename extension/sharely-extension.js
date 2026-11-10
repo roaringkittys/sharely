@@ -266,61 +266,51 @@ async function checkSession() {
     const sessionToken =
       stored.memberSessionToken || '';
 
-    memberSessionToken = sessionToken;
+    const accessToken =
+      stored.memberAccessToken || '';
 
-    if (!sessionToken) {
+    memberSessionToken = sessionToken;
+    memberAccessToken = accessToken;
+
+    if (!sessionToken && !accessToken) {
       return {
         authenticated: false
       };
     }
 
     const res = await fetch(
-      `${membershipUrl}/auth/extension-verify`,
+      `${membershipUrl}/api/membership/extension-session`,
       {
         method: 'GET',
-        headers: {
-          'X-User-Session': sessionToken
-        }
+        credentials: 'include',
+        headers: accessToken ? { 'X-Extension-Token': accessToken } : {}
       }
     );
 
     const data = await res.json().catch(() => ({}));
 
-    if (!res.ok || !data.valid || !data.user) {
+    if (!res.ok || !data.authenticated || !data.user) {
       return {
         authenticated: false
       };
     }
 
-    const expiresAt =
-      data.user.access_expires_at || '';
-
-    const now = new Date();
-
-    if (
-      expiresAt &&
-      new Date(expiresAt) <= now
-    ) {
-      return {
-        authenticated: true,
-        user: data.user,
-        subscription: {
-          active: false,
-          expires_at: expiresAt,
-          plan: 'Sharely'
-        }
-      };
+    // Keep the service API key fresh (only returned while subscription is active)
+    if (data.user.access_token) {
+      memberAccessToken = data.user.access_token;
+      await saveStorage({ memberAccessToken: data.user.access_token });
     }
+
+    const sub = data.subscription || {};
 
     return {
       authenticated: true,
-
       user: data.user,
-
       subscription: {
-        active: true,
-        expires_at: expiresAt,
-        plan: 'Sharely'
+        active: !!sub.active,
+        expires_at: sub.expires_at || '',
+        plan: sub.plan || 'Sharely',
+        days_remaining: sub.days_remaining
       }
     };
 
@@ -1130,7 +1120,8 @@ async function fetchConfig() {
           currentCategory =
             'all';
 
-               .removeClass('active');
+          $('.category-filter')
+            .removeClass('active');
 
           $('#all-category')
             .addClass('active');
@@ -1240,9 +1231,8 @@ async function loginExtension() {
     ($('#extensionEmail').val() || '')
       .trim();
 
-  const token =
-    ($('#extensionToken').val() || '')
-      .trim();
+  const password =
+    ($('#extensionPassword').val() || '');
 
   const $button =
     $('#extensionLoginBtn');
@@ -1254,10 +1244,10 @@ async function loginExtension() {
     .hide()
     .text('');
 
-  if (!email || !token) {
+  if (!email || !password) {
     $error
       .text(
-        'Enter your email and access token.'
+        'Enter your email and password.'
       )
       .show();
 
@@ -1274,9 +1264,11 @@ async function loginExtension() {
 
     const res =
       await fetch(
-        `${membershipUrl}/auth/extension-login`,
+        `${membershipUrl}/api/membership/extension-login`,
         {
           method: 'POST',
+
+          credentials: 'include',
 
           headers: {
             'Content-Type':
@@ -1285,7 +1277,7 @@ async function loginExtension() {
 
           body: JSON.stringify({
             email,
-            token,
+            password,
             deviceFingerprint
           })
         }
@@ -1298,14 +1290,27 @@ async function loginExtension() {
           () => ({})
         );
 
+    // Valid account but no active/paid subscription → prompt to purchase
+    if (data && data.access_granted === false) {
+      $('#extensionLoginForm').hide();
+      $('#subscriptionInactive').show();
+      $('#loggedOutTitle').text('Subscription required');
+      $('#loggedOutMsg').text(
+        data.error ||
+        'Your Sharely subscription is not active. Purchase a plan to use the extension.'
+      );
+      return;
+    }
+
     if (
       !res.ok ||
-      !data.success
+      !data.success ||
+      !data.access_granted
     ) {
       $error
         .text(
           data.error ||
-          'Login failed. Check your email and access token.'
+          'Login failed. Check your email and password.'
         )
         .show();
 
@@ -1315,48 +1320,39 @@ async function loginExtension() {
     const sessionToken =
       data.session_token || '';
 
-    if (!sessionToken) {
-      $error
-        .text(
-          'Login succeeded but no session token was returned.'
-        )
-        .show();
+    const sub = data.subscription || {};
 
-      return;
-    }
-
-    // Save old-system session
     await saveStorage({
       memberSessionToken:
         sessionToken,
 
       memberAccessToken:
-        '',
+        data.access_token || '',
 
       currentMemberEmail:
-        data.email || email,
+        (data.user && data.user.email) || email,
 
       currentMemberExpiry:
-        data.access_expires_at || ''
+        sub.expires_at || ''
     });
 
     memberSessionToken =
       sessionToken;
 
     memberAccessToken =
-      '';
+      data.access_token || '';
 
     currentMemberEmail =
-      data.email || email;
+      (data.user && data.user.email) || email;
 
     currentMemberExpiry =
-      data.access_expires_at || '';
+      sub.expires_at || '';
 
     currentMemberName =
-      '';
+      (data.user && data.user.name) || '';
 
     currentMemberPlan =
-      'Sharely';
+      sub.plan || 'Sharely';
 
     updateMemberFooter(
       currentMemberEmail,
@@ -1721,13 +1717,25 @@ $('#extensionLoginBtn')
     loginExtension
   );
 
-$('#extensionToken')
+$('#extensionPassword')
   .on(
     'keydown',
     e => {
       if (e.key === 'Enter') {
         loginExtension();
       }
+    }
+  );
+
+$('#extensionSignupLink')
+  .on(
+    'click',
+    async e => {
+      e.preventDefault();
+      const url = membershipUrl
+        ? `${membershipUrl}/membership/signup`
+        : `${SHARELY_URL}/membership/signup`;
+      try { await chrome.tabs.create({ url }); } catch (_) { window.open(url, '_blank'); }
     }
   );
 

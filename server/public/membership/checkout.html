@@ -4,34 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Purchase premium | Sharely</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="/membership/css/groupy-theme.css">
+<link rel="stylesheet" href="/membership/css/gp-pages.css">
 </head>
-<body>
+<body class="gp-dark">
 
   <div class="announcement-bar">
-    The only official Sharely website is <strong><a href="/">https://sharely.app</a></strong>.
-    Please be aware of fake websites.
+    The only official Sharely website is <strong><a href="/">https://sharely.id</a></strong>. Please be aware of fake websites.
   </div>
 
-  <header class="ud-header sticky">
+  <header class="ud-header">
     <div class="container">
       <div class="row">
         <div class="col-lg-12">
           <nav class="navbar navbar-expand-lg">
-            <a class="navbar-brand" href="/membership">
-              <span style="font-weight:800; font-size:22px; color:#7c3aed;">Sharely</span>
-            </a>
-            <div class="navbar-collapse">
-              <ul class="navbar-nav mx-auto">
-                <li class="nav-item"><a href="/membership">Home</a></li>
-                <li class="nav-item"><a href="/membership/pricing">Pricing</a></li>
-                <li class="nav-item"><a href="/membership/dashboard">Dashboard</a></li>
-              </ul>
-            </div>
+            <a class="navbar-brand" href="/membership"><span class="gp-brand-mark">S</span> Sharely</a>
+            <ul class="navbar-nav mx-auto">
+              <li class="nav-item"><a href="/membership">Home</a></li>
+              <li class="nav-item"><a href="/membership/pricing">Pricing</a></li>
+              <li class="nav-item"><a href="/membership/dashboard">Dashboard</a></li>
+            </ul>
             <div class="navbar-btn">
-              <a href="/membership/dashboard" class="ud-main-btn ud-login-btn"><i class="fa-solid fa-user"></i></a>
-              <a href="/membership/login" class="ud-main-btn ud-white-btn"><i class="fa fa-sign-in"></i></a>
+              <a href="/membership/dashboard" class="ud-main-btn gp-btn-glass gp-dash-btn"><i class="fa-solid fa-gauge"></i> Dashboard</a>
             </div>
           </nav>
         </div>
@@ -39,124 +37,103 @@
     </div>
   </header>
 
-  <section class="ud-page-banner">
-    <div class="container">
-      <div class="row">
-        <div class="col-lg-12">
-          <div class="ud-banner-content">
-            <h1>Purchase premium</h1>
-          </div>
-        </div>
-      </div>
-    </div>
+  <section class="ud-page-banner gp-checkout-banner">
+    <div class="container"><h1>Purchase premium</h1></div>
   </section>
 
-  <section class="ud-login">
-    <div class="container">
-      <div class="row">
-        <div class="col-lg-12">
-          <div class="ud-login-wrapper">
-            <form id="purchaseForm" onsubmit="return false;">
+  <section class="gp-checkout">
+    <div class="gp-grid">
 
-              <div id="alertBox" class="ud-alert ud-alert-error"></div>
+      <!-- LEFT -->
+      <div>
+        <div class="ud-alert ud-alert-error" id="alertBox"></div>
 
-              <div class="groupy-form-group">
-                <select id="planSelect"></select>
-                <label for="planSelect">Plan</label>
-              </div>
-
-              <div class="transaction-details">
-                <h5>Order summary</h5>
-                <div class="summary-row"><span id="summaryPlanLabel">Plan</span><span>Rp <span id="summaryPrice">0</span></span></div>
-                <hr class="summary-divider">
-                <div class="summary-row total">
-                  <span>Total</span><span>Rp <span id="summaryTotal">0</span></span>
-                </div>
-              </div>
-
-              <p class="signup-option" style="font-size:12px;">
-                By completing your purchase, you agree with our <a href="/membership" target="_blank">Terms of Service</a>.
-              </p>
-
-              <div id="guestForm">
-                <div class="groupy-form-group">
-                  <input type="email" id="emailInput" placeholder=" " required autocomplete="email" />
-                  <label for="emailInput">Email address</label>
-                </div>
-                <div class="groupy-form-group">
-                  <input type="text" id="nameInput" placeholder=" " required autocomplete="name" />
-                  <label for="nameInput">Full name</label>
-                </div>
-                <button type="button" class="ud-main-btn ud-white-btn w-100" id="payBtn">Pay now</button>
-              </div>
-
-              <div id="memberForm" style="display:none;">
-                <p class="signup-option">Logged in as <strong id="memberEmail"></strong>. <a href="/membership/login">Switch account</a></p>
-                <button type="button" class="ud-main-btn ud-white-btn w-100" id="memberPayBtn">Pay now</button>
-              </div>
-
-            </form>
-
-            <p class="signup-option">
-              Looking for your order history? <a href="/membership/billing">Order history</a>
-            </p>
-            <ul class="back-to-the-dashboard">
-              <li><a href="/membership/dashboard">Back to the dashboard</a></li>
-            </ul>
+        <div class="gp-card">
+          <div class="gp-step"><span class="gp-step-num">1</span><h5>Choose your plan</h5></div>
+          <div class="gp-tier-grid" id="tierGrid">
+            <div style="padding:20px 0;text-align:center;color:var(--gp-muted)">Loading plans…</div>
           </div>
         </div>
+
+        <div class="gp-card" id="detailsCard">
+          <div class="gp-step"><span class="gp-step-num">2</span><h5>Your details</h5></div>
+          <div id="guestForm">
+            <div class="gp-field">
+              <label for="emailInput">Email</label>
+              <input type="email" id="emailInput" placeholder="you@email.com" autocomplete="email" required>
+            </div>
+            <div class="gp-field">
+              <label for="nameInput">Name</label>
+              <input type="text" id="nameInput" placeholder="Your name" autocomplete="name" required>
+            </div>
+            <p class="gp-member-note" style="font-size:12.5px;">Already a member? <a href="/membership/login" style="color:var(--gp-accent-2)">Log in</a> so it activates automatically.</p>
+          </div>
+          <div id="memberForm" style="display:none;">
+            <p class="gp-member-note">Signed in as <b id="memberEmail">—</b>. Your plan activates automatically after payment.</p>
+          </div>
+        </div>
+
+        <div class="gp-card">
+          <div class="gp-step"><span class="gp-step-num">3</span><h5>Payment</h5></div>
+          <div class="gp-pay-note">
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+              Pay securely with <b style="color:var(--gp-fg)">Midtrans</b>. Choose your method — QRIS, bank transfer (VA), card, or e-wallet — in the secure popup after you press Pay.
+              <div class="gp-pay-logos">
+                <span>QRIS</span><span>BCA VA</span><span>BNI VA</span><span>Mandiri VA</span><span>GoPay</span><span>ShopeePay</span><span>Card</span>
+              </div>
+            </div>
+          </div>
+          <p class="gp-note-intl"><i class="fa-solid fa-circle-info"></i> For international QR payments from <b>Singapore, Malaysia, Philippines, or Thailand</b>, please use <b>QRIS by ShopeePay</b>.</p>
+        </div>
+
+        <div class="gp-card">
+          <div class="gp-step"><span class="gp-step-num">4</span><h5>Promotion code <small style="color:var(--gp-faint);font-weight:500">(optional)</small></h5></div>
+          <div class="gp-promo">
+            <input type="text" id="promoInput" placeholder="Enter code" autocomplete="off">
+            <button type="button" class="ud-main-btn gp-btn-glass" id="promoApplyBtn">Apply</button>
+          </div>
+          <div class="gp-promo-status" id="promoStatus"></div>
+        </div>
       </div>
+
+      <!-- RIGHT: summary -->
+      <aside>
+        <div class="gp-card gp-summary">
+          <h5 class="gp-summary-title">Order summary</h5>
+          <div class="gp-summary-plan-name" id="summaryPlanName">–</div>
+          <div class="gp-line"><span>Price</span><span>Rp <span id="summaryPrice">0</span></span></div>
+          <div class="gp-line" id="summaryDiscountRow" style="display:none;color:var(--gp-good)"><span>Promo <span id="summaryPromoCode"></span></span><span>&minus; Rp <span id="summaryDiscount">0</span></span></div>
+          <div class="gp-total"><span>Total</span><span class="gp-total-amount">Rp <span id="summaryTotal">0</span></span></div>
+          <button type="button" class="ud-main-btn gp-pay-btn gp-btn-rim" id="payBtn"><i class="fa-solid fa-lock"></i> Pay now</button>
+          <p class="gp-tos">By purchasing you agree to our <a href="/membership/terms" target="_blank">Terms of Service</a>.</p>
+          <div class="gp-summary-links">
+            <a href="/membership/dashboard" class="gp-backbtn"><i class="fa-solid fa-arrow-left"></i> Back to dashboard</a>
+          </div>
+        </div>
+      </aside>
+
     </div>
   </section>
 
   <footer class="ud-footer">
     <div class="container">
-      <div class="row">
+      <div class="row" style="padding-top:36px;">
         <div class="col-xl-3 col-lg-4 col-md-6">
           <div class="ud-widget">
-            <a href="/membership" class="ud-footer-logo"><span style="font-weight:800; font-size:20px; color:#fff;">Sharely</span></a>
+            <a href="/membership" class="ud-footer-logo"><span style="font-weight:800;font-size:20px;color:#fff;">Sharely</span></a>
             <p class="ud-widget-desc">One-click access to premium services.</p>
-          </div>
-        </div>
-        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
-          <div class="ud-widget">
-            <h5 class="ud-widget-title">Dashboard</h5>
-            <ul class="ud-widget-links">
-              <li><a href="/membership/dashboard">View dashboard</a></li>
-              <li><a href="/membership/pricing">Purchase premium</a></li>
-            </ul>
-          </div>
-        </div>
-        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
-          <div class="ud-widget">
-            <h5 class="ud-widget-title">Extension</h5>
-            <ul class="ud-widget-links">
-              <li><a href="/api/membership/download-extension">Download extension</a></li>
-            </ul>
           </div>
         </div>
       </div>
     </div>
     <div class="ud-footer-bottom">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-8">
-            <ul class="ud-footer-bottom-left">
-              <li><a href="/membership">Home</a></li>
-              <li><a href="/membership/pricing">Pricing</a></li>
-              <li><a href="/membership">Contact Us</a></li>
-            </ul>
-          </div>
-          <div class="col-md-4">
-            <p class="ud-footer-bottom-right">Sharely &copy; 2025</p>
-          </div>
-        </div>
-      </div>
+      <div class="container"><div class="row">
+        <div class="col-md-8"><ul class="ud-footer-bottom-left"><li><a href="/membership">Home</a></li><li><a href="/membership/pricing">Pricing</a></li></ul></div>
+        <div class="col-md-4"><p class="ud-footer-bottom-right">Sharely &copy; 2026</p></div>
+      </div></div>
     </div>
-    <div class="groupy-wave"><div style="margin-top:0px;height:20px"></div></div>
   </footer>
-
-  <a href="javascript:void(0)" class="back-to-top" id="backToTop"><i class="fa-solid fa-arrow-up"></i></a>
 
   <script src="/membership/js/membership.js"></script>
   <script src="/membership/js/checkout.js"></script>

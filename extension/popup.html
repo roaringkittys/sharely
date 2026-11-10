@@ -70,26 +70,29 @@
       <div class="error-box">
         <div style="font-size:38px;margin-bottom:12px">🔒</div>
         <h3 class="error-title" id="loggedOutTitle">Log in to Sharely</h3>
-        <p class="error-msg" id="loggedOutMsg">Use your member account or an extension token to load services.</p>
+        <p class="error-msg" id="loggedOutMsg">Log in with your Sharely account to load your services.</p>
         <div id="extensionLoginForm" class="auth-form">
           <div class="auth-field">
             <label for="extensionEmail">Email</label>
             <input type="email" id="extensionEmail" autocomplete="email" placeholder="you@example.com">
           </div>
           <div class="auth-field">
-            <label for="extensionToken">Token</label>
+            <label for="extensionPassword">Password</label>
             <input
-              type="text"
-              id="extensionToken"
-              autocomplete="off"
-              placeholder="Enter your extension token"
+              type="password"
+              id="extensionPassword"
+              autocomplete="current-password"
+              placeholder="Your password"
             >
             <div class="auth-field-hint">
-              Use the token provided by Sharely.
+              Same email &amp; password as the Sharely website.
             </div>
           </div>
           <div id="extensionLoginError" class="auth-error" style="display:none"></div>
           <button class="ud-main-btn mt-2" id="extensionLoginBtn">Log in</button>
+          <div class="auth-field-hint" style="text-align:center;margin-top:10px">
+            Don't have access yet? <a href="#" id="extensionSignupLink" style="color:#a29bfe">Sign up &amp; subscribe</a>
+          </div>
         </div>
         <div id="subscriptionInactive" style="display:none">
           <button class="ud-main-btn mt-3" id="purchaseMembershipBtn">View membership plans</button>

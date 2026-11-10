@@ -4,14 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard | Sharely</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="/membership/css/groupy-theme.css">
+<link rel="stylesheet" href="/membership/css/gp-pages.css">
 </head>
-<body>
+<body class="gp-dark">
 
   <div class="announcement-bar">
-    The only official Sharely website is <strong><a href="/">https://sharely.app</a></strong>.
-    Please be aware of fake websites.
+    The only official Sharely website is <strong><a href="/">https://sharely.id</a></strong>. Please be aware of fake websites.
   </div>
 
   <header class="ud-header">
@@ -20,18 +23,34 @@
         <div class="col-lg-12">
           <nav class="navbar navbar-expand-lg">
             <a class="navbar-brand" href="/membership">
-              <span style="font-weight:800; font-size:22px; color:#7c3aed;">Sharely</span>
+              <span class="gp-brand-mark">S</span> Sharely
             </a>
-            <div class="navbar-collapse">
-              <ul class="navbar-nav mx-auto">
-                <li class="nav-item"><a href="/membership">Home</a></li>
-                <li class="nav-item"><a href="/membership/pricing">Pricing</a></li>
-                <li class="nav-item"><a href="/membership/dashboard">Dashboard</a></li>
-              </ul>
-            </div>
+            <ul class="navbar-nav mx-auto">
+              <li class="nav-item"><a href="/membership">Home</a></li>
+              <li class="nav-item"><a href="/membership/pricing">Pricing</a></li>
+              <li class="nav-item"><a href="/membership/dashboard">Dashboard</a></li>
+            </ul>
             <div class="navbar-btn">
-              <a href="/membership/dashboard" class="ud-main-btn ud-login-btn"><i class="fa-solid fa-user"></i></a>
-              <a href="#" class="ud-main-btn ud-white-btn" id="logoutBtn"><i class="fa fa-sign-out"></i></a>
+              <div class="gp-user" id="gpUser">
+                <a class="gp-user-toggle" href="#" role="button" aria-label="Account" id="gpUserToggle">
+                  <span class="gp-avatar" id="navAvatar">–</span>
+                  <span class="gp-user-name" id="navName">Account</span>
+                  <i class="fa-solid fa-chevron-down gp-user-caret"></i>
+                </a>
+                <div class="gp-user-menu">
+                  <div class="gp-user-head">
+                    <div class="gp-user-head-label">Signed in as</div>
+                    <div class="gp-user-head-name" id="navFullName">Member</div>
+                    <span class="gp-plan-badge is-free" id="navPlanBadge">Free</span>
+                  </div>
+                  <a class="dropdown-item" href="/membership/dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+                  <a class="dropdown-item" href="/membership/settings"><i class="fa-solid fa-user-pen"></i> Edit profile</a>
+                  <a class="dropdown-item" href="/membership/billing"><i class="fa-solid fa-receipt"></i> Order history</a>
+                  <a class="dropdown-item" href="/membership/checkout?plan=1"><i class="fa-solid fa-crown"></i> Extend premium</a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item gp-item-danger" href="#" id="logoutBtn"><i class="fa fa-sign-out"></i> Log out</a>
+                </div>
+              </div>
             </div>
           </nav>
         </div>
@@ -40,33 +59,31 @@
   </header>
 
   <section class="ud-page-banner">
-    <div class="container">
-      <div class="row">
-        <div class="col-lg-12">
-          <div class="ud-banner-content">
-            <h1>Dashboard</h1>
-          </div>
-        </div>
-      </div>
+    <div class="gp-dash-banner">
+      <span class="gp-dash-banner-label">Dashboard</span>
+      <h1 id="gpGreeting"><span id="gpGreetWord">Welcome</span>, <span id="gpGreetName">there</span></h1>
     </div>
   </section>
 
-  <section class="dashboard">
-    <div class="container">
+  <section class="dashboard gp-dash">
+    <div class="gp-bento">
 
-      <div class="menu-section" id="planSection">
+      <!-- Plan -->
+      <div class="gp-dash-card gp-dash-plan gp-area-plan">
         <div class="menu-section-mini-header">Your plan</div>
-        <img src="" alt="Logo" class="top-right-image" style="display:none;" id="topRightLogo">
-        <div class="menu-section-plan-premium" id="planName">Free</div>
-        <div class="menu-section-plan-description" id="planExpiry">
-          You don't have an active plan yet. Choose a plan to unlock your services.
+        <div class="gp-dash-plan-name is-premium" id="planName">Free</div>
+        <ul class="gp-dash-tiers" id="tierList"></ul>
+        <div class="gp-dash-actions">
+          <a href="/membership/checkout?plan=1" class="ud-main-btn gp-dash-btn gp-btn-rim"><i class="fa-solid fa-crown"></i> Extend premium</a>
+          <a href="/membership/billing" class="ud-main-btn gp-dash-btn gp-btn-glass"><i class="fa fa-receipt"></i> Order history</a>
         </div>
       </div>
 
-      <div class="ext-connect-card" id="extConnectCard">
-        <h4><i class="fa fa-plug" style="margin-right:6px;"></i> Connect Your Extension</h4>
+      <!-- Connect extension -->
+      <div class="gp-dash-card ext-connect-card" id="extConnectCard" style="margin-bottom:0;">
+        <h4><i class="fa fa-plug" style="margin-right:6px;"></i> Connect your extension</h4>
         <p>Connect the Sharely extension using your email and this token.</p>
-        <ol style="margin:4px 0 12px 18px;padding:0;font-size:13px;color:#555;line-height:1.7">
+        <ol class="ext-connect-steps">
           <li>Install the extension (<a href="/api/membership/download-extension">download</a>).</li>
           <li>Open it &rarr; sign in with <b id="connectEmail">your email</b>.</li>
           <li>Paste the access token below when asked.</li>
@@ -78,53 +95,39 @@
         <div class="ext-connect-copied" id="copiedMsg">Copied to clipboard!</div>
       </div>
 
-      <div class="menu-section" id="toolsSection" style="display:none">
+      <!-- Services -->
+      <div class="gp-dash-card" id="toolsCard">
         <div class="menu-section-header">Your services</div>
-        <div id="toolsList" style="padding:4px 2px 2px"></div>
+        <div class="gp-tool-chips" id="toolsList"></div>
+        <div class="gp-empty" id="toolsEmpty">Open the Sharely extension to browse every available app.</div>
       </div>
 
-      <div class="menu-section">
-        <div class="menu-section-header">Account</div>
-        <a href="/membership/settings" class="menu-item">
-          <span class="icon"><i class="fa fa-pen-to-square"></i></span> Edit profile
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="/membership/billing" class="menu-item">
-          <span class="icon"><i class="fa fa-paperclip"></i></span> Order history
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="#" class="menu-item" id="logoutRow">
-          <span class="icon"><i class="fa fa-sign-out" style="color:#e74c3c;"></i></span> Log out
-          <span class="chevron" style="color:#e74c3c;">&#8250;</span>
-        </a>
-      </div>
-
-      <div class="menu-section">
+      <!-- Premium -->
+      <div class="gp-dash-card">
         <div class="menu-section-header">Premium</div>
-        <a href="/membership/pricing" class="menu-item">
-          <span class="icon"><i class="fa fa-shopping-cart"></i></span> Purchase premium
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="/membership/billing" class="menu-item">
-          <span class="icon"><i class="fa fa-paperclip"></i></span> Order history
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="/membership/upgrade" class="menu-item">
-          <span class="icon"><i class="fa fa-right-left"></i></span> Upgrade plan
-          <span class="chevron">&#8250;</span>
-        </a>
+        <a href="/membership/checkout?plan=1" class="menu-item"><span class="icon"><i class="fa fa-shopping-cart"></i></span> Purchase premium<span class="chevron">›</span></a>
+        <a href="/membership/billing" class="menu-item"><span class="icon"><i class="fa fa-receipt"></i></span> Order history<span class="chevron">›</span></a>
+        <a href="/membership/checkout?plan=2" class="menu-item"><span class="icon"><i class="fa fa-right-left"></i></span> Upgrade plan<span class="chevron">›</span></a>
       </div>
 
-      <div class="menu-section">
+      <!-- Account -->
+      <div class="gp-dash-card">
+        <div class="menu-section-header">Account</div>
+        <a href="/membership/settings" class="menu-item"><span class="icon"><i class="fa fa-pen-to-square"></i></span> Edit profile<span class="chevron">›</span></a>
+        <a href="/membership/billing" class="menu-item"><span class="icon"><i class="fa fa-paperclip"></i></span> Order history<span class="chevron">›</span></a>
+        <a href="#" class="menu-item" id="logoutRow"><span class="icon"><i class="fa fa-sign-out" style="color:#f87171;"></i></span> Log out<span class="chevron">›</span></a>
+      </div>
+
+      <!-- Extension downloads -->
+      <div class="gp-dash-card">
         <div class="menu-section-header">Extension</div>
-        <a href="/api/membership/download-extension" class="menu-item">
-          <span class="icon"><i class="fa fa-download"></i></span> Download Extension (.zip)
-          <span class="chevron">&#8250;</span>
-        </a>
-        <a href="#" class="menu-item" onclick="return false;" style="opacity:.7">
-          <span class="icon"><i class="fa fa-play"></i></span> Watch installation tutorial
-          <span class="chevron">&#8250;</span>
-        </a>
+        <div class="gp-dash-downloads">
+          <a href="/api/membership/download-extension" class="gp-dash-dl gp-btn-glass">
+            <span class="gp-dash-dl-icon"><i class="fa-solid fa-puzzle-piece"></i></span>
+            <span class="gp-dash-dl-text"><b>Download Sharely Extension</b><small>Chrome / Edge / Brave</small></span>
+            <span class="gp-dash-dl-arrow"><i class="fa fa-download"></i></span>
+          </a>
+        </div>
       </div>
 
     </div>
@@ -132,28 +135,26 @@
 
   <footer class="ud-footer">
     <div class="container">
-      <div class="row">
+      <div class="row" style="padding-top:36px;">
         <div class="col-xl-3 col-lg-4 col-md-6">
           <div class="ud-widget">
             <a href="/membership" class="ud-footer-logo"><span style="font-weight:800; font-size:20px; color:#fff;">Sharely</span></a>
             <p class="ud-widget-desc">One-click access to premium services.</p>
           </div>
         </div>
-        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+        <div class="col-xl-2 col-lg-2 col-md-6">
           <div class="ud-widget">
             <h5 class="ud-widget-title">Dashboard</h5>
             <ul class="ud-widget-links">
               <li><a href="/membership/dashboard">View dashboard</a></li>
-              <li><a href="/membership/pricing">Purchase premium</a></li>
+              <li><a href="/membership/checkout?plan=1">Purchase premium</a></li>
             </ul>
           </div>
         </div>
-        <div class="col-xl-2 col-lg-2 col-md-6 col-sm-6">
+        <div class="col-xl-2 col-lg-2 col-md-6">
           <div class="ud-widget">
             <h5 class="ud-widget-title">Extension</h5>
-            <ul class="ud-widget-links">
-              <li><a href="/api/membership/download-extension">Download extension</a></li>
-            </ul>
+            <ul class="ud-widget-links"><li><a href="/api/membership/download-extension">Download extension</a></li></ul>
           </div>
         </div>
       </div>
@@ -161,20 +162,11 @@
     <div class="ud-footer-bottom">
       <div class="container">
         <div class="row">
-          <div class="col-md-8">
-            <ul class="ud-footer-bottom-left">
-              <li><a href="/membership">Home</a></li>
-              <li><a href="/membership/pricing">Pricing</a></li>
-              <li><a href="/membership">Contact Us</a></li>
-            </ul>
-          </div>
-          <div class="col-md-4">
-            <p class="ud-footer-bottom-right">Sharely &copy; 2025</p>
-          </div>
+          <div class="col-md-8"><ul class="ud-footer-bottom-left"><li><a href="/membership">Home</a></li><li><a href="/membership/pricing">Pricing</a></li></ul></div>
+          <div class="col-md-4"><p class="ud-footer-bottom-right">Sharely &copy; 2026</p></div>
         </div>
       </div>
     </div>
-    <div class="groupy-wave"><div style="margin-top:0px;height:20px"></div></div>
   </footer>
 
   <a href="javascript:void(0)" class="back-to-top" id="backToTop"><i class="fa-solid fa-arrow-up"></i></a>
@@ -182,75 +174,88 @@
   <script src="/membership/js/membership.js"></script>
   <script>
     (async function () {
+      // user dropdown
+      var user = document.getElementById('gpUser');
+      document.getElementById('gpUserToggle').addEventListener('click', function (e) { e.preventDefault(); user.classList.toggle('open'); });
+      document.addEventListener('click', function (e) { if (!user.contains(e.target)) user.classList.remove('open'); });
+
+      // greeting by local time
+      var h = new Date().getHours();
+      document.getElementById('gpGreetWord').textContent = h < 12 ? 'Good morning' : (h < 16 ? 'Good afternoon' : (h < 20 ? 'Good evening' : 'Good night'));
+
       const data = await MembershipUI.requireMemberSession();
       if (!data) return;
 
       const firstName = (data.member.name || data.member.email).split(' ')[0];
+      const initials = (data.member.name || data.member.email).slice(0, 2).toUpperCase();
+      document.getElementById('gpGreetName').textContent = firstName;
+      document.getElementById('navName').textContent = firstName;
+      document.getElementById('navAvatar').textContent = initials;
+      document.getElementById('navFullName').textContent = data.member.name || data.member.email;
 
-      // Plan section
-      if (data.subscription && data.subscription.status === 'active') {
-        const expiry = new Date(data.subscription.current_period_end);
-        const days = Math.max(0, Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24)));
-        document.getElementById('planName').textContent = data.subscription.plan_name;
-        document.getElementById('planExpiry').innerHTML =
-          'Your <b>' + data.subscription.plan_name + '</b> is valid until ' + MembershipUI.formatDate(data.subscription.current_period_end) +
-          ' (UTC). <b>' + days + ' day' + (days !== 1 ? 's' : '') + ' remaining.</b>';
-      } else if (data.subscription) {
-        document.getElementById('planName').textContent = data.subscription.plan_name;
-        document.getElementById('planExpiry').textContent = 'Expired — renew to continue using Sharely.';
+      // plan + tiers
+      const plans = await MembershipUI.fetchPlans();
+      const sub = data.subscription && data.subscription.status === 'active' ? data.subscription : null;
+      const planNameEl = document.getElementById('planName');
+      const badgeEl = document.getElementById('navPlanBadge');
+      const tierList = document.getElementById('tierList');
+      const badgeClass = { 1: 'is-premium', 2: 'is-pro', 3: 'is-team' };
+
+      if (sub) {
+        planNameEl.textContent = sub.plan_name;
+        const expiry = new Date(sub.current_period_end);
+        const days = Math.max(0, Math.ceil((expiry - new Date()) / 86400000));
+        badgeEl.className = 'gp-plan-badge ' + (badgeClass[sub.plan_id] || 'is-premium');
+        badgeEl.textContent = sub.plan_name + ' · ' + days + 'd left';
+        tierList.insertAdjacentHTML('beforeend',
+          '<li class="gp-dash-tier"><span class="gp-plan-badge ' + (badgeClass[sub.plan_id] || 'is-premium') + '">' + sub.plan_name + '</span>' +
+          '<span class="gp-dash-tier-days">' + days + ' day' + (days !== 1 ? 's' : '') + ' left</span>' +
+          '<span class="gp-dash-tier-until">Ends ' + MembershipUI.formatDate(sub.current_period_end) + '</span></li>');
       } else {
-        document.getElementById('planName').textContent = 'Free';
-        document.getElementById('planExpiry').textContent = "You don't have an active plan yet. Choose a plan to unlock your services.";
+        planNameEl.textContent = 'Free';
       }
+      // other plans as upgrade links
+      plans.filter(p => !sub || p.id !== sub.plan_id).forEach(p => {
+        tierList.insertAdjacentHTML('beforeend',
+          '<li><a class="gp-dash-tier is-inactive" href="/membership/checkout?plan=' + p.id + '">' +
+          '<span class="gp-plan-badge ' + (badgeClass[p.id] || 'is-premium') + '">' + p.name + '</span>' +
+          '<span class="gp-dash-tier-days">' + MembershipUI.formatMoney(p.price_cents) + ' · ' + (p.duration_days || 30) + 'd</span>' +
+          '<span class="gp-dash-tier-until"><i class="fa-solid fa-arrow-right"></i></span></a></li>');
+      });
 
-      // Extension connect token
+      // extension token + email
+      document.getElementById('connectEmail').textContent = data.member.email;
       if (data.member.access_token) {
-        const tokenInput = document.getElementById('accessTokenInput');
-        tokenInput.value = data.member.access_token;
+        const ti = document.getElementById('accessTokenInput');
+        ti.value = data.member.access_token;
         document.getElementById('copyTokenBtn').addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(tokenInput.value);
-            const msg = document.getElementById('copiedMsg');
-            msg.style.display = 'block';
-            setTimeout(() => { msg.style.display = 'none'; }, 2000);
-          } catch (e) {
-            tokenInput.select();
-            document.execCommand('copy');
-          }
+          try { await navigator.clipboard.writeText(ti.value); } catch (e) { ti.select(); document.execCommand('copy'); }
+          const m = document.getElementById('copiedMsg'); m.style.display = 'block'; setTimeout(() => m.style.display = 'none', 2000);
         });
       }
 
-      // Extension email + your services
-      var ce = document.getElementById('connectEmail');
-      if (ce) ce.textContent = data.member.email;
+      // services
       try {
         const tRes = await fetch('/api/membership/my-tools');
         if (tRes.ok) {
           const tools = (await tRes.json()).tools || [];
           if (tools.length) {
-            document.getElementById('toolsSection').style.display = '';
-            document.getElementById('toolsList').innerHTML = tools.map(function (t) {
-              return '<span style="display:inline-block;padding:6px 12px;margin:4px;border-radius:999px;background:rgba(124,58,237,.1);color:#7c3aed;font-size:13px;font-weight:600">' + (t.name || '') + '</span>';
-            }).join('');
+            document.getElementById('toolsEmpty').style.display = 'none';
+            document.getElementById('toolsList').innerHTML = tools.map(t =>
+              '<span class="gp-tool-chip">' + (t.name || '') + '</span>').join('');
           }
         }
       } catch (e) {}
 
-      // Logout
-      async function doLogout(e) {
-        if (e) e.preventDefault();
-        await fetch('/api/membership/logout', { method: 'POST' });
-        window.location.href = '/membership/login';
-      }
+      // logout
+      async function doLogout(e) { if (e) e.preventDefault(); await fetch('/api/membership/logout', { method: 'POST' }); window.location.href = '/membership/login'; }
       document.getElementById('logoutBtn').addEventListener('click', doLogout);
       document.getElementById('logoutRow').addEventListener('click', doLogout);
 
-      // Back to top
-      const backToTop = document.getElementById('backToTop');
-      window.addEventListener('scroll', () => {
-        backToTop.classList.toggle('show', window.scrollY > 300);
-      });
-      backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+      // back to top
+      const btt = document.getElementById('backToTop');
+      window.addEventListener('scroll', () => btt.classList.toggle('show', window.scrollY > 300));
+      btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     })();
   </script>
 </body>
