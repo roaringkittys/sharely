@@ -2,6 +2,7 @@ let plans = [];
 let selectedPlan = null;
 let memberData = null;
 let paymentConfig = null;
+let appliedPromo = null;
 
 async function loadConfig() {
   const res = await fetch('/api/membership/payment-config');
@@ -45,15 +46,55 @@ function selectPlan(id) {
     input.checked = on;
     l.classList.toggle('is-selected', on);
   });
-  updateSummary();
+  if (appliedPromo) { applyPromo(); } else { updateSummary(); }
 }
 
 function updateSummary() {
   if (!selectedPlan) return;
   document.getElementById('summaryPlanName').textContent =
     selectedPlan.name + ' · ' + (selectedPlan.duration_days || 30) + ' days';
-  document.getElementById('summaryPrice').textContent = selectedPlan.price_cents.toLocaleString('id-ID');
-  document.getElementById('summaryTotal').textContent = selectedPlan.price_cents.toLocaleString('id-ID');
+  const price = selectedPlan.price_cents;
+  const discount = (appliedPromo && appliedPromo.discount_cents) || 0;
+  document.getElementById('summaryPrice').textContent = price.toLocaleString('id-ID');
+  const row = document.getElementById('summaryDiscountRow');
+  if (discount > 0) {
+    row.style.display = 'flex';
+    document.getElementById('summaryDiscount').textContent = discount.toLocaleString('id-ID');
+    document.getElementById('summaryPromoCode').textContent = appliedPromo.code ? '(' + appliedPromo.code + ')' : '';
+  } else {
+    row.style.display = 'none';
+  }
+  document.getElementById('summaryTotal').textContent = Math.max(0, price - discount).toLocaleString('id-ID');
+}
+
+async function applyPromo() {
+  const input = document.getElementById('promoInput');
+  const status = document.getElementById('promoStatus');
+  const code = (input.value || '').trim();
+  if (!code) { appliedPromo = null; status.textContent = ''; status.className = 'gp-promo-status'; updateSummary(); return; }
+  if (!selectedPlan) return;
+  status.textContent = 'Checking…'; status.className = 'gp-promo-status';
+  try {
+    const res = await fetch('/api/membership/validate-promo', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, plan_id: selectedPlan.id }),
+    });
+    const data = await res.json();
+    if (data.valid) {
+      appliedPromo = { code: data.code || code.toUpperCase(), discount_cents: data.discount_cents };
+      status.textContent = 'Code applied — you save Rp ' + data.discount_cents.toLocaleString('id-ID') + '.';
+      status.className = 'gp-promo-status is-valid';
+    } else {
+      appliedPromo = null;
+      status.textContent = data.message || 'Invalid code.';
+      status.className = 'gp-promo-status is-invalid';
+    }
+  } catch (e) {
+    appliedPromo = null;
+    status.textContent = 'Could not validate code.';
+    status.className = 'gp-promo-status is-invalid';
+  }
+  updateSummary();
 }
 
 function showAlert(msg) {
@@ -99,7 +140,7 @@ async function startPayment(email, name) {
     const res = await fetch('/api/membership/snap-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan_id: selectedPlan.id, email, name }),
+      body: JSON.stringify({ plan_id: selectedPlan.id, email, name, promo_code: appliedPromo ? appliedPromo.code : '' }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Payment initialization failed');
@@ -136,5 +177,8 @@ document.getElementById('payBtn').addEventListener('click', () => {
     startPayment(email, name);
   }
 });
+
+document.getElementById('promoApplyBtn').addEventListener('click', applyPromo);
+document.getElementById('promoInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyPromo(); } });
 
 init();

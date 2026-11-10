@@ -84,6 +84,16 @@
               </div>
             </div>
           </div>
+          <p class="gp-note-intl"><i class="fa-solid fa-circle-info"></i> For international QR payments from <b>Singapore, Malaysia, Philippines, or Thailand</b>, please use <b>QRIS by ShopeePay</b>.</p>
+        </div>
+
+        <div class="gp-card">
+          <div class="gp-step"><span class="gp-step-num">4</span><h5>Promotion code <small style="color:var(--gp-faint);font-weight:500">(optional)</small></h5></div>
+          <div class="gp-promo">
+            <input type="text" id="promoInput" placeholder="Enter code" autocomplete="off">
+            <button type="button" class="ud-main-btn gp-btn-glass" id="promoApplyBtn">Apply</button>
+          </div>
+          <div class="gp-promo-status" id="promoStatus"></div>
         </div>
       </div>
 
@@ -93,6 +103,7 @@
           <h5 class="gp-summary-title">Order summary</h5>
           <div class="gp-summary-plan-name" id="summaryPlanName">–</div>
           <div class="gp-line"><span>Price</span><span>Rp <span id="summaryPrice">0</span></span></div>
+          <div class="gp-line" id="summaryDiscountRow" style="display:none;color:var(--gp-good)"><span>Promo <span id="summaryPromoCode"></span></span><span>&minus; Rp <span id="summaryDiscount">0</span></span></div>
           <div class="gp-total"><span>Total</span><span class="gp-total-amount">Rp <span id="summaryTotal">0</span></span></div>
           <button type="button" class="ud-main-btn gp-pay-btn gp-btn-rim" id="payBtn"><i class="fa-solid fa-lock"></i> Pay now</button>
           <p class="gp-tos">By purchasing you agree to our <a href="/membership/terms" target="_blank">Terms of Service</a>.</p>

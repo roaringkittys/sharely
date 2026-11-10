@@ -83,6 +83,38 @@ function init(app, db, publicDir) {
     res.json(plans.map(p => ({ ...p, features: JSON.parse(p.features_json || '[]') })));
   });
 
+  // ── Promotions ────────────────────────────────────────────────────────────
+  function evaluatePromo(rawCode, plan) {
+    const code = String(rawCode || '').trim().toUpperCase();
+    if (!code) return { valid: false, discount_cents: 0, message: '' };
+    const promo = db.prepare('SELECT * FROM promotions WHERE UPPER(code) = ? AND active = 1').get(code);
+    if (!promo) return { valid: false, discount_cents: 0, message: 'Invalid or inactive code.' };
+    if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+      return { valid: false, discount_cents: 0, message: 'This code has expired.' };
+    }
+    if (promo.max_uses != null && promo.used_count >= promo.max_uses) {
+      return { valid: false, discount_cents: 0, message: 'This code has reached its usage limit.' };
+    }
+    let discount = promo.discount_type === 'percent'
+      ? Math.round((plan.price_cents * promo.discount_value) / 100)
+      : promo.discount_value;
+    discount = Math.max(0, Math.min(discount, plan.price_cents));
+    return {
+      valid: true,
+      code: promo.code,
+      discount_cents: discount,
+      final_cents: plan.price_cents - discount,
+      message: 'Code applied.',
+    };
+  }
+
+  router.post('/api/membership/validate-promo', (req, res) => {
+    const { code, plan_id } = req.body || {};
+    const plan = db.prepare('SELECT * FROM plans WHERE id = ? AND active = 1').get(plan_id);
+    if (!plan) return res.status(404).json({ valid: false, message: 'Plan not found.' });
+    res.json(evaluatePromo(code, plan));
+  });
+
   router.get('/api/membership/products', (req, res) => {
     const products = db.prepare('SELECT * FROM products WHERE active = 1 ORDER BY name').all();
     res.json(products);
@@ -275,16 +307,20 @@ function init(app, db, publicDir) {
       const plan = db.prepare('SELECT * FROM plans WHERE id = ? AND active = 1').get(plan_id);
       if (!plan) return res.status(404).json({ error: 'Plan not found' });
 
+      const promo = evaluatePromo((req.body && req.body.promo_code) || '', plan);
+      const discountCents = promo.valid ? promo.discount_cents : 0;
+      const promoCode = promo.valid ? promo.code : null;
+
       const orderId = 'SHRLY-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
-      const amount = plan.price_cents;
+      const amount = Math.max(0, plan.price_cents - discountCents);
 
       // If the member is already logged in, link the transaction to their account
       // so the subscription auto-activates when the webhook fires.
       const memberId = (req.session && req.session.memberId) || null;
 
       db.prepare(
-        'INSERT INTO transactions (order_id, member_id, plan_id, amount_cents, status, customer_email, customer_name) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).run(orderId, memberId, plan.id, amount, 'pending', email.toLowerCase(), name || email.split('@')[0]);
+        'INSERT INTO transactions (order_id, member_id, plan_id, amount_cents, status, customer_email, customer_name, promo_code, discount_cents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(orderId, memberId, plan.id, amount, 'pending', email.toLowerCase(), name || email.split('@')[0], promoCode, discountCents);
 
       const snapResult = await payments.createSnapToken({
         orderId,
@@ -477,6 +513,11 @@ function init(app, db, publicDir) {
         db.prepare(
           "UPDATE transactions SET status = 'paid', midtrans_status = ?, midtrans_response = ?, updated_at = datetime('now') WHERE order_id = ?"
         ).run(transaction_status, JSON.stringify(payload), order_id);
+
+        // Count a promo redemption once the payment settles
+        if (localTx.promo_code) {
+          try { db.prepare('UPDATE promotions SET used_count = used_count + 1 WHERE UPPER(code) = UPPER(?)').run(localTx.promo_code); } catch (e) {}
+        }
 
         // If member already linked (e.g., existing user upgrading), auto-activate subscription
         if (localTx.member_id) {

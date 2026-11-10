@@ -206,6 +206,18 @@ body.gp-dark .ud-page-banner.gp-checkout-banner h1 { font-size: clamp(1.9rem, 4.
 /* alert */
 body.gp-dark .ud-alert-error { background: rgba(231, 76, 60, 0.12); color: #fca5a5; border: 1px solid rgba(231, 76, 60, 0.35); }
 
+/* promo + international note */
+.gp-note-intl { font-size: 12px; color: var(--gp-muted); margin-top: 12px; line-height: 1.6; }
+.gp-note-intl i { color: var(--gp-accent-2); margin-right: 5px; }
+.gp-promo { display: flex; gap: 10px; }
+.gp-promo input { flex: 1; min-width: 0; padding: 12px 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--gp-border); border-radius: 11px; color: var(--gp-fg); font-size: 14px; outline: none; text-transform: uppercase; }
+.gp-promo input::placeholder { text-transform: none; }
+.gp-promo input:focus { border-color: var(--gp-accent); }
+.gp-promo .ud-main-btn { padding: 12px 20px; border-radius: 11px; white-space: nowrap; }
+.gp-promo-status { font-size: 13px; margin-top: 10px; }
+.gp-promo-status.is-valid { color: var(--gp-good); }
+.gp-promo-status.is-invalid { color: #f87171; }
+
 /* ── Responsive ── */
 @media (max-width: 880px) {
   .gp-grid { grid-template-columns: 1fr; }

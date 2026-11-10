@@ -11,6 +11,8 @@ function init(db) {
     'ALTER TABLE plans ADD COLUMN duration_days INTEGER DEFAULT 30',
     'ALTER TABLE transactions ADD COLUMN customer_email TEXT DEFAULT NULL',
     'ALTER TABLE transactions ADD COLUMN customer_name TEXT DEFAULT NULL',
+    'ALTER TABLE transactions ADD COLUMN promo_code TEXT DEFAULT NULL',
+    'ALTER TABLE transactions ADD COLUMN discount_cents INTEGER DEFAULT 0',
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch (e) { /* column already exists */ }
@@ -76,6 +78,18 @@ function init(db) {
       status         TEXT NOT NULL DEFAULT 'paid',
       provider       TEXT DEFAULT 'mock',
       provider_ref   TEXT DEFAULT NULL,
+      created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS promotions (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      code           TEXT UNIQUE NOT NULL,
+      discount_type  TEXT NOT NULL DEFAULT 'percent',   -- 'percent' | 'fixed'
+      discount_value INTEGER NOT NULL DEFAULT 0,        -- percent (1-100) or cents
+      active         INTEGER DEFAULT 1,
+      max_uses       INTEGER DEFAULT NULL,
+      used_count     INTEGER DEFAULT 0,
+      expires_at     DATETIME DEFAULT NULL,
       created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -145,6 +159,17 @@ function seed(db) {
       let count = plan.name === 'Starter' ? 2 : plan.name === 'Pro' ? 4 : allProducts.length;
       for (let i = 0; i < count; i++) linkStmt.run(plan.id, allProducts[i].id);
     }
+  }
+
+  // Seed a demo promotion code on first run. REVIEW/REMOVE this for production
+  // (anyone who knows the code gets the discount). Manage codes in the
+  // `promotions` table: discount_type 'percent' (discount_value 1-100) or
+  // 'fixed' (discount_value in cents). Set active=0 to disable.
+  const promoCount = db.prepare('SELECT COUNT(*) as c FROM promotions').get().c;
+  if (promoCount === 0) {
+    db.prepare(
+      'INSERT INTO promotions (code, discount_type, discount_value, active) VALUES (?, ?, ?, ?)'
+    ).run('WELCOME10', 'percent', 10, 1);
   }
 }
 
