@@ -29,12 +29,21 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 const localDbDir = path.join(__dirname, 'data');
 const localDb = path.join(localDbDir, 'sharely.db');
 const volumeDb = process.env.DB_PATH || '/data/sharely.db';
+const volumeDir = path.dirname(volumeDb);
 
-if (!fs.existsSync(localDbDir)) {
+// Prefer the persistent volume so data survives redeploys. Use it whenever the
+// volume directory exists (a mounted Railway volume) or DB_PATH is set, creating
+// the DB file there on first boot. Previously we only used the volume if the DB
+// file ALREADY existed — so a freshly-mounted (empty) volume was never used, and
+// the database kept resetting to the ephemeral local copy on every deploy.
+let dbPath;
+if (process.env.DB_PATH || fs.existsSync(volumeDir)) {
+  fs.mkdirSync(volumeDir, { recursive: true });
+  dbPath = volumeDb;
+} else {
   fs.mkdirSync(localDbDir, { recursive: true });
+  dbPath = localDb;
 }
-
-const dbPath = fs.existsSync(volumeDb) ? volumeDb : localDb;
 
 console.log('Using database:', dbPath);
 
