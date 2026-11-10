@@ -5,6 +5,7 @@ const requireAuth = requireAdmin;
 
 const express = require('express');
 const session = require('express-session');
+const createSqliteSessionStore = require('./sqlite-session-store');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
@@ -188,6 +189,7 @@ app.use((req, res, next) => {
 });
 app.set('trust proxy', 1); // Trust Replit reverse proxy so secure cookies work
 app.use(session({
+  store: createSqliteSessionStore(db),
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
