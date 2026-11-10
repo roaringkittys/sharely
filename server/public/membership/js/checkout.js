@@ -18,6 +18,50 @@ async function loadConfig() {
   }
 }
 
+function renderTiers() {
+  const grid = document.getElementById('tierGrid');
+  const featuredId = plans.length > 1 ? plans[1].id : (plans[0] && plans[0].id);
+  grid.innerHTML = plans.map(p => {
+    const feats = (p.features || []).map(f => `<li><i class="fa-solid fa-check"></i> ${f}</li>`).join('');
+    return `
+      <label class="gp-option gp-tier" data-plan="${p.id}">
+        <input type="radio" name="tier" value="${p.id}">
+        ${p.id === featuredId ? '<span class="gp-badge">POPULAR</span>' : ''}
+        <span class="gp-tier-name">${p.name}</span>
+        <span class="gp-tier-price"><span class="gp-tier-price-num">${MembershipUI.formatMoney(p.price_cents)}</span> <span class="gp-tier-per">/ ${p.duration_days || 30} days</span></span>
+        <ul class="gp-features">${feats}</ul>
+        <span class="gp-check"><i class="fa-solid fa-circle-check"></i></span>
+      </label>`;
+  }).join('');
+  grid.querySelectorAll('input[name="tier"]').forEach(r =>
+    r.addEventListener('change', () => selectPlan(r.value)));
+}
+
+function selectPlan(id) {
+  selectedPlan = plans.find(p => String(p.id) === String(id)) || plans[0];
+  document.querySelectorAll('.gp-tier').forEach(l => {
+    const input = l.querySelector('input');
+    const on = String(input.value) === String(selectedPlan.id);
+    input.checked = on;
+    l.classList.toggle('is-selected', on);
+  });
+  updateSummary();
+}
+
+function updateSummary() {
+  if (!selectedPlan) return;
+  document.getElementById('summaryPlanName').textContent =
+    selectedPlan.name + ' · ' + (selectedPlan.duration_days || 30) + ' days';
+  document.getElementById('summaryPrice').textContent = selectedPlan.price_cents.toLocaleString('id-ID');
+  document.getElementById('summaryTotal').textContent = selectedPlan.price_cents.toLocaleString('id-ID');
+}
+
+function showAlert(msg) {
+  const a = document.getElementById('alertBox');
+  a.textContent = msg;
+  a.classList.add('show');
+}
+
 async function init() {
   await loadConfig();
 
@@ -30,51 +74,26 @@ async function init() {
   }
 
   plans = await MembershipUI.fetchPlans();
-  const planSelect = document.getElementById('planSelect');
-  planSelect.innerHTML = plans.map(p =>
-    `<option value="${p.id}">${p.name} (${MembershipUI.formatMoney(p.price_cents)})</option>`
-  ).join('');
-
   if (!plans.length) {
-    document.getElementById('alertBox').textContent = 'No plans available. Please try again later.';
-    document.getElementById('alertBox').classList.add('show');
+    document.getElementById('tierGrid').innerHTML = '<div style="color:var(--gp-muted);padding:16px 0">No plans available right now. Please try again later.</div>';
     document.getElementById('payBtn').disabled = true;
-    document.getElementById('memberPayBtn').disabled = true;
     return;
   }
 
-  // Auto-select plan from URL if provided
+  renderTiers();
+
+  // preselect from ?plan= or default to first
   const urlPlanId = new URLSearchParams(location.search).get('plan');
-  if (urlPlanId) {
-    const match = plans.find(p => String(p.id) === String(urlPlanId));
-    if (match) planSelect.value = String(match.id);
-  }
-
-  selectedPlan = plans.find(p => String(p.id) === String(planSelect.value));
-  if (!selectedPlan) selectedPlan = plans[0];
-
-  planSelect.addEventListener('change', () => {
-    selectedPlan = plans.find(p => String(p.id) === String(planSelect.value));
-    updateSummary();
-  });
-
-  updateSummary();
-}
-
-function updateSummary() {
-  if (!selectedPlan) return;
-  document.getElementById('summaryPlanLabel').textContent = selectedPlan.name;
-  document.getElementById('summaryPrice').textContent = selectedPlan.price_cents.toLocaleString('id-ID');
-  document.getElementById('summaryTotal').textContent = selectedPlan.price_cents.toLocaleString('id-ID');
+  const match = urlPlanId && plans.find(p => String(p.id) === String(urlPlanId));
+  selectPlan(match ? match.id : plans[0].id);
 }
 
 async function startPayment(email, name) {
-  const btn = document.getElementById('payBtn') || document.getElementById('memberPayBtn');
-  const alertBox = document.getElementById('alertBox');
-  alertBox.classList.remove('show');
+  const btn = document.getElementById('payBtn');
+  document.getElementById('alertBox').classList.remove('show');
   btn.disabled = true;
   btn.style.opacity = '0.6';
-  btn.textContent = 'Opening payment…';
+  btn.innerHTML = 'Opening payment…';
 
   try {
     const res = await fetch('/api/membership/snap-token', {
@@ -85,47 +104,37 @@ async function startPayment(email, name) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Payment initialization failed');
 
-    btn.textContent = 'Waiting for payment…';
-
+    btn.innerHTML = 'Waiting for payment…';
     window.snap.pay(data.token, {
-      onSuccess: function() {
+      onSuccess: function () {
         window.location.href = '/membership/checkout/success?order_id=' + encodeURIComponent(data.order_id) + '&email=' + encodeURIComponent(email);
       },
-      onPending: function() {
+      onPending: function () {
         window.location.href = '/membership/checkout/success?order_id=' + encodeURIComponent(data.order_id) + '&email=' + encodeURIComponent(email) + '&pending=1';
       },
-      onError: function() {
-        window.location.href = '/membership/checkout/failed';
-      },
-      onClose: function() {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.textContent = 'Pay now';
+      onError: function () { window.location.href = '/membership/checkout/failed'; },
+      onClose: function () {
+        btn.disabled = false; btn.style.opacity = '1';
+        btn.innerHTML = '<i class="fa-solid fa-lock"></i> Pay now';
       }
     });
   } catch (err) {
-    alertBox.textContent = err.message;
-    alertBox.classList.add('show');
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.textContent = 'Pay now';
+    showAlert(err.message);
+    btn.disabled = false; btn.style.opacity = '1';
+    btn.innerHTML = '<i class="fa-solid fa-lock"></i> Pay now';
   }
 }
 
 document.getElementById('payBtn').addEventListener('click', () => {
-  const email = document.getElementById('emailInput').value.trim();
-  const name = document.getElementById('nameInput').value.trim();
-  if (!email || !name) {
-    document.getElementById('alertBox').textContent = 'Please enter your email and name.';
-    document.getElementById('alertBox').classList.add('show');
-    return;
+  if (!selectedPlan) { showAlert('Please choose a plan.'); return; }
+  if (memberData) {
+    startPayment(memberData.member.email, memberData.member.name);
+  } else {
+    const email = document.getElementById('emailInput').value.trim();
+    const name = document.getElementById('nameInput').value.trim();
+    if (!email || !name) { showAlert('Please enter your email and name.'); return; }
+    startPayment(email, name);
   }
-  startPayment(email, name);
-});
-
-document.getElementById('memberPayBtn')?.addEventListener('click', () => {
-  if (!memberData) return;
-  startPayment(memberData.member.email, memberData.member.name);
 });
 
 init();
