@@ -15,6 +15,7 @@ const multer = require('multer');
 const crypto = require('crypto');
 const userSystem = require('./user-system');
 const { verifyUserSession } = userSystem;
+const createSqliteSessionStore = require('./sqlite-session-store');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -24,7 +25,7 @@ cloudinary.config({
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+const SESSION_SECRET_ENV = process.env.SESSION_SECRET || '';
 
 const localDbDir = path.join(__dirname, 'data');
 const localDb = path.join(localDbDir, 'sharely.db');
@@ -49,6 +50,23 @@ console.log('Using database:', dbPath);
 
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
+
+// Keep a stable session secret even when SESSION_SECRET isn't set in the
+// environment. The default used to be crypto.randomBytes() on every boot, which
+// changed the secret each redeploy and invalidated all admin login cookies — so
+// the admin page kept bouncing back to the login screen after any deploy. We now
+// persist a generated secret in the database (on the Railway volume), so it stays
+// the same across restarts and logins survive. An env var still takes priority.
+function resolveSessionSecret() {
+  if (SESSION_SECRET_ENV) return SESSION_SECRET_ENV;
+  db.exec('CREATE TABLE IF NOT EXISTS app_secrets (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+  const row = db.prepare('SELECT value FROM app_secrets WHERE key = ?').get('session_secret');
+  if (row && row.value) return row.value;
+  const generated = crypto.randomBytes(32).toString('hex');
+  db.prepare('INSERT INTO app_secrets (key, value) VALUES (?, ?)').run('session_secret', generated);
+  return generated;
+}
+const SESSION_SECRET = resolveSessionSecret();
 
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -188,6 +206,7 @@ app.use((req, res, next) => {
 });
 app.set('trust proxy', 1); // Trust Replit reverse proxy so secure cookies work
 app.use(session({
+  store: createSqliteSessionStore(db),
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
