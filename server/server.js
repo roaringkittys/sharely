@@ -350,9 +350,23 @@ app.post('/api/auth/change-password', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// Derive a favicon URL from a service's domain. Used as a fallback so services
+// that have no admin-uploaded icon_url still show their own site's icon in the
+// admin list, the app, and the extension — the same way a browser's bookmark
+// bar shows each site's icon. It never overrides a custom icon_url.
+function faviconFor(domain) {
+  if (!domain) return null;
+  const host = String(domain).trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/.*$/, '')
+    .replace(/^www\./i, '');
+  if (!host) return null;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+}
+
 app.get('/api/services', requireAuth, (req, res) => {
   const services = db.prepare('SELECT * FROM services ORDER BY parent_id NULLS FIRST, name').all();
-  res.json(services);
+  res.json(services.map(s => ({ ...s, icon_url: s.icon_url || faviconFor(s.domain) })));
 });
 
 app.post('/api/services', requireAuth, (req, res) => {
@@ -605,7 +619,7 @@ app.get('/api/extension/config', corsForExtension, requireApiKey, (req, res) => 
       name: s.name,
       domain: s.domain,
       icon: s.icon,
-      icon_url: s.icon_url || null,
+      icon_url: s.icon_url || faviconFor(s.domain),
       category: s.category,
       accounts: buildAccounts(s.id),
     };
